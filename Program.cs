@@ -40,8 +40,6 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 
-builder.Services.AddHttpClient();
-
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
