@@ -1,4 +1,5 @@
 using Auth.Web.Data;
+using Auth.Web.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 
 namespace Auth.Web.Components.Account

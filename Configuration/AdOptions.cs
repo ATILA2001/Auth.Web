@@ -2,7 +2,7 @@ namespace Auth.Web.Configuration;
 
 public class AdOptions
 {
-    public string Domain { get; set; } = string.Empty;
+    public string Domain { get; set; } = "BUENOSAIRES";
 
     public string? Container { get; set; }
 

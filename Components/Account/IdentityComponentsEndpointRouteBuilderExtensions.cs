@@ -3,6 +3,7 @@ using System.Text.Json;
 using Auth.Web.Components.Account.Pages;
 using Auth.Web.Components.Account.Pages.Manage;
 using Auth.Web.Data;
+using Auth.Web.Domain.Entities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;

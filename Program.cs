@@ -1,4 +1,5 @@
 using Auth.Web.Components;
+using Auth.Web.Components.Account;
 using Auth.Web.Configuration;
 using Auth.Web.Data;
 using Auth.Web.Domain.Entities;
@@ -9,6 +10,7 @@ using Auth.Web.Services.Permissions;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Routing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,6 +50,9 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
+// Registrar el IEmailSender<ApplicationUser> usado por los componentes de identidad
+builder.Services.AddScoped<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+
 builder.Services.AddScoped<IAdAuthService, AdAuthService>();
 builder.Services.AddScoped<IProvisioningService, ProvisioningService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -74,6 +79,9 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapControllers();
+
+// Endpoints necesarios para Logout y acciones auxiliares de Identity Components
+app.MapAdditionalIdentityEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Auth.Web.Data;
+using Auth.Web.Domain.Entities;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Identity;

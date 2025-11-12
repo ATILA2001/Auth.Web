@@ -1,11 +1,15 @@
 ﻿@page "/Account/Login"
 
 @using System.ComponentModel.DataAnnotations
+@using System.Diagnostics
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
 @using Auth.Web.Data
+@using Auth.Web.Services.Abstractions
 
 @inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IAdAuthService AdAuth
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
@@ -19,13 +23,13 @@
             <StatusMessage Message="@errorMessage" />
             <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
                 <DataAnnotationsValidator />
-                <h2>Use a local account to log in.</h2>
+                <h2>Use your Active Directory account to log in.</h2>
                 <hr />
                 <ValidationSummary class="text-danger" role="alert" />
                 <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                    <label for="email" class="form-label">Email</label>
-                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+                    <InputText @bind-Value="Input.UserNameOrEmail" class="form-control" autocomplete="username" aria-required="true" placeholder="user or user@domain" />
+                    <label for="username" class="form-label">User or email</label>
+                    <ValidationMessage For="() => Input.UserNameOrEmail" class="text-danger" />
                 </div>
                 <div class="form-floating mb-3">
                     <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
@@ -47,9 +51,6 @@
                     </p>
                     <p>
                         <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</a>
-                    </p>
-                    <p>
-                        <a href="Account/ResendEmailConfirmation">Resend email confirmation</a>
                     </p>
                 </div>
             </EditForm>
@@ -87,40 +88,54 @@
 
     public async Task LoginUser()
     {
-        // This doesn't count login failures towards account lockout
-        // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-        var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
-        if (result.Succeeded)
+#if DEBUG
+        if (!Debugger.IsAttached) Debugger.Launch();
+        Debugger.Break();
+#endif
+
+        var login = Input.UserNameOrEmail.Trim();
+        var password = Input.Password;
+
+        // 1) Validar contra AD
+        var adOk = await AdAuth.ValidateAsync(login, password);
+
+#if DEBUG
+        Debugger.Break(); // revisar resultado de AD
+#endif
+
+        if (!adOk)
         {
-            Logger.LogInformation("User logged in.");
-            RedirectManager.RedirectTo(ReturnUrl);
+            errorMessage = "Error: Invalid login attempt (AD).";
+            return;
         }
-        else if (result.RequiresTwoFactor)
+
+        // 2) Buscar usuario local por UserName o Email (registro previo requerido)
+        var user = await UserManager.FindByNameAsync(login) ?? await UserManager.FindByEmailAsync(login);
+        if (user is null)
         {
-            RedirectManager.RedirectTo(
-                "Account/LoginWith2fa",
-                new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+            errorMessage = "Error: No local account found. Please register first.";
+            return;
         }
-        else if (result.IsLockedOut)
-        {
-            Logger.LogWarning("User account locked out.");
-            RedirectManager.RedirectTo("Account/Lockout");
-        }
-        else
-        {
-            errorMessage = "Error: Invalid login attempt.";
-        }
+
+        // 3) Iniciar sesión local (cookie) sin password local
+        await SignInManager.SignInAsync(user, Input.RememberMe);
+
+#if DEBUG
+        Debugger.Break(); // revisar antes de redirigir
+#endif
+
+        Logger.LogInformation("User logged in via AD.");
+        RedirectManager.RedirectTo(ReturnUrl);
     }
 
     private sealed class InputModel
     {
         [Required]
-        [EmailAddress]
-        public string Email { get; set; } = "";
+        public string UserNameOrEmail { get; set; } = string.Empty;
 
         [Required]
         [DataType(DataType.Password)]
-        public string Password { get; set; } = "";
+        public string Password { get; set; } = string.Empty;
 
         [Display(Name = "Remember me?")]
         public bool RememberMe { get; set; }
