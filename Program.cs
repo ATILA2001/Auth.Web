@@ -59,6 +59,9 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 
+// Routing por áreas
+builder.Services.AddScoped<Auth.Web.Services.Abstractions.IRoutingService, Auth.Web.Services.Routing.RoutingService>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())

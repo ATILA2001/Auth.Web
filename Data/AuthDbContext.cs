@@ -20,6 +20,8 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
 
     public DbSet<ApplicationClient> ApplicationClients => Set<ApplicationClient>();
 
+    public DbSet<AreaRoute> AreaRoutes => Set<AreaRoute>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -30,6 +32,10 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
 
         builder.Entity<UserArea>()
             .HasIndex(x => new { x.UserId, x.AreaId })
+            .IsUnique();
+
+        builder.Entity<AreaRoute>()
+            .HasIndex(x => new { x.AreaId, x.ClientId, x.ReturnUrl })
             .IsUnique();
     }
 }

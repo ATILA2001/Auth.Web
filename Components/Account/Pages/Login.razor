@@ -1,18 +1,18 @@
 ﻿@page "/Account/Login"
 
 @using System.ComponentModel.DataAnnotations
-@using System.Diagnostics
+@using System.Net.Http.Json
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
 @using Auth.Web.Data
 @using Auth.Web.Services.Abstractions
 
-@inject SignInManager<ApplicationUser> SignInManager
+@inject HttpClient Http
 @inject UserManager<ApplicationUser> UserManager
 @inject IAdAuthService AdAuth
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
-@inject IdentityRedirectManager RedirectManager
+@inject IRoutingService Routing
 
 <PageTitle>Log in</PageTitle>
 
@@ -47,20 +47,10 @@
                 </div>
                 <div>
                     <p>
-                        <a href="Account/ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
-                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</a>
+                        <a href="Account/Register">Register as a new user</a>
                     </p>
                 </div>
             </EditForm>
-        </section>
-    </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to log in.</h3>
-            <hr />
-            <ExternalLoginPicker />
         </section>
     </div>
 </div>
@@ -74,9 +64,6 @@
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
 
-    [SupplyParameterFromQuery]
-    private string? ReturnUrl { get; set; }
-
     protected override async Task OnInitializedAsync()
     {
         if (HttpMethods.IsGet(HttpContext.Request.Method))
@@ -88,14 +75,13 @@
 
     public async Task LoginUser()
     {
-
+        errorMessage = null;
 
         var login = Input.UserNameOrEmail.Trim();
         var password = Input.Password;
 
         // 1) Validar contra AD
         var adOk = await AdAuth.ValidateAsync(login, password);
-
         if (!adOk)
         {
             errorMessage = "Error: Invalid login attempt (AD).";
@@ -110,12 +96,52 @@
             return;
         }
 
-        // 3) Iniciar sesión local (cookie) sin password local
-        await SignInManager.SignInAsync(user, Input.RememberMe);
+        // 3) Resolver destino por áreas (BD)
+        var target = await Routing.ResolveForUserAsync(user.Id);
+        if (target is null)
+        {
+            errorMessage = "No hay una regla de redirección para tu usuario/áreas.";
+            return;
+        }
 
+        // 4) Solicitar token y redirigir
+        var payload = new
+        {
+            UserName = login,
+            Password = password,
+            ClientId = target.Value.ClientId,
+            ReturnUrl = target.Value.ReturnUrl,
+            DisplayName = (string?)null
+        };
 
-        Logger.LogInformation("User logged in via AD.");
-        RedirectManager.RedirectTo(ReturnUrl);
+        try
+        {
+            var uri = NavigationManager.ToAbsoluteUri("/connect/login").ToString();
+            var response = await Http.PostAsJsonAsync(uri, payload);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(errorMessage))
+                {
+                    errorMessage = $"Login error ({(int)response.StatusCode}).";
+                }
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<LoginResultDto>();
+            if (result is null || string.IsNullOrWhiteSpace(result.Redirect))
+            {
+                errorMessage = "Respuesta inválida del servidor.";
+                return;
+            }
+
+            NavigationManager.NavigateTo(result.Redirect, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error de comunicación: {ex.Message}";
+        }
     }
 
     private sealed class InputModel
@@ -127,7 +153,11 @@
         [DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
 
-        [Display(Name = "Remember me?")]
         public bool RememberMe { get; set; }
+    }
+
+    private sealed class LoginResultDto
+    {
+        public string? Redirect { get; set; }
     }
 }
