@@ -78,6 +78,16 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 
+// Redirección inmediata del root a /Account/Login (HTTP 302) para evitar delay en cliente
+app.MapGet("/", (HttpContext ctx) =>
+{
+    var returnUrl = ctx.Request.Query["returnUrl"].ToString();
+    var target = string.IsNullOrEmpty(returnUrl)
+        ? "/Account/Login"
+        : $"/Account/Login?returnUrl={Uri.EscapeDataString(returnUrl)}";
+    return Results.Redirect(target, permanent: false);
+});
+
 app.MapControllers();
 
 // Endpoints necesarios para Logout y acciones auxiliares de Identity Components
