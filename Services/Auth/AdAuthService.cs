@@ -39,16 +39,7 @@ public class AdAuthService : IAdAuthService
 
     private PrincipalContext CreateContext()
     {
-        if (!string.IsNullOrWhiteSpace(_options.UserName) && !string.IsNullOrWhiteSpace(_options.Password))
-        {
-            return new PrincipalContext(ContextType.Domain, _options.Domain, _options.Container, _options.UserName, _options.Password);
-        }
-
-        if (!string.IsNullOrWhiteSpace(_options.Container))
-        {
-            return new PrincipalContext(ContextType.Domain, _options.Domain, _options.Container);
-        }
-
+        // Simplificado: siempre usa solo el dominio configurado.
         return new PrincipalContext(ContextType.Domain, _options.Domain);
     }
 }
