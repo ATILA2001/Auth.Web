@@ -88,20 +88,13 @@
 
     public async Task LoginUser()
     {
-#if DEBUG
-        if (!Debugger.IsAttached) Debugger.Launch();
-        Debugger.Break();
-#endif
+
 
         var login = Input.UserNameOrEmail.Trim();
         var password = Input.Password;
 
         // 1) Validar contra AD
         var adOk = await AdAuth.ValidateAsync(login, password);
-
-#if DEBUG
-        Debugger.Break(); // revisar resultado de AD
-#endif
 
         if (!adOk)
         {
@@ -120,9 +113,6 @@
         // 3) Iniciar sesión local (cookie) sin password local
         await SignInManager.SignInAsync(user, Input.RememberMe);
 
-#if DEBUG
-        Debugger.Break(); // revisar antes de redirigir
-#endif
 
         Logger.LogInformation("User logged in via AD.");
         RedirectManager.RedirectTo(ReturnUrl);
