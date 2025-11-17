@@ -54,12 +54,12 @@ public sealed class LoginService : ILoginService
             return new LoginResult(false, "Error: No local account found. Please register first.", null);
         }
 
-        // Check admin role: issue identity cookie and go to dashboard
+        // Check admin role: issue identity cookie and go to admin index
         var roles = await _userManager.GetRolesAsync(user);
         if (roles.Contains("Admin"))
         {
             await _signInManager.SignInAsync(user, isPersistent: false);
-            return new LoginResult(true, null, "/account/dashboard");
+            return new LoginResult(true, null, "/admin");
         }
 
         // 3) Resolve area-based route (non-admin)
