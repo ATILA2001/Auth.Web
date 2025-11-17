@@ -2,39 +2,68 @@
 @using Auth.Web.Domain.Entities
 @inject IRoutingAdminService RoutingSvc
 
-<div class="card">
-    <div class="card-header">Aplicativos disponibles</div>
-    <div class="card-body">
-        <p class="text-muted">Seleccione un aplicativo para navegar.</p>
-        @if (areas.Count == 0 || rules.Count == 0)
+@* Componente compacto para NavMenu (solo Admin) *@
+
+@if (error is not null)
+{
+    <div class="nav-item px-3 text-danger small">Error cargando aplicativos: @error</div>
+}
+else if (loading)
+{
+    <div class="nav-item px-3 small text-muted">Cargando aplicativos...</div>
+}
+else
+{
+    <div class="nav-item px-3">
+        <span class="nav-link disabled small text-uppercase fw-semibold">Aplicativos (@rules.Count(r => r.IsActive) activos)</span>
+    </div>
+
+    @if (areas.Count == 0)
+    {
+        <div class="nav-item px-3 text-muted small">Sin áreas configuradas</div>
+    }
+    else if (rules.Count == 0)
+    {
+        <div class="nav-item px-3 text-muted small">Sin reglas de redirección</div>
+    }
+    else if (!rules.Any(r => r.IsActive))
+    {
+        <div class="nav-item px-3 text-muted small">Todas las reglas están inactivas</div>
+    }
+    else
+    {
+        @foreach (var r in rules.Where(r => r.IsActive).OrderBy(r => r.Priority))
         {
-            <div class="alert alert-warning">No hay reglas configuradas o no hay áreas.</div>
-        }
-        else
-        {
-            <div class="list-group">
-                @foreach (var r in rules.Where(r => r.IsActive).OrderBy(r => r.Priority))
-                {
-                    var areaName = areas.First(a => a.Id == r.AreaId).Name;
-                    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="@r.ReturnUrl" target="_blank">
-                        <span>
-                            <strong>@areaName</strong>
-                            <small class="text-body-secondary ms-2">(@r.ClientId)</small>
-                        </span>
-                        <span class="badge text-bg-secondary">@r.Priority</span>
-                    </a>
-                }
+            var areaName = areas.FirstOrDefault(a => a.Id == r.AreaId)?.Name ?? $"Área {r.AreaId}";
+            <div class="nav-item px-3">
+                <a class="nav-link d-flex justify-content-between align-items-center" href="@r.ReturnUrl" target="_blank" rel="noopener noreferrer">
+                    <span>@areaName <small class="text-body-secondary">(@r.ClientId)</small></span>
+                    <span class="badge text-bg-secondary">@r.Priority</span>
+                </a>
             </div>
         }
-    </div>
-</div>
+    }
+}
 
 @code {
     private List<Area> areas = new();
     private List<AreaRoute> rules = new();
+    private bool loading = true;
+    private string? error;
 
     protected override async Task OnInitializedAsync()
     {
-        (areas, rules) = await RoutingSvc.GetAsync();
+        try
+        {
+            (areas, rules) = await RoutingSvc.GetAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
     }
 }

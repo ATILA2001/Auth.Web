@@ -1,15 +1,14 @@
 ﻿@implements IDisposable
 
 @inject NavigationManager NavigationManager
-
-
-
+@using Auth.Web.Services.Admin
+@using Auth.Web.Domain.Entities
+@inject IRoutingAdminService RoutingSvc
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">   
-
         <AuthorizeView>
-            <Authorized>               
+            <Authorized>                
                 <div class="nav-item px-3">
                     <form action="Account/Logout" method="post">
                         <AntiforgeryToken />
@@ -26,6 +25,48 @@
                             <span class="bi bi-pencil-square" aria-hidden="true"></span> Administración
                         </NavLink>
                     </div>
+                    <div class="mt-2 mb-2 border-top"></div>
+
+                    @* Inicio listado aplicativos *@
+                    <div class="nav-item px-3">
+                        <span class="nav-link disabled small text-uppercase fw-semibold">Aplicativos</span>
+                    </div>
+                    @if (appsError is not null)
+                    {
+                        <div class="nav-item px-3 text-danger small">Error: @appsError</div>
+                    }
+                    else if (appsLoading)
+                    {
+                        <div class="nav-item px-3 small text-muted">Cargando aplicativos...</div>
+                    }
+                    else if (areas.Count == 0)
+                    {
+                        <div class="nav-item px-3 small text-muted">Sin áreas</div>
+                    }
+                    else if (rules.Count == 0)
+                    {
+                        <div class="nav-item px-3 small text-muted">Sin reglas de redirección</div>
+                    }
+                    else if (activeCount == 0)
+                    {
+                        <div class="nav-item px-3 small text-muted">Todas las reglas inactivas</div>
+                    }
+                    else
+                    {
+                        @foreach (var r in rules.Where(r => r.IsActive).OrderBy(r => r.Priority))
+                        {
+                           
+                            <div class="nav-item px-3">
+                                <a class="nav-link d-flex justify-content-between align-items-center" href="@r.ReturnUrl" target="_blank" rel="noopener noreferrer">
+                                    <span><small class="text-body-secondary">@r.ClientId</small></span>
+                                    
+                                </a>
+                            </div>
+                        }
+                    }
+                    @* Fin listado aplicativos *@
+
+                    <div class="mt-2 mb-2 border-top"></div>
                 }
             </Authorized>
             <NotAuthorized>
@@ -47,10 +88,35 @@
 @code {
     private string? currentUrl;
 
+    // Datos aplicativos
+    private List<Area> areas = new();
+    private List<AreaRoute> rules = new();
+    private bool appsLoading = true;
+    private string? appsError;
+    private int activeCount => rules.Count(r => r.IsActive);
+
     protected override void OnInitialized()
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Carga de aplicativos
+        try
+        {
+            (areas, rules) = await RoutingSvc.GetAsync();
+        }
+        catch (Exception ex)
+        {
+            appsError = ex.Message;
+        }
+        finally
+        {
+            appsLoading = false;
+            StateHasChanged();
+        }
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)

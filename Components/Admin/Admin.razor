@@ -1,22 +1,22 @@
 @page "/admin"
 
-<h1>Administración</h1>
+<h1 class="mb-4 text-center">Administración</h1>
 <AuthorizeView Roles="Admin">
     <Authorized>
-        <div class="row g-3">
-            <div class="col-md-5">
-                <h5 class="mb-3">Aplicativos disponibles</h5>
-                <AdminAppsList />
-            </div>
-            <div class="col-md-7">
-                <h5 class="mb-3">Módulos de administración</h5>
-                <ul class="list-group list-group-flush mb-3">
-                    <li class="list-group-item"><NavLink href="/admin/users" class="nav-link">Usuarios</NavLink></li>
-                    <li class="list-group-item"><NavLink href="/admin/roles" class="nav-link">Roles</NavLink></li>
-                    <li class="list-group-item"><NavLink href="/admin/areas" class="nav-link">Áreas</NavLink></li>
-                    <li class="list-group-item"><NavLink href="/admin/user-areas" class="nav-link">Áreas por usuario</NavLink></li>
-                    <li class="list-group-item"><NavLink href="/admin/routing" class="nav-link">Redirección</NavLink></li>
-                </ul>
+        <div class="container-fluid">
+            <div class="row justify-content-center">
+                <div class="col-12 col-lg-8">
+                    <div class="card">
+                        <div class="card-header">Módulos de administración</div>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item"><NavLink href="/admin/users" class="nav-link">Usuarios</NavLink></li>
+                            <li class="list-group-item"><NavLink href="/admin/roles" class="nav-link">Roles</NavLink></li>
+                            <li class="list-group-item"><NavLink href="/admin/areas" class="nav-link">Áreas</NavLink></li>
+                            <li class="list-group-item"><NavLink href="/admin/user-areas" class="nav-link">Áreas por usuario</NavLink></li>
+                            <li class="list-group-item"><NavLink href="/admin/routing" class="nav-link">Redirección</NavLink></li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </Authorized>
