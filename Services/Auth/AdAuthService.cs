@@ -37,6 +37,30 @@ public class AdAuthService : IAdAuthService
         }
     }
 
+    public Task<bool> ExistsByEmailAsync(string email)
+    {
+        try
+        {
+            using var context = CreateContext();
+            using var searcher = new PrincipalSearcher(new UserPrincipal(context)
+            {
+                EmailAddress = email
+            });
+            var result = searcher.FindOne();
+            return Task.FromResult(result is not null);
+        }
+        catch (PrincipalServerDownException ex)
+        {
+            _logger.LogError(ex, "Active Directory server is not reachable.");
+            return Task.FromResult(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to query user by email {Email}", email);
+            return Task.FromResult(false);
+        }
+    }
+
     private PrincipalContext CreateContext()
     {
         // Simplificado: siempre usa solo el dominio configurado.

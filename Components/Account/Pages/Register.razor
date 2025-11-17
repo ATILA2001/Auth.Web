@@ -3,6 +3,7 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
 @using Auth.Web.Data
+@using Auth.Web.Services.Abstractions
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
@@ -10,6 +11,7 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject IAdAuthService AdAuth
 
 <PageTitle>Registro</PageTitle>
 
@@ -50,15 +52,36 @@
 
     public async Task RegisterUser(EditContext editContext)
     {
+        identityErrors = null;
+
+        var email = Input.Email.Trim();
+        var fullName = Input.FullName.Trim();
+
+        // 1) Validación previa: email único
+        var existing = await UserManager.FindByEmailAsync(email);
+        if (existing is not null)
+        {
+            identityErrors = new[] { new IdentityError { Description = "El correo ya está registrado." } };
+            return;
+        }
+
+        // 2) Validación en AD: comprobar que el correo pertenece/existe en el dominio
+        var existsInAd = await AdAuth.ExistsByEmailAsync(email);
+        if (!existsInAd)
+        {
+            identityErrors = new[] { new IdentityError { Description = "El correo no pertenece al dominio (AD) o no existe en el directorio." } };
+            return;
+        }
+
         var user = CreateUser();
 
         // Mapear campos
-        user.Nombre = Input.FullName;
+        user.Nombre = fullName;
 
         // UserName = Email
-        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+        await UserStore.SetUserNameAsync(user, email, CancellationToken.None);
         var emailStore = GetEmailStore();
-        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+        await emailStore.SetEmailAsync(user, email, CancellationToken.None);
 
         // Crear sin contraseña (la autenticación real será contra AD)
         var result = await UserManager.CreateAsync(user);

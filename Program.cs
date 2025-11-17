@@ -28,6 +28,7 @@ builder.Services.AddDbContext<AuthDbContext>(options => options.UseSqlServer(con
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
         options.SignIn.RequireConfirmedAccount = false;
+        options.User.RequireUniqueEmail = true; // Unicidad de email
     })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AuthDbContext>()
