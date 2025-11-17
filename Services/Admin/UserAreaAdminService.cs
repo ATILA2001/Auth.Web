@@ -6,23 +6,32 @@ namespace Auth.Web.Services.Admin;
 
 public interface IUserAreaAdminService
 {
-    Task<(List<Area> Areas, List<UserArea> UserAreas)> GetAsync(CancellationToken ct = default);
+    Task<UserAreaData> GetAsync(CancellationToken ct = default);
     Task<bool> AssignAsync(string userId, int areaId, CancellationToken ct = default);
     Task<bool> RemoveAsync(int userAreaId, CancellationToken ct = default);
 }
+
+public sealed record UserListItem(string Id, string? Email, string? UserName)
+{
+    public override string ToString() => string.IsNullOrWhiteSpace(Email) ? UserName ?? Id : Email!;
+}
+
+public sealed record UserAreaData(List<Area> Areas, List<UserArea> UserAreas, List<UserListItem> Users);
 
 public sealed class UserAreaAdminService : IUserAreaAdminService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     public UserAreaAdminService(IServiceScopeFactory scopeFactory) => _scopeFactory = scopeFactory;
 
-    public async Task<(List<Area> Areas, List<UserArea> UserAreas)> GetAsync(CancellationToken ct = default)
+    public async Task<UserAreaData> GetAsync(CancellationToken ct = default)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
         var areas = await db.Areas.AsNoTracking().OrderBy(a => a.Name).ToListAsync(ct);
         var userAreas = await db.UserAreas.AsNoTracking().OrderBy(ua => ua.UserId).ThenBy(ua => ua.AreaId).ToListAsync(ct);
-        return (areas, userAreas);
+        var users = await db.Users.AsNoTracking()
+            .OrderBy(u => u.Email).Select(u => new UserListItem(u.Id, u.Email, u.UserName)).ToListAsync(ct);
+        return new UserAreaData(areas, userAreas, users);
     }
 
     public async Task<bool> AssignAsync(string userId, int areaId, CancellationToken ct = default)

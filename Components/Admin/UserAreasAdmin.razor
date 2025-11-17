@@ -7,9 +7,15 @@
         <h4>Áreas por usuario</h4>
 
         <div class="row g-2 align-items-end mb-3">
-            <div class="col-md-4">
-                <label class="form-label">Usuario (Id)</label>
-                <input class="form-control" @bind="selectedUserId" />
+            <div class="col-md-5">
+                <label class="form-label">Usuario (email)</label>
+                <select class="form-select" @bind="selectedUserId">
+                    <option value="">Seleccione usuario...</option>
+                    @foreach (var u in users)
+                    {
+                        <option value="@u.Id">@u.Email (@u.UserName)</option>
+                    }
+                </select>
             </div>
             <div class="col-md-4">
                 <label class="form-label">Área</label>
@@ -29,7 +35,7 @@
         <table class="table table-sm">
             <thead>
                 <tr>
-                    <th>Usuario</th>
+                    <th>Usuario (email)</th>
                     <th>Área</th>
                     <th style="width:100px"></th>
                 </tr>
@@ -37,8 +43,9 @@
             <tbody>
                 @foreach (var ua in userAreas)
                 {
+                    var mail = users.FirstOrDefault(u => u.Id == ua.UserId)?.Email ?? ua.UserId;
                     <tr>
-                        <td>@ua.UserId</td>
+                        <td>@mail</td>
                         <td>@areas.First(a => a.Id == ua.AreaId).Name</td>
                         <td>
                             <button class="btn btn-sm btn-outline-danger" @onclick="() => Remove(ua.Id)">Quitar</button>
@@ -56,6 +63,7 @@
 @code {
     private List<Area> areas = new();
     private List<UserArea> userAreas = new();
+    private List<UserListItem> users = new();
     private string selectedUserId = string.Empty;
     private int selectedAreaId = 0;
     [Inject] private IUserAreaAdminService UserAreaAdmin { get; set; } = default!;
@@ -67,7 +75,10 @@
 
     private async Task ReloadAsync()
     {
-        (areas, userAreas) = await UserAreaAdmin.GetAsync();
+        var data = await UserAreaAdmin.GetAsync();
+        areas = data.Areas;
+        userAreas = data.UserAreas;
+        users = data.Users;
     }
 
     private async Task Assign()
