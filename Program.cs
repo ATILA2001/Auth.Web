@@ -16,6 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<AdOptions>(builder.Configuration.GetSection("ActiveDirectory"));
+builder.Services.Configure<FeatureOptions>(builder.Configuration.GetSection("Features"));
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -64,6 +65,9 @@ builder.Services.AddScoped<IClientService, ClientService>();
 
 // Routing por áreas
 builder.Services.AddScoped<Auth.Web.Services.Abstractions.IRoutingService, Auth.Web.Services.Routing.RoutingService>();
+
+// Orquestador de login
+builder.Services.AddScoped<ILoginService, LoginService>();
 
 var app = builder.Build();
 

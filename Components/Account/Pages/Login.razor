@@ -7,12 +7,8 @@
 @using Auth.Web.Data
 @using Auth.Web.Services.Abstractions
 
-@inject HttpClient Http
-@inject UserManager<ApplicationUser> UserManager
-@inject IAdAuthService AdAuth
-@inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
-@inject IRoutingService Routing
+@inject ILoginService LoginService
 
 <PageTitle>Log in</PageTitle>
 
@@ -80,67 +76,16 @@
         var login = Input.UserNameOrEmail.Trim();
         var password = Input.Password;
 
-        // 1) Validar contra AD
-        var adOk = await AdAuth.ValidateAsync(login, password);
-        if (!adOk)
+        var result = await LoginService.LoginAsync(login, password);
+        if (!result.Success)
         {
-            errorMessage = "Error: Invalid login attempt (AD).";
+            errorMessage = result.Error;
             return;
         }
 
-        // 2) Buscar usuario local por UserName o Email (registro previo requerido)
-        var user = await UserManager.FindByNameAsync(login) ?? await UserManager.FindByEmailAsync(login);
-        if (user is null)
+        if (!string.IsNullOrWhiteSpace(result.Redirect))
         {
-            errorMessage = "Error: No local account found. Please register first.";
-            return;
-        }
-
-        // 3) Resolver destino por áreas (BD)
-        var target = await Routing.ResolveForUserAsync(user.Id);
-        if (target is null)
-        {
-            errorMessage = "No hay una regla de redirección para tu usuario/áreas.";
-            return;
-        }
-
-        // 4) Solicitar token y redirigir
-        var payload = new
-        {
-            UserName = login,
-            Password = password,
-            ClientId = target.Value.ClientId,
-            ReturnUrl = target.Value.ReturnUrl,
-            DisplayName = (string?)null
-        };
-
-        try
-        {
-            var uri = NavigationManager.ToAbsoluteUri("/connect/login").ToString();
-            var response = await Http.PostAsJsonAsync(uri, payload);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                errorMessage = await response.Content.ReadAsStringAsync();
-                if (string.IsNullOrWhiteSpace(errorMessage))
-                {
-                    errorMessage = $"Login error ({(int)response.StatusCode}).";
-                }
-                return;
-            }
-
-            var result = await response.Content.ReadFromJsonAsync<LoginResultDto>();
-            if (result is null || string.IsNullOrWhiteSpace(result.Redirect))
-            {
-                errorMessage = "Respuesta inválida del servidor.";
-                return;
-            }
-
-            NavigationManager.NavigateTo(result.Redirect, forceLoad: true);
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error de comunicación: {ex.Message}";
+            NavigationManager.NavigateTo(result.Redirect!, forceLoad: true);
         }
     }
 
@@ -154,10 +99,5 @@
         public string Password { get; set; } = string.Empty;
 
         public bool RememberMe { get; set; }
-    }
-
-    private sealed class LoginResultDto
-    {
-        public string? Redirect { get; set; }
     }
 }
