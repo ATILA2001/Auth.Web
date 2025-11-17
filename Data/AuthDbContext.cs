@@ -37,5 +37,14 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
         builder.Entity<AreaRoute>()
             .HasIndex(x => new { x.AreaId, x.ClientId, x.ReturnUrl })
             .IsUnique();
+
+        // Longitudes para permitir indexar
+        builder.Entity<AreaRoute>()
+            .Property(r => r.ClientId)
+            .HasMaxLength(100);
+
+        builder.Entity<AreaRoute>()
+            .Property(r => r.ReturnUrl)
+            .HasMaxLength(450);
     }
 }
