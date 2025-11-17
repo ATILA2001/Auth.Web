@@ -10,42 +10,37 @@
 @inject NavigationManager NavigationManager
 @inject ILoginService LoginService
 
-<PageTitle>Log in</PageTitle>
+<PageTitle>Inicio de sesion</PageTitle>
 
-<h1>Log in</h1>
 <div class="row">
     <div class="col-md-4">
         <section>
             <StatusMessage Message="@errorMessage" />
             <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
                 <DataAnnotationsValidator />
-                <h2>Use your Active Directory account to log in.</h2>
+                <h2>Use sus credenciales de Windows para iniciar sesion.</h2>
                 <hr />
                 <ValidationSummary class="text-danger" role="alert" />
                 <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.UserNameOrEmail" class="form-control" autocomplete="username" aria-required="true" placeholder="user or user@domain" />
-                    <label for="username" class="form-label">User or email</label>
+                    <InputText @bind-Value="Input.UserNameOrEmail" class="form-control" autocomplete="username" aria-required="true" placeholder="Correo electronico / CUIL" />
+                    <label for="username" class="form-label">CUIL o correo electronico</label>
                     <ValidationMessage For="() => Input.UserNameOrEmail" class="text-danger" />
                 </div>
                 <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label for="password" class="form-label">Password</label>
+                    <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Contraseña" />
+                    <label for="password" class="form-label">Contraseña</label>
                     <ValidationMessage For="() => Input.Password" class="text-danger" />
                 </div>
                 <div class="checkbox mb-3">
                     <label class="form-label">
                         <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
-                        Remember me
+                        Recordar
                     </label>
                 </div>
                 <div>
-                    <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
+                    <button type="submit" class="w-100 btn btn-lg btn-primary">Iniciar</button>
                 </div>
-                <div>
-                    <p>
-                        <a href="Account/Register">Register as a new user</a>
-                    </p>
-                </div>
+                
             </EditForm>
         </section>
     </div>
