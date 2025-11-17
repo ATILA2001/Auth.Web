@@ -1,0 +1,76 @@
+@page "/admin/areas"
+@using Auth.Web.Domain.Entities
+@using Auth.Web.Services.Admin
+
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <h3>Áreas</h3>
+
+        <div class="input-group mb-3" style="max-width:520px">
+            <input class="form-control" placeholder="Nueva área" @bind="newArea" />
+            <button class="btn btn-primary" @onclick="CreateArea">Crear</button>
+        </div>
+
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th style="width:120px"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in areas)
+                {
+                    <tr>
+                        <td>
+                            <input class="form-control form-control-sm" @bind="a.Name" @bind:after="() => SaveArea(a)" />
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteArea(a.Id)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </Authorized>
+    <NotAuthorized>
+        <div class="alert alert-danger">Acceso no autorizado.</div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<Area> areas = new();
+    private string newArea = string.Empty;
+    [Inject] private IAreaAdminService AreaAdmin { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        areas = await AreaAdmin.GetAreasAsync();
+    }
+
+    private async Task CreateArea()
+    {
+        var created = await AreaAdmin.CreateAsync(newArea);
+        if (created is not null)
+        {
+            newArea = string.Empty;
+            areas = await AreaAdmin.GetAreasAsync();
+        }
+    }
+
+    private async Task SaveArea(Area area)
+    {
+        if (await AreaAdmin.UpdateNameAsync(area.Id, area.Name))
+        {
+            areas = await AreaAdmin.GetAreasAsync();
+        }
+    }
+
+    private async Task DeleteArea(int id)
+    {
+        if (await AreaAdmin.DeleteAsync(id))
+        {
+            areas = await AreaAdmin.GetAreasAsync();
+        }
+    }
+}

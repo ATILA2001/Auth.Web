@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Routing;
+using Auth.Web.Services.Routing;
+using Auth.Web.Services.Admin;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,7 +48,6 @@ builder.Services.AddControllers();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Registrar HttpClient para uso en componentes (llamadas a /connect/login)
 builder.Services.AddHttpClient();
 
 builder.Services.AddCascadingAuthenticationState();
@@ -54,7 +55,6 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
-// Registrar el IEmailSender<ApplicationUser> usado por los componentes de identidad
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
 builder.Services.AddScoped<IAdAuthService, AdAuthService>();
@@ -63,11 +63,20 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 
-// Routing por áreas
 builder.Services.AddScoped<Auth.Web.Services.Abstractions.IRoutingService, Auth.Web.Services.Routing.RoutingService>();
 
-// Orquestador de login
 builder.Services.AddScoped<ILoginService, LoginService>();
+
+builder.Services.AddScoped<IRouteQueryService, RouteQueryService>();
+
+builder.Services.AddScoped<IRoleAdminService, RoleAdminService>();
+builder.Services.AddScoped<IAreaAdminService, AreaAdminService>();
+builder.Services.AddScoped<IRoutingAdminService, RoutingAdminService>();
+builder.Services.AddScoped<IUserAreaAdminService, UserAreaAdminService>();
+builder.Services.AddScoped<IUserAdminService, UserAdminService>();
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
 
 var app = builder.Build();
 

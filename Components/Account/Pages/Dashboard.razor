@@ -1,0 +1,85 @@
+@page "/account/dashboard"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@using Auth.Web.Services.Abstractions
+@inject IRouteQueryService RouteQuery
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Dashboard</PageTitle>
+
+<h1>Dashboard</h1>
+
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <div class="alert alert-info">
+            Bienvenido administrador. Desde aquí puedes ir al panel de administración o elegir manualmente un aplicativo.
+        </div>
+        <div class="mb-3">
+            <button class="btn btn-primary me-2" @onclick="GoAdmin">Administración</button>
+            <button class="btn btn-outline-secondary" @onclick="LoadRoutes">Ver rutas disponibles</button>
+        </div>
+        @if (routes is not null && routes.Count > 0)
+        {
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        <th>Área</th>
+                        <th>ClientId</th>
+                        <th>ReturnUrl</th>
+                        <th>Priority</th>
+                        <th>Activo</th>
+                        <th style="width:140px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in routes)
+                    {
+                        <tr>
+                            <td>@r.AreaName</td>
+                            <td>@r.ClientId</td>
+                            <td>@r.ReturnUrl</td>
+                            <td>@r.Priority</td>
+                            <td>@(r.IsActive ? "Sí" : "No")</td>
+                            <td>
+                                <button class="btn btn-sm btn-success" @onclick="() => Navigate(r.ReturnUrl)">Ingresar</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>No autorizado.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<UserRouteInfo>? routes;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Cargar rutas solo bajo demanda (botón), mantiene rápido el load inicial.
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        userId = state.User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value
+                 ?? state.User.Claims.FirstOrDefault(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+    }
+
+    private async Task LoadRoutes()
+    {
+        if (userId is null) return;
+        routes = (await RouteQuery.GetUserRoutesAsync(userId)).ToList();
+    }
+
+    private void Navigate(string url)
+    {
+        Nav.NavigateTo(url, forceLoad: true);
+    }
+
+    private void GoAdmin()
+    {
+        Nav.NavigateTo("/admin");
+    }
+}

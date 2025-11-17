@@ -1,0 +1,65 @@
+@page "/admin/roles"
+@using Microsoft.AspNetCore.Identity
+@using Auth.Web.Services.Admin
+
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <h3>Roles</h3>
+
+        <div class="input-group mb-3" style="max-width:420px">
+            <input class="form-control" placeholder="Nuevo rol" @bind="newRole" />
+            <button class="btn btn-primary" @onclick="CreateRole">Crear</button>
+        </div>
+
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th style="width:100px"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in roles)
+                {
+                    <tr>
+                        <td>@r.Name</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteRole(r.Id)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </Authorized>
+    <NotAuthorized>
+        <div class="alert alert-danger">Acceso no autorizado.</div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<IdentityRole> roles = new();
+    private string newRole = string.Empty;
+    [Inject] private IRoleAdminService RoleAdmin { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        roles = await RoleAdmin.GetRolesAsync();
+    }
+
+    private async Task CreateRole()
+    {
+        if (await RoleAdmin.CreateRoleAsync(newRole))
+        {
+            newRole = string.Empty;
+            roles = await RoleAdmin.GetRolesAsync();
+        }
+    }
+
+    private async Task DeleteRole(string roleId)
+    {
+        if (await RoleAdmin.DeleteRoleAsync(roleId))
+        {
+            roles = await RoleAdmin.GetRolesAsync();
+        }
+    }
+}

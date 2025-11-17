@@ -1,0 +1,90 @@
+@page "/admin/user-areas"
+@using Auth.Web.Domain.Entities
+@using Auth.Web.Services.Admin
+
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <h4>Áreas por usuario</h4>
+
+        <div class="row g-2 align-items-end mb-3">
+            <div class="col-md-4">
+                <label class="form-label">Usuario (Id)</label>
+                <input class="form-control" @bind="selectedUserId" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Área</label>
+                <select class="form-select" @bind="selectedAreaId">
+                    <option value="0">Seleccione...</option>
+                    @foreach (var a in areas)
+                    {
+                        <option value="@a.Id">@a.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary" @onclick="Assign">Asignar</button>
+            </div>
+        </div>
+
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Área</th>
+                    <th style="width:100px"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var ua in userAreas)
+                {
+                    <tr>
+                        <td>@ua.UserId</td>
+                        <td>@areas.First(a => a.Id == ua.AreaId).Name</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => Remove(ua.Id)">Quitar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </Authorized>
+    <NotAuthorized>
+        <div class="alert alert-danger">Acceso no autorizado.</div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<Area> areas = new();
+    private List<UserArea> userAreas = new();
+    private string selectedUserId = string.Empty;
+    private int selectedAreaId = 0;
+    [Inject] private IUserAreaAdminService UserAreaAdmin { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        (areas, userAreas) = await UserAreaAdmin.GetAsync();
+    }
+
+    private async Task Assign()
+    {
+        if (string.IsNullOrWhiteSpace(selectedUserId) || selectedAreaId == 0) return;
+
+        if (await UserAreaAdmin.AssignAsync(selectedUserId, selectedAreaId))
+        {
+            await ReloadAsync();
+        }
+    }
+
+    private async Task Remove(int userAreaId)
+    {
+        if (await UserAreaAdmin.RemoveAsync(userAreaId))
+        {
+            await ReloadAsync();
+        }
+    }
+}

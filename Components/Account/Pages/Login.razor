@@ -87,6 +87,11 @@
         {
             NavigationManager.NavigateTo(result.Redirect!, forceLoad: true);
         }
+        else
+        {
+            // Admin sin redirección automática => ir al dashboard
+            NavigationManager.NavigateTo("/account/dashboard");
+        }
     }
 
     private sealed class InputModel

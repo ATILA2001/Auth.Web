@@ -1,0 +1,111 @@
+@page "/admin/routing"
+@using Auth.Web.Domain.Entities
+@using Auth.Web.Services.Admin
+
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <h3>Redirección por áreas</h3>
+
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Área</label>
+                <select class="form-select" @bind="newRule.AreaId">
+                    <option value="0">Seleccione...</option>
+                    @foreach (var a in areas)
+                    {
+                        <option value="@a.Id">@a.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">ClientId</label>
+                <input class="form-control" @bind="newRule.ClientId" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">ReturnUrl</label>
+                <input class="form-control" @bind="newRule.ReturnUrl" />
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">Priority</label>
+                <input class="form-control" type="number" @bind="newRule.Priority" />
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-primary" @onclick="AddRule">Agregar</button>
+            </div>
+        </div>
+
+        <table class="table table-sm table-striped mt-3">
+            <thead>
+                <tr>
+                    <th>Área</th>
+                    <th>ClientId</th>
+                    <th>ReturnUrl</th>
+                    <th>Priority</th>
+                    <th>Activo</th>
+                    <th style="width:120px"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in rules)
+                {
+                    <tr>
+                        <td>@areas.First(a => a.Id == r.AreaId).Name</td>
+                        <td><input class="form-control form-control-sm" @bind="r.ClientId" @bind:after="() => Save(r)" /></td>
+                        <td><input class="form-control form-control-sm" @bind="r.ReturnUrl" @bind:after="() => Save(r)" /></td>
+                        <td><input class="form-control form-control-sm" type="number" @bind="r.Priority" @bind:after="() => Save(r)" /></td>
+                        <td><input class="form-check-input" type="checkbox" @bind="r.IsActive" @bind:after="() => Save(r)" /></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(r.Id)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </Authorized>
+    <NotAuthorized>
+        <div class="alert alert-danger">Acceso no autorizado.</div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<Area> areas = new();
+    private List<AreaRoute> rules = new();
+    private AreaRoute newRule = new AreaRoute { Priority = 1, IsActive = true };
+    [Inject] private IRoutingAdminService RoutingSvc { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        (areas, rules) = await RoutingSvc.GetAsync();
+    }
+
+    private async Task AddRule()
+    {
+        var created = await RoutingSvc.CreateAsync(newRule);
+        if (created is not null)
+        {
+            newRule = new AreaRoute { Priority = 1, IsActive = true };
+            await ReloadAsync();
+        }
+    }
+
+    private async Task Save(AreaRoute r)
+    {
+        if (await RoutingSvc.UpdateAsync(r))
+        {
+            await ReloadAsync();
+        }
+    }
+
+    private async Task Delete(int id)
+    {
+        if (await RoutingSvc.DeleteAsync(id))
+        {
+            await ReloadAsync();
+        }
+    }
+}

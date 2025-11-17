@@ -1,0 +1,110 @@
+@page "/admin/users"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@using Auth.Web.Services.Admin
+@inject IUserAdminService UserAdmin
+
+<h3>Usuarios</h3>
+
+<div class="row mb-3">
+    <div class="col">
+        <input class="form-control" @bind="search" @bind:after="Filter" placeholder="Buscar" />
+    </div>
+</div>
+
+<table class="table table-sm table-striped">
+    <thead>
+        <tr>
+            <th>Usuario</th>
+            <th>Correo</th>
+            <th>Roles</th>
+            <th style="width:140px"></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var u in filteredUsers)
+        {
+            <tr>
+                <td>@u.UserName</td>
+                <td>@u.Email</td>
+                <td><span>@string.Join(", ", u.Roles)</span></td>
+                <td><button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditRoles(u)">Roles</button></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<EditForm Model="roleEdit" OnValidSubmit="SaveUserRoles">
+    <DataAnnotationsValidator />
+    @if (editUser is not null)
+    {
+        <div class="card mt-3">
+            <div class="card-header">Editar roles de @editUser.UserName</div>
+            <div class="card-body">
+                @foreach (var r in allRoles)
+                {
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" checked="@selectedRoles.Contains(r)" @onchange="args => ToggleRole(r, args.Value as bool? == true)" />
+                        <label class="form-check-label">@r</label>
+                    </div>
+                }
+                <button class="btn btn-primary mt-2" type="submit">Guardar</button>
+                <button class="btn btn-link" type="button" @onclick="CancelEdit">Cancelar</button>
+            </div>
+        </div>
+    }
+</EditForm>
+
+@code {
+    private string search = string.Empty;
+    private List<UserItem> users = new();
+    private List<UserItem> filteredUsers = new();
+    private UserItem? editUser;
+    private List<string> allRoles = new();
+    private HashSet<string> selectedRoles = new();
+    private object roleEdit = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        (users, allRoles) = await UserAdmin.GetAsync();
+        filteredUsers = users;
+        StateHasChanged();
+    }
+
+    private void Filter()
+    {
+        filteredUsers = users
+            .Where(u => string.IsNullOrWhiteSpace(search) || (u.UserName?.Contains(search, StringComparison.OrdinalIgnoreCase) == true) || (u.Email?.Contains(search, StringComparison.OrdinalIgnoreCase) == true))
+            .ToList();
+    }
+
+    private void EditRoles(UserItem user)
+    {
+        editUser = user;
+        selectedRoles = user.Roles.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        StateHasChanged();
+    }
+
+    private void ToggleRole(string role, bool selected)
+    {
+        if (selected) selectedRoles.Add(role); else selectedRoles.Remove(role);
+    }
+
+    private async Task SaveUserRoles()
+    {
+        if (editUser is null) return;
+        await UserAdmin.UpdateRolesAsync(editUser.Id, selectedRoles);
+        editUser = null;
+        await ReloadAsync();
+    }
+
+    private void CancelEdit()
+    {
+        editUser = null;
+    }
+}

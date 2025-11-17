@@ -1,0 +1,19 @@
+@page "/admin"
+@using Auth.Web.Services.Admin
+
+<h1>Administración</h1>
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <p>Seleccione la sección:</p>
+        <ul class="list-group list-group-flush mb-3" style="max-width:420px">
+            <li class="list-group-item"><NavLink href="/admin/users" class="nav-link">Usuarios</NavLink></li>
+            <li class="list-group-item"><NavLink href="/admin/roles" class="nav-link">Roles</NavLink></li>
+            <li class="list-group-item"><NavLink href="/admin/areas" class="nav-link">Áreas</NavLink></li>
+            <li class="list-group-item"><NavLink href="/admin/user-areas" class="nav-link">Áreas por usuario</NavLink></li>
+            <li class="list-group-item"><NavLink href="/admin/routing" class="nav-link">Redirección</NavLink></li>
+        </ul>
+    </Authorized>
+    <NotAuthorized>
+        <div class="alert alert-danger">Acceso no autorizado.</div>
+    </NotAuthorized>
+</AuthorizeView>

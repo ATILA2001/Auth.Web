@@ -43,13 +43,15 @@ public static class Seed
 
         // Regla de ruteo por área: DGAYF -> WebsiteV2 @ http://10.10.12.37/websitev2
         await EnsureAreaRouteAsync(context, areaDgayf.Id, clientId: "WebsiteV2", returnUrl: "http://10.10.12.37/websitev2", priority: 1);
-        // Para CONTABLE no se crea ruta (sin redirección)
+        // También para CONTABLE
+        await EnsureAreaRouteAsync(context, areaContable.Id, clientId: "WebsiteV2", returnUrl: "http://10.10.12.37/websitev2", priority: 1);
 
         // Usuarios locales y asignación de áreas
         var userManager = scopedProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-        var user1 = await EnsureUserAsync(userManager, "ncarracedo@buenosaires.gob.ar", nombre: "N. Carracedo");
+        var user1 = await EnsureUserAsync(userManager, "n.carracedo@buenosaires.gob.ar", nombre: "N. Carracedo");
         await EnsureUserAreaAsync(context, user1.Id, areaDgayf.Id);
+        await EnsureUserRoleAsync(userManager, user1, "Admin"); // Asignar rol Admin
 
         var user2 = await EnsureUserAsync(userManager, "ycaceres@buenosaires.gob.ar", nombre: "Y. Caceres");
         await EnsureUserAreaAsync(context, user2.Id, areaContable.Id);
@@ -163,6 +165,14 @@ public static class Seed
         if (!exists)
         {
             context.UserAreas.Add(new UserArea { UserId = userId, AreaId = areaId });
+        }
+    }
+
+    private static async Task EnsureUserRoleAsync(UserManager<ApplicationUser> userManager, ApplicationUser user, string role)
+    {
+        if (!await userManager.IsInRoleAsync(user, role))
+        {
+            await userManager.AddToRoleAsync(user, role);
         }
     }
 }

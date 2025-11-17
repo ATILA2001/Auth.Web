@@ -15,6 +15,7 @@ public class ConnectController : ControllerBase
     private readonly ITokenService _tokenService;
     private readonly IPermissionService _permissionService;
     private readonly IClientService _clientService;
+    private readonly SignInManager<Domain.Entities.ApplicationUser> _signInManager;
     private readonly UserManager<Domain.Entities.ApplicationUser> _userManager;
 
     public ConnectController(
@@ -23,7 +24,8 @@ public class ConnectController : ControllerBase
         ITokenService tokenService,
         IPermissionService permissionService,
         IClientService clientService,
-        UserManager<Domain.Entities.ApplicationUser> userManager)
+        UserManager<Domain.Entities.ApplicationUser> userManager,
+        SignInManager<Domain.Entities.ApplicationUser> signInManager)
     {
         _adAuthService = adAuthService;
         _provisioningService = provisioningService;
@@ -31,6 +33,7 @@ public class ConnectController : ControllerBase
         _permissionService = permissionService;
         _clientService = clientService;
         _userManager = userManager;
+        _signInManager = signInManager;
     }
 
     [HttpPost("login")]
@@ -61,10 +64,29 @@ public class ConnectController : ControllerBase
         return Ok(new { redirect });
     }
 
+    [HttpPost("portal-login")]
+    public async Task<IActionResult> PortalLogin([FromForm] PortalLoginRequest request)
+    {
+        if (!await _adAuthService.ValidateAsync(request.UserName, request.Password))
+        {
+            return Unauthorized();
+        }
+
+        var user = await _userManager.FindByNameAsync(request.UserName) ?? await _userManager.FindByEmailAsync(request.UserName);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        await _signInManager.SignInAsync(user, isPersistent: false);
+        return LocalRedirect("/account/dashboard");
+    }
+
     private static string AppendTokenToUrl(string url, string token)
     {
         return QueryHelpers.AddQueryString(url, "token", token);
     }
 
     public record LoginRequest(string UserName, string Password, string ClientId, string ReturnUrl, string? DisplayName);
+    public record PortalLoginRequest(string UserName, string Password);
 }

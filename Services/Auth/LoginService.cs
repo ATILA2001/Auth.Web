@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Auth.Web.Domain.Entities;
+using System.Linq;
 
 namespace Auth.Web.Services.Auth;
 
@@ -13,6 +14,7 @@ public sealed class LoginService : ILoginService
 {
     private readonly IAdAuthService _ad;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IRoutingService _routing;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<LoginService> _logger;
@@ -21,6 +23,7 @@ public sealed class LoginService : ILoginService
     public LoginService(
         IAdAuthService ad,
         UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
         IRoutingService routing,
         IHttpClientFactory httpClientFactory,
         IOptions<FeatureOptions> features,
@@ -28,6 +31,7 @@ public sealed class LoginService : ILoginService
     {
         _ad = ad;
         _userManager = userManager;
+        _signInManager = signInManager;
         _routing = routing;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
@@ -50,7 +54,15 @@ public sealed class LoginService : ILoginService
             return new LoginResult(false, "Error: No local account found. Please register first.", null);
         }
 
-        // 3) Resolve area-based route
+        // Check admin role: issue identity cookie and go to dashboard
+        var roles = await _userManager.GetRolesAsync(user);
+        if (roles.Contains("Admin"))
+        {
+            await _signInManager.SignInAsync(user, isPersistent: false);
+            return new LoginResult(true, null, "/account/dashboard");
+        }
+
+        // 3) Resolve area-based route (non-admin)
         var target = await _routing.ResolveForUserAsync(user.Id, ct);
         if (target is null)
         {
@@ -60,8 +72,7 @@ public sealed class LoginService : ILoginService
         // 4) Request token and redirect (optional)
         if (!_features.EnableTokenIssuance)
         {
-            // Only redirect logic should be handled in the UI/backend caller when token is disabled
-            var redirectNoToken = target.Value.ReturnUrl; // caller will navigate directly
+            var redirectNoToken = target.Value.ReturnUrl; // direct navigation
             return new LoginResult(true, null, redirectNoToken);
         }
 
