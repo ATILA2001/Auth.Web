@@ -1,3 +1,4 @@
+using Radzen;
 using Auth.Web.Components;
 using Auth.Web.Components.Account;
 using Auth.Web.Configuration;
@@ -16,6 +17,12 @@ using Auth.Web.Services.Admin;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add services to the container.
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+
+builder.Services.AddRadzenComponents();
+
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<AdOptions>(builder.Configuration.GetSection("ActiveDirectory"));
 builder.Services.Configure<FeatureOptions>(builder.Configuration.GetSection("Features"));
@@ -28,7 +35,7 @@ builder.Services.AddDbContext<AuthDbContext>(options => options.UseSqlServer(con
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
         options.SignIn.RequireConfirmedAccount = false;
-        options.User.RequireUniqueEmail = true; // Unicidad de email
+        options.User.RequireUniqueEmail = true;
     })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AuthDbContext>()
@@ -46,10 +53,9 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
-
 builder.Services.AddHttpClient();
+// HttpContext accessor para componentes
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
