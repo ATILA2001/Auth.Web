@@ -1,14 +1,10 @@
 ﻿@page "/Account/Login"
 
 @using System.ComponentModel.DataAnnotations
-@using System.Net.Http.Json
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
 @using Auth.Web.Data
 @using Auth.Web.Services.Abstractions
-
-@inject NavigationManager NavigationManager
-@inject ILoginService LoginService
 
 <PageTitle>Inicio de sesion</PageTitle>
 
@@ -45,59 +41,3 @@
         </section>
     </div>
 </div>
-
-@code {
-    private string? errorMessage;
-
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
-
-    [SupplyParameterFromForm]
-    private InputModel Input { get; set; } = new();
-
-    protected override async Task OnInitializedAsync()
-    {
-        if (HttpMethods.IsGet(HttpContext.Request.Method))
-        {
-            // Clear the existing external cookie to ensure a clean login process
-            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-        }
-    }
-
-    public async Task LoginUser()
-    {
-        errorMessage = null;
-
-        var login = Input.UserNameOrEmail.Trim();
-        var password = Input.Password;
-
-        var result = await LoginService.LoginAsync(login, password);
-        if (!result.Success)
-        {
-            errorMessage = result.Error;
-            return;
-        }
-
-        if (!string.IsNullOrWhiteSpace(result.Redirect))
-        {
-            NavigationManager.NavigateTo(result.Redirect!, forceLoad: true);
-        }
-        else
-        {
-            // Admin sin redirección automática => ir al dashboard
-            NavigationManager.NavigateTo("/account/dashboard");
-        }
-    }
-
-    private sealed class InputModel
-    {
-        [Required]
-        public string UserNameOrEmail { get; set; } = string.Empty;
-
-        [Required]
-        [DataType(DataType.Password)]
-        public string Password { get; set; } = string.Empty;
-
-        public bool RememberMe { get; set; }
-    }
-}

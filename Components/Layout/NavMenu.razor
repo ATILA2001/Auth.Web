@@ -1,11 +1,4 @@
-﻿@implements IDisposable
-
-@inject NavigationManager NavigationManager
-@using Auth.Web.Services.Admin
-@using Auth.Web.Domain.Entities
-@inject IRoutingAdminService RoutingSvc
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+﻿<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">   
         <AuthorizeView>
             <Authorized>                
@@ -84,50 +77,4 @@
         </AuthorizeView>
     </nav>
 </div>
-
-@code {
-    private string? currentUrl;
-
-    // Datos aplicativos
-    private List<Area> areas = new();
-    private List<AreaRoute> rules = new();
-    private bool appsLoading = true;
-    private string? appsError;
-    private int activeCount => rules.Count(r => r.IsActive);
-
-    protected override void OnInitialized()
-    {
-        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-        NavigationManager.LocationChanged += OnLocationChanged;
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        // Carga de aplicativos
-        try
-        {
-            (areas, rules) = await RoutingSvc.GetAsync();
-        }
-        catch (Exception ex)
-        {
-            appsError = ex.Message;
-        }
-        finally
-        {
-            appsLoading = false;
-            StateHasChanged();
-        }
-    }
-
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
-        StateHasChanged();
-    }
-
-    public void Dispose()
-    {
-        NavigationManager.LocationChanged -= OnLocationChanged;
-    }
-}
 

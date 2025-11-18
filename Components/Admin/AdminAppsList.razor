@@ -1,6 +1,6 @@
+@* Code-behind moved to AdminAppsList.razor.cs *@
 @using Auth.Web.Services.Admin
 @using Auth.Web.Domain.Entities
-@inject IRoutingAdminService RoutingSvc
 
 @* Componente compacto para NavMenu (solo Admin) *@
 
@@ -41,29 +41,6 @@ else
                     <span class="badge text-bg-secondary">@r.Priority</span>
                 </a>
             </div>
-        }
-    }
-}
-
-@code {
-    private List<Area> areas = new();
-    private List<AreaRoute> rules = new();
-    private bool loading = true;
-    private string? error;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            (areas, rules) = await RoutingSvc.GetAsync();
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-        }
-        finally
-        {
-            loading = false;
         }
     }
 }

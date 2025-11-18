@@ -1,7 +1,5 @@
 ﻿@page "/Account/Manage/PersonalData"
 
-@inject IdentityUserAccessor UserAccessor
-
 <PageTitle>Personal Data</PageTitle>
 
 <StatusMessage />
@@ -22,13 +20,3 @@
         </p>
     </div>
 </div>
-
-@code {
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
-
-    protected override async Task OnInitializedAsync()
-    {
-        _ = await UserAccessor.GetRequiredUserAsync(HttpContext);
-    }
-}
