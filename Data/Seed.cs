@@ -35,15 +35,42 @@ public static class Seed
         var areaDgayf = await EnsureAreaAsync(context, "DGAYF");
         var areaContable = await EnsureAreaAsync(context, "CONTABLE");
 
-        // Cliente WebsiteV2 con la URL permitida
+        // Cliente único WebsiteV2
         await EnsureClientAsync(context,
             clientId: "WebsiteV2",
             audience: "websitev2",
-            allowedReturnUrls: new[] { "http://10.10.12.37/websitev2" });
+            allowedReturnUrls: new[] { "http://10.10.12.37/websitev2", "/websitev2" });
 
-        // Regla de ruteo por área: DGAYF -> WebsiteV2 @ http://10.10.12.37/websitev2
+        // Migrar reglas existentes que apunten a "WebsiteV2(borrar)" -> "WebsiteV2"
+        var routesToFix = await context.AreaRoutes
+            .Where(r => r.ClientId == "WebsiteV2(borrar)")
+            .ToListAsync();
+        if (routesToFix.Count > 0)
+        {
+            foreach (var r in routesToFix)
+            {
+                // Si ya existe una regla equivalente con WebsiteV2, eliminar la obsoleta para evitar duplicados (clave única)
+                var existsTarget = await context.AreaRoutes.AnyAsync(x => x.AreaId == r.AreaId && x.ClientId == "WebsiteV2" && x.ReturnUrl == r.ReturnUrl);
+                if (existsTarget)
+                {
+                    context.AreaRoutes.Remove(r);
+                }
+                else
+                {
+                    r.ClientId = "WebsiteV2";
+                }
+            }
+        }
+
+        // Eliminar cliente obsoleto "WebsiteV2(borrar)" si existe
+        var obsoleteClient = await context.ApplicationClients.FirstOrDefaultAsync(c => c.ClientId == "WebsiteV2(borrar)");
+        if (obsoleteClient is not null)
+        {
+            context.ApplicationClients.Remove(obsoleteClient);
+        }
+
+        // Reglas de ruteo por área (si no existen)
         await EnsureAreaRouteAsync(context, areaDgayf.Id, clientId: "WebsiteV2", returnUrl: "http://10.10.12.37/websitev2", priority: 1);
-        // También para CONTABLE
         await EnsureAreaRouteAsync(context, areaContable.Id, clientId: "WebsiteV2", returnUrl: "http://10.10.12.37/websitev2", priority: 1);
 
         // Usuarios locales y asignación de áreas
@@ -51,7 +78,7 @@ public static class Seed
 
         var user1 = await EnsureUserAsync(userManager, "n.carracedo@buenosaires.gob.ar", nombre: "N. Carracedo");
         await EnsureUserAreaAsync(context, user1.Id, areaDgayf.Id);
-        await EnsureUserRoleAsync(userManager, user1, "Admin"); // Asignar rol Admin
+        await EnsureUserRoleAsync(userManager, user1, "Admin");
 
         var user2 = await EnsureUserAsync(userManager, "ycaceres@buenosaires.gob.ar", nombre: "Y. Caceres");
         await EnsureUserAreaAsync(context, user2.Id, areaContable.Id);
@@ -126,7 +153,6 @@ public static class Seed
 
     private static async Task<ApplicationUser> EnsureUserAsync(UserManager<ApplicationUser> userManager, string email, string? nombre)
     {
-        // Buscar por email o por UserName (email) o por sAMAccountName (parte local antes de @)
         var localPart = email.Split('@')[0];
         var user = await userManager.FindByEmailAsync(email)
                    ?? await userManager.FindByNameAsync(email)
@@ -148,7 +174,6 @@ public static class Seed
         }
         else
         {
-            // Asegurar que el Email esté establecido para poder encontrarlo por email
             if (string.IsNullOrWhiteSpace(user.Email))
             {
                 user.Email = email;
