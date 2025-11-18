@@ -14,7 +14,6 @@ public sealed class LoginService : ILoginService
 {
     private readonly IAdAuthService _ad;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IRoutingService _routing;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<LoginService> _logger;
@@ -23,7 +22,6 @@ public sealed class LoginService : ILoginService
     public LoginService(
         IAdAuthService ad,
         UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager,
         IRoutingService routing,
         IHttpClientFactory httpClientFactory,
         IOptions<FeatureOptions> features,
@@ -31,7 +29,6 @@ public sealed class LoginService : ILoginService
     {
         _ad = ad;
         _userManager = userManager;
-        _signInManager = signInManager;
         _routing = routing;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
@@ -54,11 +51,11 @@ public sealed class LoginService : ILoginService
             return new LoginResult(false, "Error: No local account found. Please register first.", null);
         }
 
-        // Check admin role: issue identity cookie and go to admin index
+        // Check admin role: SIN cookie, solo redirección
         var roles = await _userManager.GetRolesAsync(user);
         if (roles.Contains("Admin"))
         {
-            await _signInManager.SignInAsync(user, isPersistent: false);
+            // No SignInAsync (cookies deshabilitadas)
             return new LoginResult(true, null, "/admin");
         }
 
@@ -66,6 +63,7 @@ public sealed class LoginService : ILoginService
         var target = await _routing.ResolveForUserAsync(user.Id, ct);
         if (target is null)
         {
+            _logger.LogWarning("Routing no resolvió para usuario {UserId}", user.Id);
             return new LoginResult(false, "No hay una regla de redirección para tu usuario/áreas.", null);
         }
 

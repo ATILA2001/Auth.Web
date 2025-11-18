@@ -1,43 +1,32 @@
 ﻿@page "/Account/Login"
+@rendermode InteractiveServer
 
-@using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Authentication
-@using Microsoft.AspNetCore.Identity
-@using Auth.Web.Data
-@using Auth.Web.Services.Abstractions
+@using Auth.Web.Components.Account.Pages
+@using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>Inicio de sesion</PageTitle>
 
-<div class="row">
-    <div class="col-md-4">
-        <section>
-            <StatusMessage Message="@errorMessage" />
-            <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+<RadzenStack Style="min-height:100vh" AlignItems="Radzen.AlignItems.Center" JustifyContent="Radzen.JustifyContent.Center">
+    <RadzenCard Style="width:100%; max-width:420px;">
+        <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
+            <RadzenLabel Text="Use sus credenciales de Windows para iniciar sesión." />
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <RadzenAlert Severity="Radzen.AlertSeverity.Error" Style="width:100%">@ErrorMessage</RadzenAlert>
+            }
+            <EditForm Model="@Input" OnValidSubmit="@ExecuteLogin">
                 <DataAnnotationsValidator />
-                <h2>Use sus credenciales de Windows para iniciar sesion.</h2>
-                <hr />
-                <ValidationSummary class="text-danger" role="alert" />
-                <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.UserNameOrEmail" class="form-control" autocomplete="username" aria-required="true" placeholder="Correo electronico / CUIL" />
-                    <label for="username" class="form-label">CUIL o correo electronico</label>
-                    <ValidationMessage For="() => Input.UserNameOrEmail" class="text-danger" />
-                </div>
-                <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Contraseña" />
-                    <label for="password" class="form-label">Contraseña</label>
-                    <ValidationMessage For="() => Input.Password" class="text-danger" />
-                </div>
-                <div class="checkbox mb-3">
-                    <label class="form-label">
-                        <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
-                        Recordar
-                    </label>
-                </div>
-                <div>
-                    <button type="submit" class="w-100 btn btn-lg btn-primary">Iniciar</button>
-                </div>
-                
+                <ValidationSummary />
+                <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
+                    <RadzenTextBox @bind-Value="Input.UserNameOrEmail" Placeholder="Correo electrónico / CUIL" Style="width:100%" />
+                    <RadzenPassword @bind-Value="Input.Password" Placeholder="Contraseña" Style="width:100%" />
+                    <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Gap="1">
+                        <RadzenCheckBox @bind-Value="Input.RememberMe" />
+                        <RadzenLabel Text="Recordar" />
+                    </RadzenStack>
+                    <RadzenButton ButtonStyle="Radzen.ButtonStyle.Primary" Text="Iniciar" Type="Radzen.ButtonType.Submit" Style="width:100%" />
+                </RadzenStack>
             </EditForm>
-        </section>
-    </div>
-</div>
+        </RadzenStack>
+    </RadzenCard>
+</RadzenStack>
