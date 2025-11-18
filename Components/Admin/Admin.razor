@@ -1,26 +1,27 @@
 @page "/admin"
 
-<h1 class="mb-4 text-center">Administración</h1>
+<PageTitle>Administración</PageTitle>
+
 <AuthorizeView Roles="Admin">
     <Authorized>
-        <div class="container-fluid">
-            <div class="row justify-content-center">
-                <div class="col-12 col-lg-8">
-                    <div class="card">
-                        <div class="card-header">Módulos de administración</div>
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item"><NavLink href="/admin/users" class="nav-link">Usuarios</NavLink></li>
-                            <li class="list-group-item"><NavLink href="/admin/roles" class="nav-link">Roles</NavLink></li>
-                            <li class="list-group-item"><NavLink href="/admin/areas" class="nav-link">Áreas</NavLink></li>
-                            <li class="list-group-item"><NavLink href="/admin/user-areas" class="nav-link">Áreas por usuario</NavLink></li>
-                            <li class="list-group-item"><NavLink href="/admin/routing" class="nav-link">Redirección</NavLink></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <RadzenStack Style="min-height:60vh" AlignItems="Radzen.AlignItems.Center" JustifyContent="Radzen.JustifyContent.Center">
+            <RadzenCard Style="width:100%; max-width:640px;">
+                <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
+                    <RadzenHeading Size="Radzen.HeadingSize.H1" Text="Administración" Style="text-align:center" />
+                    <RadzenPanelMenu ShowArrow="false">
+                        <RadzenPanelMenuItem Text="Usuarios" Icon="group" Path="/admin/users" />
+                        <RadzenPanelMenuItem Text="Roles" Icon="admin_panel_settings" Path="/admin/roles" />
+                        <RadzenPanelMenuItem Text="Áreas" Icon="domain" Path="/admin/areas" />
+                        <RadzenPanelMenuItem Text="Áreas por usuario" Icon="badge" Path="/admin/user-areas" />
+                        <RadzenPanelMenuItem Text="Redirección" Icon="alt_route" Path="/admin/routing" />
+                    </RadzenPanelMenu>
+                </RadzenStack>
+            </RadzenCard>
+        </RadzenStack>
     </Authorized>
     <NotAuthorized>
-        <div class="alert alert-danger">Acceso no autorizado.</div>
+        <RadzenAlert Severity="Radzen.AlertSeverity.Error">
+            Acceso no autorizado.
+        </RadzenAlert>
     </NotAuthorized>
 </AuthorizeView>

@@ -14,6 +14,9 @@ public partial class UserAreasAdmin : ComponentBase
     private List<UserListItem> users = new();
     private string selectedUserId = string.Empty;
     private int selectedAreaId = 0;
+
+    protected bool CanAssign => !string.IsNullOrWhiteSpace(selectedUserId) && selectedAreaId != 0;
+
     [Inject] private IUserAreaAdminService UserAreaAdmin { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
@@ -31,7 +34,7 @@ public partial class UserAreasAdmin : ComponentBase
 
     private async Task Assign()
     {
-        if (string.IsNullOrWhiteSpace(selectedUserId) || selectedAreaId == 0) return;
+        if (!CanAssign) return;
 
         if (await UserAreaAdmin.AssignAsync(selectedUserId, selectedAreaId))
         {

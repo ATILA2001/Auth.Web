@@ -1,55 +1,58 @@
 @page "/admin/users"
+@using Auth.Web.Services.Admin
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Admin")]
-@using Auth.Web.Services.Admin
+@inject NavigationManager NavigationManager
 
-<h3>Usuarios</h3>
+<PageTitle>Usuarios</PageTitle>
 
-<div class="row mb-3">
-    <div class="col">
-        <input class="form-control" @bind="search" @bind:after="Filter" placeholder="Buscar" />
-    </div>
-</div>
+<RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
+        <RadzenButton Text="Volver" Icon="arrow_back" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(() => NavigationManager.NavigateTo("/admin"))" />
+        <RadzenHeading Size="Radzen.HeadingSize.H3" Text="Usuarios" />
+    </RadzenStack>
 
-<table class="table table-sm table-striped">
-    <thead>
-        <tr>
-            <th>Usuario</th>
-            <th>Correo</th>
-            <th>Roles</th>
-            <th style="width:140px"></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var u in filteredUsers)
-        {
-            <tr>
-                <td>@u.UserName</td>
-                <td>@u.Email</td>
-                <td><span>@string.Join(", ", u.Roles)</span></td>
-                <td><button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditRoles(u)">Roles</button></td>
-            </tr>
-        }
-    </tbody>
-</table>
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
+        <RadzenTextBox @bind-Value="search" Placeholder="Buscar" Style="width:320px" Change="@(args => Filter())" />
+    </RadzenStack>
 
-<EditForm Model="roleEdit" OnValidSubmit="SaveUserRoles">
-    <DataAnnotationsValidator />
+    <RadzenCard>
+        <RadzenDataGrid TItem="UserItem" Data="@filteredUsers" AllowPaging="true" PageSize="10">
+            <Columns>
+                <RadzenDataGridColumn TItem="UserItem" Property="UserName" Title="Usuario" />
+                <RadzenDataGridColumn TItem="UserItem" Property="Email" Title="Correo" />
+                <RadzenDataGridColumn TItem="UserItem" Title="Roles">
+                    <Template Context="u">
+                        @string.Join(", ", u.Roles)
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="UserItem" Context="u" Width="140px">
+                    <Template Context="u">
+                        <RadzenButton Text="Roles" Icon="manage_accounts" Size="Radzen.ButtonSize.Small" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(args => EditRoles(u))" />
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenCard>
+
     @if (editUser is not null)
     {
-        <div class="card mt-3">
-            <div class="card-header">Editar roles de @editUser.UserName</div>
-            <div class="card-body">
-                @foreach (var r in allRoles)
-                {
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" checked="@selectedRoles.Contains(r)" @onchange="args => ToggleRole(r, args.Value as bool? == true)" />
-                        <label class="form-check-label">@r</label>
-                    </div>
-                }
-                <button class="btn btn-primary mt-2" type="submit">Guardar</button>
-                <button class="btn btn-link" type="button" @onclick="CancelEdit">Cancelar</button>
-            </div>
-        </div>
+        <RadzenCard>
+            <RadzenFieldset Text="@($"Editar roles de {editUser.UserName}")">
+                <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="1">
+                    @foreach (var r in allRoles)
+                    {
+                        <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Gap="1">
+                            <RadzenCheckBox Value="@selectedRoles.Contains(r)" Change="@((bool? v) => ToggleRole(r, v == true))" />
+                            <RadzenLabel Text="@r" />
+                        </RadzenStack>
+                    }
+                    <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
+                        <RadzenButton Text="Guardar" ButtonStyle="Radzen.ButtonStyle.Primary" Click="@(_ => SaveUserRoles())" />
+                        <RadzenButton Text="Cancelar" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(_ => CancelEdit())" />
+                    </RadzenStack>
+                </RadzenStack>
+            </RadzenFieldset>
+        </RadzenCard>
     }
-</EditForm>
+</RadzenStack>

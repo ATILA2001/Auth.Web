@@ -1,68 +1,79 @@
 @page "/admin/routing"
 @using Auth.Web.Domain.Entities
 @using Auth.Web.Services.Admin
+@inject NavigationManager NavigationManager
 
 <AuthorizeView Roles="Admin">
     <Authorized>
-        <h3>Redirección por áreas</h3>
+        <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
+            <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
+                <RadzenButton Text="Volver" Icon="arrow_back" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(() => NavigationManager.NavigateTo("/admin"))" />
+                <RadzenHeading Size="Radzen.HeadingSize.H3" Text="Redirección por áreas" />
+            </RadzenStack>
 
-        <div class="row g-3 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label">Área</label>
-                <select class="form-select" @bind="newRule.AreaId">
-                    <option value="0">Seleccione...</option>
-                    @foreach (var a in areas)
-                    {
-                        <option value="@a.Id">@a.Name</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">ClientId</label>
-                <input class="form-control" @bind="newRule.ClientId" />
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">ReturnUrl</label>
-                <input class="form-control" @bind="newRule.ReturnUrl" />
-            </div>
-            <div class="col-md-1">
-                <label class="form-label">Priority</label>
-                <input class="form-control" type="number" @bind="newRule.Priority" />
-            </div>
-            <div class="col-md-1">
-                <button class="btn btn-primary" @onclick="AddRule">Agregar</button>
-            </div>
-        </div>
+            <RadzenCard>
+                <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.End" Gap="1">
+                    <RadzenFieldset Text="Nueva regla" Style="width:100%">
+                        <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.End" Gap="1">
+                            <RadzenDropDown Data="@areas" TextProperty="Name" ValueProperty="Id" @bind-Value="newRule.AreaId" Placeholder="Área" Style="width:220px" />
+                            <RadzenTextBox @bind-Value="newRule.ClientId" Placeholder="ClientId" Style="width:220px" />
+                            <RadzenTextBox @bind-Value="newRule.ReturnUrl" Placeholder="ReturnUrl" Style="width:360px" />
+                            <RadzenNumeric @bind-Value="newRule.Priority" Style="width:120px" />
+                            <RadzenCheckBox @bind-Value="newRule.IsActive" />
+                            <RadzenLabel Text="Activo" />
+                            <RadzenButton Text="Agregar" ButtonStyle="Radzen.ButtonStyle.Primary" Click="@(args => AddRule())" />
+                        </RadzenStack>
+                    </RadzenFieldset>
+                </RadzenStack>
+            </RadzenCard>
 
-        <table class="table table-sm table-striped mt-3">
-            <thead>
-                <tr>
-                    <th>Área</th>
-                    <th>ClientId</th>
-                    <th>ReturnUrl</th>
-                    <th>Priority</th>
-                    <th>Activo</th>
-                    <th style="width:120px"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var r in rules)
-                {
-                    <tr>
-                        <td>@areas.First(a => a.Id == r.AreaId).Name</td>
-                        <td><input class="form-control form-control-sm" @bind="r.ClientId" @bind:after="() => Save(r)" /></td>
-                        <td><input class="form-control form-control-sm" @bind="r.ReturnUrl" @bind:after="() => Save(r)" /></td>
-                        <td><input class="form-control form-control-sm" type="number" @bind="r.Priority" @bind:after="() => Save(r)" /></td>
-                        <td><input class="form-check-input" type="checkbox" @bind="r.IsActive" @bind:after="() => Save(r)" /></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(r.Id)">Eliminar</button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+            <RadzenCard>
+                <RadzenDataGrid TItem="AreaRoute" Data="@rules" @ref="grid" EditMode="Radzen.DataGridEditMode.Single" AllowPaging="true" PageSize="10" RowUpdate="@Save">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="AreaRoute" Title="Área">
+                            <Template Context="r">
+                                @areas.FirstOrDefault(a => a.Id == r.AreaId)?.Name
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="AreaRoute" Property="ClientId" Title="ClientId">
+                            <EditTemplate Context="r">
+                                <RadzenTextBox @bind-Value="r.ClientId" Style="width:100%" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="AreaRoute" Property="ReturnUrl" Title="ReturnUrl">
+                            <EditTemplate Context="r">
+                                <RadzenTextBox @bind-Value="r.ReturnUrl" Style="width:100%" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="AreaRoute" Property="Priority" Title="Priority" Width="120px">
+                            <EditTemplate Context="r">
+                                <RadzenNumeric @bind-Value="r.Priority" Style="width:100%" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="AreaRoute" Title="Activo" Width="120px">
+                            <Template Context="r">
+                                <RadzenCheckBox Value="@r.IsActive" Disabled="true" />
+                            </Template>
+                            <EditTemplate Context="r">
+                                <RadzenCheckBox @bind-Value="r.IsActive" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="AreaRoute" Context="r" Width="180px">
+                            <Template Context="r">
+                                <RadzenButton Icon="edit" Size="Radzen.ButtonSize.Small" Click="@(args => grid.EditRow(r))" />
+                                <RadzenButton Icon="delete" ButtonStyle="Radzen.ButtonStyle.Danger" Size="Radzen.ButtonSize.Small" class="rz-ml-2" Click="@(args => Delete(r.Id))" />
+                            </Template>
+                            <EditTemplate Context="r">
+                                <RadzenButton Icon="save" ButtonStyle="Radzen.ButtonStyle.Primary" Size="Radzen.ButtonSize.Small" Click="@(args => grid.UpdateRow(r))" />
+                                <RadzenButton Icon="cancel" Size="Radzen.ButtonSize.Small" class="rz-ml-2" Click="@(args => grid.CancelEditRow(r))" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenCard>
+        </RadzenStack>
     </Authorized>
     <NotAuthorized>
-        <div class="alert alert-danger">Acceso no autorizado.</div>
+        <RadzenAlert Severity="Radzen.AlertSeverity.Error">Acceso no autorizado.</RadzenAlert>
     </NotAuthorized>
 </AuthorizeView>

@@ -1,37 +1,36 @@
 @page "/admin/roles"
 @using Microsoft.AspNetCore.Identity
 @using Auth.Web.Services.Admin
+@inject NavigationManager NavigationManager
 
 <AuthorizeView Roles="Admin">
     <Authorized>
-        <h3>Roles</h3>
+        <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
+            <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
+                <RadzenButton Text="Volver" Icon="arrow_back" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(() => NavigationManager.NavigateTo("/admin"))" />
+                <RadzenHeading Size="Radzen.HeadingSize.H3" Text="Roles" />
+            </RadzenStack>
 
-        <div class="input-group mb-3" style="max-width:420px">
-            <input class="form-control" placeholder="Nuevo rol" @bind="newRole" />
-            <button class="btn btn-primary" @onclick="CreateRole">Crear</button>
-        </div>
+            <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Gap="1" Style="max-width:420px">
+                <RadzenTextBox @bind-Value="newRole" Placeholder="Nuevo rol" Style="width:100%" />
+                <RadzenButton Text="Crear" ButtonStyle="Radzen.ButtonStyle.Primary" Disabled="@string.IsNullOrWhiteSpace(newRole)" Click="@(args => CreateRole())" />
+            </RadzenStack>
 
-        <table class="table table-sm table-striped">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th style="width:100px"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var r in roles)
-                {
-                    <tr>
-                        <td>@r.Name</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteRole(r.Id)">Eliminar</button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+            <RadzenCard>
+                <RadzenDataGrid TItem="IdentityRole" Data="@roles" AllowPaging="true" PageSize="10">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="IdentityRole" Property="Name" Title="Nombre" />
+                        <RadzenDataGridColumn TItem="IdentityRole" Context="r" Width="120px">
+                            <Template Context="r">
+                                <RadzenButton Icon="delete" ButtonStyle="Radzen.ButtonStyle.Danger" Size="Radzen.ButtonSize.Small" Click="@(args => DeleteRole(r.Id))" />
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenCard>
+        </RadzenStack>
     </Authorized>
     <NotAuthorized>
-        <div class="alert alert-danger">Acceso no autorizado.</div>
+        <RadzenAlert Severity="Radzen.AlertSeverity.Error">Acceso no autorizado.</RadzenAlert>
     </NotAuthorized>
 </AuthorizeView>
