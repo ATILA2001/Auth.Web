@@ -20,15 +20,14 @@
                         {
                             <RadzenAlert Severity="Radzen.AlertSeverity.Success" Style="width:100%">@SuccessMessage</RadzenAlert>
                         }
-                        <EditForm Model="@Input" OnValidSubmit="@ExecuteLogin">
-                            <DataAnnotationsValidator />
-                            <ValidationSummary />
-                            <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="20">
-                                <RadzenTextBox @bind-Value="Input.UserNameOrEmail" Placeholder="Correo electrónico / CUIL" Style="width:100%" />
-                                <RadzenPassword @bind-Value="Input.Password" Placeholder="Contraseña" Style="width:100%" />
-                                <RadzenButton ButtonStyle="Radzen.ButtonStyle.Primary" Text="Iniciar" Type="Radzen.ButtonType.Submit" Style="width:100%" />
-                            </RadzenStack>
-                        </EditForm>
+
+                        <form method="post" action="/connect/login">
+                            <input name="UserNameOrEmail" placeholder="Correo electrónico / CUIL" style="width:100%" @bind="Input.UserNameOrEmail" />
+                            <input name="Password" type="password" placeholder="Contraseña" style="width:100%" @bind="Input.Password" />
+                            <input type="hidden" name="ReturnUrl" value="@ReturnUrlFromQuery" />
+                            <input type="hidden" name="ClientId" value="@ClientIdFromQuery" />
+                            <button type="submit" class="rz-button rz-primary" style="width:100%; margin-top:12px">Iniciar</button>
+                        </form>
                     </RadzenStack>
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Registrarse">

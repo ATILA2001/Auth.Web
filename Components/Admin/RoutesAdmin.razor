@@ -1,0 +1,56 @@
+@page "/admin/routes"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@using Auth.Web.Application.Admin.Dtos
+
+<PageTitle>Rutas</PageTitle>
+
+<RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
+        <RadzenButton Text="Volver" Icon="arrow_back" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(() => NavigationManager.NavigateTo("/admin"))" />
+        <RadzenHeading Size="Radzen.HeadingSize.H3" Text="Rutas por Área" />
+    </RadzenStack>
+
+    <RadzenButton Text="Nueva" Icon="add" ButtonStyle="Radzen.ButtonStyle.Primary" Click="@(() => BeginCreate())" />
+
+    <RadzenCard>
+        <RadzenDataGrid TItem="AreaRouteAdminDto" Data="@routes" AllowPaging="true" PageSize="10">
+            <Columns>
+                <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="AreaName" Title="Área" />
+                <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="ApplicationName" Title="Cliente" />
+                <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="ReturnUrl" Title="ReturnUrl" />
+                <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="Priority" Title="Prioridad" />
+                <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="IsActive" Title="Activo" />
+                <RadzenDataGridColumn TItem="AreaRouteAdminDto" Context="r" Width="180px">
+                    <Template Context="r">
+                        <RadzenButton Icon="edit" Size="Radzen.ButtonSize.Small" Click="@(() => BeginEdit(r))" />
+                        <RadzenButton Icon="delete" ButtonStyle="Radzen.ButtonStyle.Danger" Size="Radzen.ButtonSize.Small" class="rz-ml-2" Click="@(() => DeleteRoute(r.Id))" />
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenCard>
+
+    @if (editing)
+    {
+        <RadzenCard Style="max-width:740px">
+            <RadzenFieldset Text="@(editModel.Id == 0 ? "Crear ruta" : $"Editar ruta {editModel.Id}")">
+                <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
+                    <RadzenDropDown Data="@areas" TextProperty="Name" ValueProperty="Id" @bind-Value="selectedAreaId" Style="width:100%" Placeholder="Área" />
+                    <RadzenDropDown Data="@clients" TextProperty="ClientId" ValueProperty="Id" @bind-Value="selectedClientId" Style="width:100%" Placeholder="Cliente" />
+                    <RadzenTextBox @bind-Value="editReturnUrl" Placeholder="ReturnUrl" Style="width:100%" />
+                    <RadzenNumeric @bind-Value="editPriority" Placeholder="Prioridad" Style="width:160px" />
+                    <RadzenCheckBox @bind-Value="editIsActive" /> <RadzenLabel Text="Activo" />
+                    @if (!string.IsNullOrWhiteSpace(validationError))
+                    {
+                        <RadzenAlert Severity="Radzen.AlertSeverity.Error">@validationError</RadzenAlert>
+                    }
+                    <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
+                        <RadzenButton Text="Guardar" ButtonStyle="Radzen.ButtonStyle.Primary" Click="@(() => SaveRoute())" />
+                        <RadzenButton Text="Cancelar" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(() => CancelEdit())" />
+                    </RadzenStack>
+                </RadzenStack>
+            </RadzenFieldset>
+        </RadzenCard>
+    }
+</RadzenStack>

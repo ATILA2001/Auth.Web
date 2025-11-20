@@ -1,36 +1,32 @@
 @page "/admin/roles"
-@using Microsoft.AspNetCore.Identity
-@using Auth.Web.Services.Admin
-@inject NavigationManager NavigationManager
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@using Auth.Web.Application.Admin.Dtos
 
-<AuthorizeView Roles="Admin">
-    <Authorized>
-        <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
-            <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
-                <RadzenButton Text="Volver" Icon="arrow_back" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(() => NavigationManager.NavigateTo("/admin"))" />
-                <RadzenHeading Size="Radzen.HeadingSize.H3" Text="Roles" />
-            </RadzenStack>
+<PageTitle>Roles</PageTitle>
 
-            <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Gap="1" Style="max-width:420px">
-                <RadzenTextBox @bind-Value="newRole" Placeholder="Nuevo rol" Style="width:100%" />
-                <RadzenButton Text="Crear" ButtonStyle="Radzen.ButtonStyle.Primary" Disabled="@string.IsNullOrWhiteSpace(newRole)" Click="@(args => CreateRole())" />
-            </RadzenStack>
+<RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
+        <RadzenButton Text="Volver" Icon="arrow_back" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(() => NavigationManager.NavigateTo("/admin"))" />
+        <RadzenHeading Size="Radzen.HeadingSize.H3" Text="Roles" />
+    </RadzenStack>
 
-            <RadzenCard>
-                <RadzenDataGrid TItem="IdentityRole" Data="@roles" AllowPaging="true" PageSize="10">
-                    <Columns>
-                        <RadzenDataGridColumn TItem="IdentityRole" Property="Name" Title="Nombre" />
-                        <RadzenDataGridColumn TItem="IdentityRole" Context="r" Width="120px">
-                            <Template Context="r">
-                                <RadzenButton Icon="delete" ButtonStyle="Radzen.ButtonStyle.Danger" Size="Radzen.ButtonSize.Small" Click="@(args => DeleteRole(r.Id))" />
-                            </Template>
-                        </RadzenDataGridColumn>
-                    </Columns>
-                </RadzenDataGrid>
-            </RadzenCard>
-        </RadzenStack>
-    </Authorized>
-    <NotAuthorized>
-        <RadzenAlert Severity="Radzen.AlertSeverity.Error">Acceso no autorizado.</RadzenAlert>
-    </NotAuthorized>
-</AuthorizeView>
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Gap="1" Style="max-width:420px">
+        <RadzenTextBox @bind-Value="newRole" Placeholder="Nuevo rol" Style="width:100%" />
+        <RadzenButton Text="Crear" ButtonStyle="Radzen.ButtonStyle.Primary" Disabled="@string.IsNullOrWhiteSpace(newRole)" Click="@(args => CreateRole())" />
+    </RadzenStack>
+
+    <RadzenCard>
+        <RadzenDataGrid TItem="RoleAdminDto" Data="@roles" AllowPaging="true" PageSize="10">
+            <Columns>
+                <RadzenDataGridColumn TItem="RoleAdminDto" Property="Name" Title="Nombre" />
+                <RadzenDataGridColumn TItem="RoleAdminDto" Property="UserCount" Title="Usuarios" />
+                <RadzenDataGridColumn TItem="RoleAdminDto" Context="r" Width="120px">
+                    <Template Context="r">
+                        <RadzenButton Icon="delete" ButtonStyle="Radzen.ButtonStyle.Danger" Size="Radzen.ButtonSize.Small" Click="@(() => DeleteRole(r.Id))" />
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenCard>
+</RadzenStack>

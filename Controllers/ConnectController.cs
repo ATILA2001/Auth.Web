@@ -1,8 +1,8 @@
-using System;
-using Auth.Web.Services.Abstractions;
-using Microsoft.AspNetCore.Identity;
+using Auth.Web.Application.Auth;
+using Auth.Web.Application.Dtos;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.AspNetCore.Identity;
+using Auth.Web.Domain.Entities;
 
 namespace Auth.Web.Controllers;
 
@@ -10,83 +10,68 @@ namespace Auth.Web.Controllers;
 [Route("connect")]
 public class ConnectController : ControllerBase
 {
-    private readonly IAdAuthService _adAuthService;
-    private readonly IProvisioningService _provisioningService;
-    private readonly ITokenService _tokenService;
-    private readonly IPermissionService _permissionService;
-    private readonly IClientService _clientService;
-    private readonly SignInManager<Domain.Entities.ApplicationUser> _signInManager;
-    private readonly UserManager<Domain.Entities.ApplicationUser> _userManager;
+    private readonly IAuthFlowService _authFlowService;
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager;
 
     public ConnectController(
-        IAdAuthService adAuthService,
-        IProvisioningService provisioningService,
-        ITokenService tokenService,
-        IPermissionService permissionService,
-        IClientService clientService,
-        UserManager<Domain.Entities.ApplicationUser> userManager,
-        SignInManager<Domain.Entities.ApplicationUser> signInManager)
+        IAuthFlowService authFlowService,
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager)
     {
-        _adAuthService = adAuthService;
-        _provisioningService = provisioningService;
-        _tokenService = tokenService;
-        _permissionService = permissionService;
-        _clientService = clientService;
+        _authFlowService = authFlowService;
         _userManager = userManager;
         _signInManager = signInManager;
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    public async Task<IActionResult> Login([FromForm] LoginRequestDto request, CancellationToken cancellationToken)
     {
-        if (!await _adAuthService.ValidateAsync(request.UserName, request.Password))
+        var outcome = await _authFlowService.LoginAsync(request, cancellationToken);
+
+        switch (outcome.Type)
         {
-            return Unauthorized();
+            case LoginOutcomeType.SuccessAdmin:
+            {
+                var user = await _userManager.FindByNameAsync(request.UserNameOrEmail)
+                           ?? await _userManager.FindByEmailAsync(request.UserNameOrEmail);
+                if (user is null)
+                {
+                    return Unauthorized("No se encontró el usuario admin.");
+                }
+                await _signInManager.SignInAsync(user, isPersistent: false);
+                var redirectUrl = outcome.RedirectUrl ?? "/admin";
+                return Redirect(redirectUrl);
+            }
+            case LoginOutcomeType.SuccessExternalApp:
+            {
+                if (string.IsNullOrEmpty(outcome.RedirectUrl))
+                {
+                    return BadRequest("No se pudo determinar la URL de destino.");
+                }
+                return Redirect(outcome.RedirectUrl);
+            }
+            case LoginOutcomeType.Failure:
+            default:
+                return Unauthorized(outcome.ErrorMessage ?? "No se pudo iniciar sesión.");
         }
-
-        var client = await _clientService.GetAsync(request.ClientId);
-        if (client is null)
-        {
-            return BadRequest("Cliente inválido");
-        }
-
-        if (!_clientService.IsReturnUrlAllowed(client, request.ReturnUrl))
-        {
-            return BadRequest("ReturnUrl inválida");
-        }
-
-        var user = await _provisioningService.EnsureUserAsync(request.UserName, request.DisplayName);
-        var roles = await _userManager.GetRolesAsync(user);
-        var permissions = await _permissionService.GetAsync(request.UserName);
-        var token = await _tokenService.CreateAsync(user, roles, permissions, client.Audience);
-
-        var redirect = AppendTokenToUrl(request.ReturnUrl, token);
-        return Ok(new { redirect });
     }
 
     [HttpPost("portal-login")]
-    public async Task<IActionResult> PortalLogin([FromForm] PortalLoginRequest request)
+    public async Task<IActionResult> PortalLogin([FromForm] LoginRequestDto request, CancellationToken cancellationToken)
     {
-        if (!await _adAuthService.ValidateAsync(request.UserName, request.Password))
+        var outcome = await _authFlowService.LoginAsync(request, cancellationToken);
+        if (outcome.Type == LoginOutcomeType.SuccessAdmin)
         {
-            return Unauthorized();
+            var user = await _userManager.FindByNameAsync(request.UserNameOrEmail)
+                       ?? await _userManager.FindByEmailAsync(request.UserNameOrEmail);
+            if (user is null)
+            {
+                return Unauthorized("No se encontró el usuario admin.");
+            }
+            await _signInManager.SignInAsync(user, isPersistent: false);
+            return LocalRedirect(outcome.RedirectUrl ?? "/admin");
         }
-
-        var user = await _userManager.FindByNameAsync(request.UserName) ?? await _userManager.FindByEmailAsync(request.UserName);
-        if (user is null)
-        {
-            return Unauthorized();
-        }
-
-        await _signInManager.SignInAsync(user, isPersistent: false);
-        return LocalRedirect("/account/dashboard");
+        return Unauthorized(outcome.ErrorMessage ?? "No se pudo iniciar sesión.");
     }
-
-    private static string AppendTokenToUrl(string url, string token)
-    {
-        return QueryHelpers.AddQueryString(url, "token", token);
-    }
-
-    public record LoginRequest(string UserName, string Password, string ClientId, string ReturnUrl, string? DisplayName);
-    public record PortalLoginRequest(string UserName, string Password);
 }

@@ -1,12 +1,14 @@
 using System.DirectoryServices.AccountManagement;
 using Auth.Web.Configuration;
-using Auth.Web.Services.Abstractions;
+using Auth.Web.Services.Abstractions; // legacy
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using AppAD = Auth.Web.Application.Abstractions.IActiveDirectoryAuthService;
+using Auth.Web.Application.Abstractions;
 
 namespace Auth.Web.Services.Auth;
 
-public class AdAuthService : IAdAuthService
+public class AdAuthService : IAdAuthService, AppAD
 {
     private readonly AdOptions _options;
     private readonly ILogger<AdAuthService> _logger;
@@ -17,7 +19,13 @@ public class AdAuthService : IAdAuthService
         _logger = logger;
     }
 
-    public Task<bool> ValidateAsync(string userName, string password)
+    // Legacy signature
+    public Task<bool> ValidateAsync(string userName, string password) => ValidateCredentialsInternal(userName, password);
+
+    // Application signature
+    public Task<bool> ValidateCredentialsAsync(string userNameOrEmail, string password) => ValidateCredentialsInternal(userNameOrEmail, password);
+
+    private Task<bool> ValidateCredentialsInternal(string userName, string password)
     {
         try
         {
@@ -61,9 +69,31 @@ public class AdAuthService : IAdAuthService
         }
     }
 
-    private PrincipalContext CreateContext()
+    // Application enrichment (simple stub)
+    public Task<AdUserInfo?> GetUserInfoAsync(string userNameOrEmail)
     {
-        // Simplificado: siempre usa solo el dominio configurado.
-        return new PrincipalContext(ContextType.Domain, _options.Domain);
+        try
+        {
+            using var context = CreateContext();
+            using var userPrincipal = UserPrincipal.FindByIdentity(context, userNameOrEmail);
+            if (userPrincipal is null)
+            {
+                return Task.FromResult<AdUserInfo?>(null);
+            }
+            var info = new AdUserInfo
+            {
+                UserName = userPrincipal.SamAccountName ?? userNameOrEmail,
+                Email = userPrincipal.EmailAddress,
+                DisplayName = userPrincipal.DisplayName
+            };
+            return Task.FromResult<AdUserInfo?>(info);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "GetUserInfoAsync failed for {User}", userNameOrEmail);
+            return Task.FromResult<AdUserInfo?>(null);
+        }
     }
+
+    private PrincipalContext CreateContext() => new(ContextType.Domain, _options.Domain);
 }

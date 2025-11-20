@@ -1,8 +1,7 @@
 @page "/admin/users"
-@using Auth.Web.Services.Admin
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Admin")]
-@inject NavigationManager NavigationManager
+@using Auth.Web.Application.Admin.Dtos
 
 <PageTitle>Usuarios</PageTitle>
 
@@ -17,39 +16,37 @@
     </RadzenStack>
 
     <RadzenCard>
-        <RadzenDataGrid TItem="UserItem" Data="@filteredUsers" AllowPaging="true" PageSize="10">
+        <RadzenDataGrid TItem="UserAdminDto" Data="@filteredUsers" AllowPaging="true" PageSize="10">
             <Columns>
-                <RadzenDataGridColumn TItem="UserItem" Property="UserName" Title="Usuario" />
-                <RadzenDataGridColumn TItem="UserItem" Property="Email" Title="Correo" />
-                <RadzenDataGridColumn TItem="UserItem" Title="Roles">
-                    <Template Context="u">
-                        @string.Join(", ", u.Roles)
-                    </Template>
+                <RadzenDataGridColumn TItem="UserAdminDto" Property="UserName" Title="Usuario" />
+                <RadzenDataGridColumn TItem="UserAdminDto" Property="Email" Title="Correo" />
+                <RadzenDataGridColumn TItem="UserAdminDto" Title="Roles">
+                    <Template Context="u">@string.Join(", ", u.Roles)</Template>
                 </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="UserItem" Context="u" Width="140px">
+                <RadzenDataGridColumn TItem="UserAdminDto" Title="Áreas">
+                    <Template Context="u">@string.Join(", ", u.Areas)</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="UserAdminDto" Context="u" Width="160px">
                     <Template Context="u">
-                        <RadzenButton Text="Roles" Icon="manage_accounts" Size="Radzen.ButtonSize.Small" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(args => EditRoles(u))" />
+                        <RadzenButton Text="Editar" Icon="manage_accounts" Size="Radzen.ButtonSize.Small" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(args => BeginEdit(u))" />
                     </Template>
                 </RadzenDataGridColumn>
             </Columns>
         </RadzenDataGrid>
     </RadzenCard>
 
-    @if (editUser is not null)
+    @if (SelectedUser is not null)
     {
         <RadzenCard>
-            <RadzenFieldset Text="@($"Editar roles de {editUser.UserName}")">
-                <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="1">
-                    @foreach (var r in allRoles)
-                    {
-                        <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Gap="1">
-                            <RadzenCheckBox Value="@selectedRoles.Contains(r)" Change="@((bool? v) => ToggleRole(r, v == true))" />
-                            <RadzenLabel Text="@r" />
-                        </RadzenStack>
-                    }
+            <RadzenFieldset Text="@($"Editar usuario {SelectedUser.UserName}")">
+                <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
+                    <RadzenLabel Text="Roles" />
+                    <RadzenDropDown Multiple="true" Data="@AllRoles" TextProperty="Name" ValueProperty="Name" @bind-Value="SelectedRoles" Style="width:100%" />
+                    <RadzenLabel Text="Áreas" />
+                    <RadzenDropDown Multiple="true" Data="@AllAreas" TextProperty="Name" ValueProperty="Id" @bind-Value="SelectedAreaIds" Style="width:100%" />
                     <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
-                        <RadzenButton Text="Guardar" ButtonStyle="Radzen.ButtonStyle.Primary" Click="@(_ => SaveUserRoles())" />
-                        <RadzenButton Text="Cancelar" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(_ => CancelEdit())" />
+                        <RadzenButton Text="Guardar" ButtonStyle="Radzen.ButtonStyle.Primary" Click="@(args => SaveUser())" />
+                        <RadzenButton Text="Cancelar" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(args => CancelEdit())" />
                     </RadzenStack>
                 </RadzenStack>
             </RadzenFieldset>

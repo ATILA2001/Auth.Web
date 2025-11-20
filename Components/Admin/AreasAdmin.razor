@@ -1,45 +1,41 @@
 @page "/admin/areas"
-@using Auth.Web.Domain.Entities
-@using Auth.Web.Services.Admin
-@inject NavigationManager NavigationManager
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@using Auth.Web.Application.Admin.Dtos
 
-<AuthorizeView Roles="Admin">
-    <Authorized>
-        <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
-            <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
-                <RadzenButton Text="Volver" Icon="arrow_back" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(() => NavigationManager.NavigateTo("/admin"))" />
-                <RadzenHeading Size="Radzen.HeadingSize.H3" Text="Áreas" />
-            </RadzenStack>
+<PageTitle>Áreas</PageTitle>
 
-            <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Gap="1" Style="max-width:520px">
-                <RadzenTextBox @bind-Value="newArea" Placeholder="Nueva área" Style="width:100%" />
-                <RadzenButton Text="Crear" ButtonStyle="Radzen.ButtonStyle.Primary" Disabled="@string.IsNullOrWhiteSpace(newArea)" Click="@(args => CreateArea())" />
-            </RadzenStack>
+<RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
+        <RadzenButton Text="Volver" Icon="arrow_back" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(() => NavigationManager.NavigateTo("/admin"))" />
+        <RadzenHeading Size="Radzen.HeadingSize.H3" Text="Áreas" />
+    </RadzenStack>
 
-            <RadzenCard>
-                <RadzenDataGrid TItem="Area" Data="@areas" @ref="grid" EditMode="Radzen.DataGridEditMode.Single" AllowPaging="true" PageSize="10" RowUpdate="@OnRowUpdate">
-                    <Columns>
-                        <RadzenDataGridColumn TItem="Area" Property="Name" Title="Nombre">
-                            <EditTemplate Context="a">
-                                <RadzenTextBox @bind-Value="a.Name" Style="width:100%" />
-                            </EditTemplate>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="Area" Context="a" Width="160px">
-                            <Template Context="a">
-                                <RadzenButton Icon="edit" Size="Radzen.ButtonSize.Small" Click="@(args => grid.EditRow(a))" />
-                                <RadzenButton Icon="delete" ButtonStyle="Radzen.ButtonStyle.Danger" Size="Radzen.ButtonSize.Small" class="rz-ml-2" Click="@(args => DeleteArea(a.Id))" />
-                            </Template>
-                            <EditTemplate Context="a">
-                                <RadzenButton Icon="save" ButtonStyle="Radzen.ButtonStyle.Primary" Size="Radzen.ButtonSize.Small" Click="@(args => grid.UpdateRow(a))" />
-                                <RadzenButton Icon="cancel" Size="Radzen.ButtonSize.Small" class="rz-ml-2" Click="@(args => grid.CancelEditRow(a))" />
-                            </EditTemplate>
-                        </RadzenDataGridColumn>
-                    </Columns>
-                </RadzenDataGrid>
-            </RadzenCard>
-        </RadzenStack>
-    </Authorized>
-    <NotAuthorized>
-        <RadzenAlert Severity="Radzen.AlertSeverity.Error">Acceso no autorizado.</RadzenAlert>
-    </NotAuthorized>
-</AuthorizeView>
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Gap="1" Style="max-width:520px">
+        <RadzenTextBox @bind-Value="newArea" Placeholder="Nueva área" Style="width:100%" />
+        <RadzenButton Text="Crear" ButtonStyle="Radzen.ButtonStyle.Primary" Disabled="@string.IsNullOrWhiteSpace(newArea)" Click="@(args => CreateArea())" />
+    </RadzenStack>
+
+    <RadzenCard>
+        <RadzenDataGrid TItem="AreaAdminDto" Data="@areas" @ref="grid" EditMode="Radzen.DataGridEditMode.Single" AllowPaging="true" PageSize="10" RowUpdate="@OnRowUpdate">
+            <Columns>
+                <RadzenDataGridColumn TItem="AreaAdminDto" Property="Name" Title="Nombre">
+                    <EditTemplate Context="a">
+                        <RadzenTextBox @bind-Value="a.Name" Style="width:100%" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="AreaAdminDto" Property="UserCount" Title="Usuarios" />
+                <RadzenDataGridColumn TItem="AreaAdminDto" Context="a" Width="160px">
+                    <Template Context="a">
+                        <RadzenButton Icon="edit" Size="Radzen.ButtonSize.Small" Click="@(args => grid.EditRow(a))" />
+                        <RadzenButton Icon="delete" ButtonStyle="Radzen.ButtonStyle.Danger" Size="Radzen.ButtonSize.Small" class="rz-ml-2" Click="@(args => DeleteArea(a.Id))" />
+                    </Template>
+                    <EditTemplate Context="a">
+                        <RadzenButton Icon="save" ButtonStyle="Radzen.ButtonStyle.Primary" Size="Radzen.ButtonSize.Small" Click="@(args => grid.UpdateRow(a))" />
+                        <RadzenButton Icon="cancel" Size="Radzen.ButtonSize.Small" class="rz-ml-2" Click="@(args => grid.CancelEditRow(a))" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenCard>
+</RadzenStack>

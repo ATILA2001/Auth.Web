@@ -1,8 +1,9 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
-using Auth.Web.Domain.Entities;
-using Auth.Web.Services.Admin;
+using Auth.Web.Application.Admin.Abstractions;
+using Auth.Web.Application.Admin.Dtos;
 using Radzen;
 using Radzen.Blazor;
 
@@ -10,42 +11,68 @@ namespace Auth.Web.Components.Admin;
 
 public partial class AreasAdmin : ComponentBase
 {
-    private List<Area> areas = new();
+    private List<AreaAdminDto> areas = new();
     private string newArea = string.Empty;
-    private RadzenDataGrid<Area> grid = default!;
+    private RadzenDataGrid<AreaAdminDto> grid = default!;
 
-    [Inject] private IAreaAdminService AreaAdmin { get; set; } = default!;
+    [Inject] private IAdminAreaService AdminAreaService { get; set; } = default!;
+    [Inject] private NotificationService NotificationService { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
-        areas = await AreaAdmin.GetAreasAsync();
+        areas = (await AdminAreaService.GetAreasAsync()).ToList();
     }
 
     private async Task CreateArea()
     {
-        var created = await AreaAdmin.CreateAsync(newArea);
-        if (created is not null)
+        try
         {
-            newArea = string.Empty;
-            areas = await AreaAdmin.GetAreasAsync();
-            await grid.Reload();
+            var id = await AdminAreaService.CreateAreaAsync(newArea);
+            if (id != 0)
+            {
+                NotificationService.Notify(NotificationSeverity.Success, "Área creada", $"Se creó '{newArea}' correctamente.");
+                newArea = string.Empty;
+                areas = (await AdminAreaService.GetAreasAsync()).ToList();
+                await grid.Reload();
+            }
+            else
+            {
+                NotificationService.Notify(NotificationSeverity.Warning, "Sin cambios", "Nombre inválido o duplicado.");
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Error al crear área", ex.Message);
         }
     }
 
-    private async Task OnRowUpdate(Area area)
+    private async Task OnRowUpdate(AreaAdminDto area)
     {
-        if (await AreaAdmin.UpdateNameAsync(area.Id, area.Name))
+        try
         {
-            areas = await AreaAdmin.GetAreasAsync();
+            await AdminAreaService.UpdateAreaAsync(area.Id, area.Name);
+            NotificationService.Notify(NotificationSeverity.Success, "Área actualizada", $"Se actualizó '{area.Name}'.");
+            areas = (await AdminAreaService.GetAreasAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Error al actualizar área", ex.Message);
         }
     }
 
     private async Task DeleteArea(int id)
     {
-        if (await AreaAdmin.DeleteAsync(id))
+        try
         {
-            areas = await AreaAdmin.GetAreasAsync();
+            await AdminAreaService.DeleteAreaAsync(id);
+            NotificationService.Notify(NotificationSeverity.Success, "Área eliminada", $"Id {id} removido.");
+            areas = (await AdminAreaService.GetAreasAsync()).ToList();
             await grid.Reload();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Error al eliminar área", ex.Message);
         }
     }
 }

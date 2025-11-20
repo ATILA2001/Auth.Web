@@ -4,12 +4,13 @@ using System.Linq;
 using System.Text.Json;
 using Auth.Web.Data;
 using Auth.Web.Domain.Entities;
-using Auth.Web.Services.Abstractions;
+using Auth.Web.Services.Abstractions; // legacy
 using Microsoft.EntityFrameworkCore;
+using AppClientService = Auth.Web.Application.Abstractions.IClientService;
 
 namespace Auth.Web.Services.Clients;
 
-public class ClientService : IClientService
+public class ClientService : IClientService, AppClientService
 {
     private readonly AuthDbContext _context;
 
@@ -33,7 +34,7 @@ public class ClientService : IClientService
         try
         {
             var urls = JsonSerializer.Deserialize<List<string>>(client.AllowedReturnUrlsJson) ?? [];
-            return urls.Any(u => string.Equals(u, returnUrl, StringComparison.OrdinalIgnoreCase));
+            return urls.Any(u => string.Equals(u?.TrimEnd('/'), returnUrl?.TrimEnd('/'), StringComparison.OrdinalIgnoreCase));
         }
         catch (JsonException)
         {

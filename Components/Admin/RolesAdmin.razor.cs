@@ -1,36 +1,60 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Identity;
-using Auth.Web.Services.Admin;
+using Auth.Web.Application.Admin.Abstractions;
+using Auth.Web.Application.Admin.Dtos;
+using Radzen;
 
 namespace Auth.Web.Components.Admin;
 
 public partial class RolesAdmin : ComponentBase
 {
-    private List<IdentityRole> roles = new();
+    private List<RoleAdminDto> roles = new();
     private string newRole = string.Empty;
-    [Inject] private IRoleAdminService RoleAdmin { get; set; } = default!;
+
+    [Inject] private IAdminRoleService RoleService { get; set; } = default!;
+    [Inject] private NotificationService Notifications { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
-        roles = await RoleAdmin.GetRolesAsync();
+        roles = (await RoleService.GetRolesAsync()).ToList();
     }
 
     private async Task CreateRole()
     {
-        if (await RoleAdmin.CreateRoleAsync(newRole))
+        try
         {
-            newRole = string.Empty;
-            roles = await RoleAdmin.GetRolesAsync();
+            var id = await RoleService.CreateRoleAsync(newRole);
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                Notifications.Notify(NotificationSeverity.Success, "Rol creado", $"Se creó '{newRole}'.");
+                newRole = string.Empty;
+                roles = (await RoleService.GetRolesAsync()).ToList();
+            }
+            else
+            {
+                Notifications.Notify(NotificationSeverity.Warning, "Sin cambios", "Nombre inválido o duplicado.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Notifications.Notify(NotificationSeverity.Error, "Error al crear rol", ex.Message);
         }
     }
 
     private async Task DeleteRole(string roleId)
     {
-        if (await RoleAdmin.DeleteRoleAsync(roleId))
+        try
         {
-            roles = await RoleAdmin.GetRolesAsync();
+            await RoleService.DeleteRoleAsync(roleId);
+            Notifications.Notify(NotificationSeverity.Success, "Rol eliminado", $"Id {roleId} eliminado.");
+            roles = (await RoleService.GetRolesAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Notify(NotificationSeverity.Error, "Error al eliminar rol", ex.Message);
         }
     }
 }

@@ -2,21 +2,29 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
-using Auth.Web.Services.Admin;
+using Auth.Web.Application.Admin.Abstractions;
+using Auth.Web.Application.Admin.Dtos;
+using Radzen;
 
 namespace Auth.Web.Components.Admin;
 
 public partial class UsersAdmin : ComponentBase
 {
-    [Inject] private IUserAdminService UserAdmin { get; set; } = default!;
+    [Inject] private IAdminUserService UserService { get; set; } = default!;
+    [Inject] private IAdminRoleService RoleService { get; set; } = default!;
+    [Inject] private IAdminAreaService AreaService { get; set; } = default!;
+    [Inject] private NotificationService Notifications { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     private string search = string.Empty;
-    private List<UserItem> users = new();
-    private List<UserItem> filteredUsers = new();
-    private UserItem? editUser;
-    private List<string> allRoles = new();
-    private HashSet<string> selectedRoles = new();
-    private object roleEdit = new();
+    private List<UserAdminDto> users = new();
+    private List<UserAdminDto> filteredUsers = new();
+
+    private UserAdminDto? SelectedUser;
+    private List<RoleAdminDto> AllRoles = new();
+    private List<AreaAdminDto> AllAreas = new();
+    private List<string> SelectedRoles = new();
+    private List<int> SelectedAreaIds = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -25,40 +33,45 @@ public partial class UsersAdmin : ComponentBase
 
     private async Task ReloadAsync()
     {
-        (users, allRoles) = await UserAdmin.GetAsync();
+        users = (await UserService.GetUsersAsync()).ToList();
         filteredUsers = users;
+        AllRoles = (await RoleService.GetRolesAsync()).ToList();
+        AllAreas = (await AreaService.GetAreasAsync()).ToList();
         StateHasChanged();
     }
 
     private void Filter()
     {
         filteredUsers = users
-            .Where(u => string.IsNullOrWhiteSpace(search) || (u.UserName?.Contains(search, StringComparison.OrdinalIgnoreCase) == true) || (u.Email?.Contains(search, StringComparison.OrdinalIgnoreCase) == true))
+            .Where(u => string.IsNullOrWhiteSpace(search)
+                || (u.UserName?.Contains(search, System.StringComparison.OrdinalIgnoreCase) == true)
+                || (u.Email?.Contains(search, System.StringComparison.OrdinalIgnoreCase) == true))
             .ToList();
     }
 
-    private void EditRoles(UserItem user)
+    private void BeginEdit(UserAdminDto user)
     {
-        editUser = user;
-        selectedRoles = user.Roles.ToHashSet(System.StringComparer.OrdinalIgnoreCase);
+        SelectedUser = user;
+        SelectedRoles = user.Roles.ToList();
+        SelectedAreaIds = user.AreaIds.ToList();
         StateHasChanged();
     }
 
-    private void ToggleRole(string role, bool selected)
+    private async Task SaveUser()
     {
-        if (selected) selectedRoles.Add(role); else selectedRoles.Remove(role);
+        if (SelectedUser is null) return;
+        try
+        {
+            await UserService.UpdateUserRolesAndAreasAsync(SelectedUser.Id, SelectedRoles, SelectedAreaIds);
+            Notifications.Notify(NotificationSeverity.Success, "Usuario actualizado", $"Se actualizaron roles/áreas de {SelectedUser.UserName}.");
+            SelectedUser = null;
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Notify(NotificationSeverity.Error, "Error al actualizar usuario", ex.Message);
+        }
     }
 
-    private async Task SaveUserRoles()
-    {
-        if (editUser is null) return;
-        await UserAdmin.UpdateRolesAsync(editUser.Id, selectedRoles);
-        editUser = null;
-        await ReloadAsync();
-    }
-
-    private void CancelEdit()
-    {
-        editUser = null;
-    }
+    private void CancelEdit() => SelectedUser = null;
 }

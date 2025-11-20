@@ -1,14 +1,15 @@
 using Auth.Web.Data;
 using Auth.Web.Domain.Dtos;
 using Auth.Web.Domain.Entities;
-using Auth.Web.Services.Abstractions;
 using Auth.Web.Utils;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using LegacyIPermissionService = Auth.Web.Services.Abstractions.IPermissionService;
+using AppIPermissionService = Auth.Web.Application.Abstractions.IPermissionService;
 
 namespace Auth.Web.Services.Permissions;
 
-public class PermissionService : IPermissionService
+public class PermissionService : LegacyIPermissionService, AppIPermissionService
 {
     private readonly AuthDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;

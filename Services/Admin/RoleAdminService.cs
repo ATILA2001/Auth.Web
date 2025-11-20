@@ -1,33 +1,26 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Auth.Web.Data;
+using Auth.Web.Application.Admin.Abstractions;
+using Auth.Web.Application.Admin.Dtos;
 
 namespace Auth.Web.Services.Admin;
 
-public interface IRoleAdminService
-{
-    Task<List<IdentityRole>> GetRolesAsync(CancellationToken ct = default);
-    Task<bool> CreateRoleAsync(string name, CancellationToken ct = default);
-    Task<bool> DeleteRoleAsync(string roleId, CancellationToken ct = default);
-}
-
-public sealed class RoleAdminService : IRoleAdminService
+// Keep legacy public methods but implement only new interface
+public sealed class RoleAdminService : IAdminRoleService
 {
     private readonly RoleManager<IdentityRole> _roleManager;
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly AuthDbContext _db;
 
-    public RoleAdminService(RoleManager<IdentityRole> roleManager, IServiceScopeFactory scopeFactory)
+    public RoleAdminService(RoleManager<IdentityRole> roleManager, AuthDbContext db)
     {
         _roleManager = roleManager;
-        _scopeFactory = scopeFactory;
+        _db = db;
     }
 
+    // Legacy-compatible methods (used by existing UI)
     public async Task<List<IdentityRole>> GetRolesAsync(CancellationToken ct = default)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-        return await db.Roles.AsNoTracking().OrderBy(r => r.Name).ToListAsync(ct);
-    }
+        => await _db.Roles.AsNoTracking().OrderBy(r => r.Name).ToListAsync(ct);
 
     public async Task<bool> CreateRoleAsync(string name, CancellationToken ct = default)
     {
@@ -43,5 +36,56 @@ public sealed class RoleAdminService : IRoleAdminService
         if (role is null) return false;
         var res = await _roleManager.DeleteAsync(role);
         return res.Succeeded;
+    }
+
+    // New interface implementation
+    async Task<IReadOnlyCollection<RoleAdminDto>> IAdminRoleService.GetRolesAsync(CancellationToken cancellationToken)
+    {
+        var roles = await _db.Roles.AsNoTracking().OrderBy(r => r.Name).ToListAsync(cancellationToken);
+        var userRoleCounts = await _db.UserRoles.AsNoTracking().GroupBy(ur => ur.RoleId)
+            .Select(g => new { RoleId = g.Key, Count = g.Count() }).ToListAsync(cancellationToken);
+        var countMap = userRoleCounts.ToDictionary(x => x.RoleId, x => x.Count);
+        return roles.Select(r => new RoleAdminDto
+        {
+            Id = r.Id,
+            Name = r.Name ?? string.Empty,
+            UserCount = countMap.TryGetValue(r.Id, out var c) ? c : 0
+        }).ToList();
+    }
+
+    async Task<RoleAdminDto?> IAdminRoleService.GetRoleByIdAsync(string roleId, CancellationToken cancellationToken)
+    {
+        var role = await _db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
+        if (role is null) return null;
+        var count = await _db.UserRoles.CountAsync(ur => ur.RoleId == roleId, cancellationToken);
+        return new RoleAdminDto { Id = role.Id, Name = role.Name ?? string.Empty, UserCount = count };
+    }
+
+    async Task<string> IAdminRoleService.CreateRoleAsync(string name, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return string.Empty;
+        if (await _roleManager.RoleExistsAsync(name))
+        {
+            var existing = await _roleManager.FindByNameAsync(name);
+            return existing?.Id ?? string.Empty;
+        }
+        var res = await _roleManager.CreateAsync(new IdentityRole(name.Trim()));
+        return res.Succeeded ? (await _roleManager.FindByNameAsync(name.Trim()))!.Id : string.Empty;
+    }
+
+    async Task IAdminRoleService.RenameRoleAsync(string roleId, string newName, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(newName)) return;
+        var role = await _roleManager.FindByIdAsync(roleId);
+        if (role is null) return;
+        role.Name = newName.Trim();
+        await _roleManager.UpdateAsync(role);
+    }
+
+    async Task IAdminRoleService.DeleteRoleAsync(string roleId, CancellationToken cancellationToken)
+    {
+        var role = await _roleManager.FindByIdAsync(roleId);
+        if (role is null) return;
+        await _roleManager.DeleteAsync(role);
     }
 }

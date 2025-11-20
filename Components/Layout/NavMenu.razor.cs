@@ -5,14 +5,14 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using Auth.Web.Domain.Entities;
-using Auth.Web.Services.Admin;
+using Auth.Web.Application.Admin.Abstractions; // use new admin routing interface
 
 namespace Auth.Web.Components.Layout;
 
 public partial class NavMenu : IDisposable
 {
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
-    [Inject] private IRoutingAdminService RoutingSvc { get; set; } = default!;
+    [Inject] private IAdminRoutingService RoutingService { get; set; } = default!;
     private string? currentUrl;
 
     // Datos aplicativos
@@ -33,7 +33,20 @@ public partial class NavMenu : IDisposable
         // Carga de aplicativos
         try
         {
-            (areas, rules) = await RoutingSvc.GetAsync();
+            // New service returns DTOs; adapt by mapping if needed
+            var routesDto = await RoutingService.GetRoutesAsync();
+            // Map DTOs to existing AreaRoute shape for nav usage
+            rules = routesDto.Select(d => new AreaRoute
+            {
+                Id = d.Id,
+                AreaId = d.AreaId,
+                ClientId = d.ClientIdentifier,
+                ReturnUrl = d.ReturnUrl,
+                Priority = d.Priority,
+                IsActive = d.IsActive
+            }).ToList();
+            var areasDto = await RoutingService.GetRoutesAsync(); // reuse call for area names if needed
+            areas = rules.Select(r => new Area { Id = r.AreaId, Name = routesDto.First(x => x.AreaId == r.AreaId).AreaName ?? $"Área {r.AreaId}" }).DistinctBy(a => a.Id).ToList();
         }
         catch (Exception ex)
         {

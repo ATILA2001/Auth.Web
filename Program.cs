@@ -4,16 +4,26 @@ using Auth.Web.Components.Account;
 using Auth.Web.Configuration;
 using Auth.Web.Data;
 using Auth.Web.Domain.Entities;
-using Auth.Web.Services.Abstractions;
-using Auth.Web.Services.Auth;
-using Auth.Web.Services.Clients;
-using Auth.Web.Services.Permissions;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Routing;
-using Auth.Web.Services.Routing;
 using Auth.Web.Services.Admin;
+using Auth.Web.Application.Abstractions;
+using Auth.Web.Application.Auth;
+using Auth.Web.Application.Users;
+using Auth.Web.Application.Permissions;
+using Auth.Web.Application.Admin.Abstractions; // new admin interfaces
+using LegacyRoutingService = Auth.Web.Services.Abstractions.IRoutingService;
+using LegacyPermissionService = Auth.Web.Services.Abstractions.IPermissionService;
+using LegacyClientService = Auth.Web.Services.Abstractions.IClientService;
+using LegacyAdAuthService = Auth.Web.Services.Abstractions.IAdAuthService;
+using Auth.Web.Services.Auth; // AdAuthService
+using Auth.Web.Services.Clients;
+using Auth.Web.Services.Permissions;
+using Auth.Web.Services.Routing;
+using InfraClientAdminService = Auth.Web.Infrastructure.Admin.ClientAdminService;
+using InfraRoutingAdminService = Auth.Web.Infrastructure.Admin.RoutingAdminService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,7 +64,6 @@ builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 
 builder.Services.AddHttpClient();
-// HttpContext accessor para componentes
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddCascadingAuthenticationState();
@@ -64,23 +73,36 @@ builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuth
 
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
-builder.Services.AddScoped<IAdAuthService, AdAuthService>();
-builder.Services.AddScoped<IProvisioningService, ProvisioningService>();
-builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddScoped<IPermissionService, PermissionService>();
-builder.Services.AddScoped<IClientService, ClientService>();
+// AD service implements both legacy and new interface
+builder.Services.AddScoped<LegacyAdAuthService, AdAuthService>();
+builder.Services.AddScoped<IActiveDirectoryAuthService, AdAuthService>();
 
-builder.Services.AddScoped<Auth.Web.Services.Abstractions.IRoutingService, Auth.Web.Services.Routing.RoutingService>();
+// JWT token service
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
-builder.Services.AddScoped<ILoginService, LoginService>();
+// Permission service implements both interfaces
+builder.Services.AddScoped<LegacyPermissionService, PermissionService>();
+builder.Services.AddScoped<Auth.Web.Application.Abstractions.IPermissionService, PermissionService>();
 
-builder.Services.AddScoped<IRouteQueryService, RouteQueryService>();
+// Client service implements both
+builder.Services.AddScoped<LegacyClientService, ClientService>();
+builder.Services.AddScoped<Auth.Web.Application.Abstractions.IClientService, ClientService>();
 
-builder.Services.AddScoped<IRoleAdminService, RoleAdminService>();
-builder.Services.AddScoped<IAreaAdminService, AreaAdminService>();
-builder.Services.AddScoped<IRoutingAdminService, RoutingAdminService>();
-builder.Services.AddScoped<IUserAreaAdminService, UserAreaAdminService>();
-builder.Services.AddScoped<IUserAdminService, UserAdminService>();
+// Routing service implements both
+builder.Services.AddScoped<LegacyRoutingService, RoutingService>();
+builder.Services.AddScoped<Auth.Web.Application.Abstractions.IRoutingService, RoutingService>();
+
+// Application layer orchestrators
+builder.Services.AddScoped<IAuthFlowService, AuthFlowService>(); // register via interface
+builder.Services.AddScoped<UserProvisioningService>();
+builder.Services.AddScoped<UserPermissionsAssembler>();
+
+// New admin interfaces mapping
+builder.Services.AddScoped<IAdminUserService, UserAdminService>();
+builder.Services.AddScoped<IAdminRoleService, RoleAdminService>();
+builder.Services.AddScoped<IAdminAreaService, AreaAdminService>();
+builder.Services.AddScoped<IAdminClientService, InfraClientAdminService>();
+builder.Services.AddScoped<IAdminRoutingService, InfraRoutingAdminService>();
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
@@ -115,8 +137,6 @@ app.MapGet("/", (HttpContext ctx) =>
 });
 
 app.MapControllers();
-
-// Endpoints necesarios para Logout y acciones auxiliares de Identity Components
 app.MapAdditionalIdentityEndpoints();
 
 app.MapRazorComponents<App>()
