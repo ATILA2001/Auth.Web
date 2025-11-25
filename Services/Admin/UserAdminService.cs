@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Auth.Web.Services.Admin;
 
-public sealed class UserAdminService : IUserAdminService, IAdminUserService // Keep legacy IUserAdminService (implicit) + new interface
+public sealed class UserAdminService : IAdminUserService
 {
     private readonly AuthDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
@@ -18,43 +18,6 @@ public sealed class UserAdminService : IUserAdminService, IAdminUserService // K
         _userManager = userManager;
     }
 
-    // Legacy method (used by existing UI) - preserved
-    public async Task<(List<UserItem> Users, List<string> AllRoles)> GetAsync(CancellationToken ct = default)
-    {
-        var users = await _db.Users.AsNoTracking().OrderBy(u => u.UserName).ToListAsync(ct);
-        var roles = await _db.Roles.AsNoTracking().Select(r => r.Name!).OrderBy(n => n).ToListAsync(ct);
-        var userRoles = await _db.UserRoles.AsNoTracking().ToListAsync(ct);
-        var roleMap = (await _db.Roles.AsNoTracking().ToListAsync(ct)).ToDictionary(r => r.Id, r => r.Name!);
-
-        var usersOut = users.Select(u =>
-        {
-            var rs = userRoles.Where(ur => ur.UserId == u.Id).Select(ur => roleMap[ur.RoleId]).OrderBy(n => n).ToList();
-            return new UserItem(u.Id, u.UserName, u.Email, rs);
-        }).ToList();
-
-        return (usersOut, roles);
-    }
-
-    // Legacy method
-    public async Task<bool> UpdateRolesAsync(string userId, IEnumerable<string> roles, CancellationToken ct = default)
-    {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user is null) return false;
-
-        var current = await _userManager.GetRolesAsync(user);
-        var desired = roles.Distinct().ToArray();
-
-        var toAdd = desired.Except(current).ToArray();
-        var toRemove = current.Except(desired).ToArray();
-
-        if (toAdd.Length > 0)
-            await _userManager.AddToRolesAsync(user, toAdd);
-        if (toRemove.Length > 0)
-            await _userManager.RemoveFromRolesAsync(user, toRemove);
-        return true;
-    }
-
-    // New interface implementation
     public async Task<IReadOnlyCollection<UserAdminDto>> GetUsersAsync(CancellationToken cancellationToken = default)
     {
         var users = await _db.Users.AsNoTracking().OrderBy(u => u.UserName).ToListAsync(cancellationToken);
@@ -107,7 +70,19 @@ public sealed class UserAdminService : IUserAdminService, IAdminUserService // K
 
     public async Task UpdateUserRolesAsync(string userId, IEnumerable<string> roles, CancellationToken cancellationToken = default)
     {
-        await UpdateRolesAsync(userId, roles, cancellationToken);
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null) return;
+
+        var current = await _userManager.GetRolesAsync(user);
+        var desired = roles.Distinct().ToArray();
+
+        var toAdd = desired.Except(current).ToArray();
+        var toRemove = current.Except(desired).ToArray();
+
+        if (toAdd.Length > 0)
+            await _userManager.AddToRolesAsync(user, toAdd);
+        if (toRemove.Length > 0)
+            await _userManager.RemoveFromRolesAsync(user, toRemove);
     }
 
     public async Task UpdateUserAreasAsync(string userId, IEnumerable<int> areaIds, CancellationToken cancellationToken = default)

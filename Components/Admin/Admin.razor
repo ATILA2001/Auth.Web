@@ -1,13 +1,19 @@
 @page "/admin"
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Admin")]
+@layout Auth.Web.Components.Admin.AdminLayout
 
-<PageTitle>Administración</PageTitle>
+<RadzenHeading Size="HeadingSize.H3"
+               Text="Panel de administración"
+               Class="rz-mb-3" />
 
-<RadzenStack Style="min-height:60vh" AlignItems="Radzen.AlignItems.Center" JustifyContent="Radzen.JustifyContent.Center">
-    <RadzenCard Style="width:100%; max-width:640px;">
-        <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
-            <RadzenHeading Size="Radzen.HeadingSize.H1" Text="Administración" Style="text-align:center" />
+<RadzenRow JustifyContent="JustifyContent.Center">
+    <RadzenColumn Size="12" SizeMd="8" SizeLg="6">
+        <RadzenCard Class="rz-shadow-3 rz-p-4">
+            <RadzenHeading Size="HeadingSize.H4"
+                           Class="rz-text-center rz-mb-4"
+                           Text="Administración" />
+
             <RadzenPanelMenu ShowArrow="false">
                 <RadzenPanelMenuItem Text="Usuarios" Icon="group" Path="/admin/users" />
                 <RadzenPanelMenuItem Text="Roles" Icon="admin_panel_settings" Path="/admin/roles" />
@@ -15,6 +21,6 @@
                 <RadzenPanelMenuItem Text="Clientes" Icon="apps" Path="/admin/clients" />
                 <RadzenPanelMenuItem Text="Rutas" Icon="alt_route" Path="/admin/routes" />
             </RadzenPanelMenu>
-        </RadzenStack>
-    </RadzenCard>
-</RadzenStack>
+        </RadzenCard>
+    </RadzenColumn>
+</RadzenRow>

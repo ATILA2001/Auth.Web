@@ -9,12 +9,12 @@ public partial class ClientsAdmin : ComponentBase
 {
     [Inject] private IAdminClientService ClientService { get; set; } = default!;
     [Inject] private NotificationService NotificationService { get; set; } = default!;
-    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     private List<ApplicationClientAdminDto> clients = new();
     private bool editing;
     private ApplicationClientAdminDto editModel = new();
     private string allowedUrlsText = string.Empty;
+    private string? validationError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -30,6 +30,7 @@ public partial class ClientsAdmin : ComponentBase
     {
         editModel = new ApplicationClientAdminDto { Id = 0, ClientId = string.Empty, Audience = string.Empty, AllowedReturnUrls = Array.Empty<string>() };
         allowedUrlsText = string.Empty;
+        validationError = null;
         editing = true;
     }
 
@@ -37,12 +38,28 @@ public partial class ClientsAdmin : ComponentBase
     {
         editModel = dto;
         allowedUrlsText = string.Join("\n", dto.AllowedReturnUrls);
+        validationError = null;
         editing = true;
     }
 
     private async Task SaveClient()
     {
+        validationError = null;
+
+        if (string.IsNullOrWhiteSpace(editModel.ClientId))
+        {
+            validationError = "El ClientId no puede estar vacío.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(editModel.Audience))
+        {
+            validationError = "El Audience no puede estar vacío.";
+            return;
+        }
+
         var urls = allowedUrlsText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        
         try
         {
             if (editModel.Id == 0)
@@ -53,13 +70,14 @@ public partial class ClientsAdmin : ComponentBase
             else
             {
                 await ClientService.UpdateClientAsync(editModel.Id, editModel.ClientId, editModel.Audience, urls);
-                NotificationService.Notify(NotificationSeverity.Success, "Cliente actualizado", $"Se actualizó '{editModel.ClientId}'.");
+                NotificationService.Notify(NotificationSeverity.Success, "Cliente actualizado", $"Se actualizó '{editModel.ClientId}'.");;
             }
             editing = false;
             await LoadAsync();
         }
         catch (Exception ex)
         {
+            validationError = ex.Message;
             NotificationService.Notify(NotificationSeverity.Error, "Error al guardar cliente", ex.Message);
         }
     }
@@ -81,5 +99,6 @@ public partial class ClientsAdmin : ComponentBase
     private void CancelEdit()
     {
         editing = false;
+        validationError = null;
     }
 }

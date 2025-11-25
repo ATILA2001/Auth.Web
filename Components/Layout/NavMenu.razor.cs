@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using Auth.Web.Domain.Entities;
-using Auth.Web.Application.Admin.Abstractions; // use new admin routing interface
+using Auth.Web.Application.Admin.Abstractions;
 
 namespace Auth.Web.Components.Layout;
 
@@ -13,9 +9,8 @@ public partial class NavMenu : IDisposable
 {
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IAdminRoutingService RoutingService { get; set; } = default!;
+    
     private string? currentUrl;
-
-    // Datos aplicativos
     private List<Area> areas = new();
     private List<AreaRoute> rules = new();
     private bool appsLoading = true;
@@ -30,12 +25,10 @@ public partial class NavMenu : IDisposable
 
     protected override async Task OnInitializedAsync()
     {
-        // Carga de aplicativos
         try
         {
-            // New service returns DTOs; adapt by mapping if needed
             var routesDto = await RoutingService.GetRoutesAsync();
-            // Map DTOs to existing AreaRoute shape for nav usage
+            
             rules = routesDto.Select(d => new AreaRoute
             {
                 Id = d.Id,
@@ -45,8 +38,12 @@ public partial class NavMenu : IDisposable
                 Priority = d.Priority,
                 IsActive = d.IsActive
             }).ToList();
-            var areasDto = await RoutingService.GetRoutesAsync(); // reuse call for area names if needed
-            areas = rules.Select(r => new Area { Id = r.AreaId, Name = routesDto.First(x => x.AreaId == r.AreaId).AreaName ?? $"Área {r.AreaId}" }).DistinctBy(a => a.Id).ToList();
+            
+            areas = routesDto
+                .Where(x => x.AreaName != null)
+                .Select(r => new Area { Id = r.AreaId, Name = r.AreaName ?? $"Área {r.AreaId}" })
+                .DistinctBy(a => a.Id)
+                .ToList();
         }
         catch (Exception ex)
         {

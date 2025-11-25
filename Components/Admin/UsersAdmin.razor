@@ -1,55 +1,58 @@
 @page "/admin/users"
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Admin")]
-@using Auth.Web.Application.Admin.Dtos
+@layout Auth.Web.Components.Admin.AdminLayout
 
-<PageTitle>Usuarios</PageTitle>
+<RadzenHeading Size="HeadingSize.H3"
+               Text="Usuarios"
+               Class="rz-mb-3" />
 
-<RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
-    <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
-        <RadzenButton Text="Volver" Icon="arrow_back" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(() => NavigationManager.NavigateTo("/admin"))" />
-        <RadzenHeading Size="Radzen.HeadingSize.H3" Text="Usuarios" />
-    </RadzenStack>
-
-    <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
-        <RadzenTextBox @bind-Value="search" Placeholder="Buscar" Style="width:320px" Change="@(args => Filter())" />
-    </RadzenStack>
-
-    <RadzenCard>
-        <RadzenDataGrid TItem="UserAdminDto" Data="@filteredUsers" AllowPaging="true" PageSize="10">
-            <Columns>
-                <RadzenDataGridColumn TItem="UserAdminDto" Property="UserName" Title="Usuario" />
-                <RadzenDataGridColumn TItem="UserAdminDto" Property="Email" Title="Correo" />
-                <RadzenDataGridColumn TItem="UserAdminDto" Title="Roles">
-                    <Template Context="u">@string.Join(", ", u.Roles)</Template>
-                </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="UserAdminDto" Title="햞eas">
-                    <Template Context="u">@string.Join(", ", u.Areas)</Template>
-                </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="UserAdminDto" Context="u" Width="160px">
-                    <Template Context="u">
-                        <RadzenButton Text="Editar" Icon="manage_accounts" Size="Radzen.ButtonSize.Small" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(args => BeginEdit(u))" />
-                    </Template>
-                </RadzenDataGridColumn>
-            </Columns>
-        </RadzenDataGrid>
-    </RadzenCard>
-
-    @if (SelectedUser is not null)
-    {
-        <RadzenCard>
-            <RadzenFieldset Text="@($"Editar usuario {SelectedUser.UserName}")">
-                <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
-                    <RadzenLabel Text="Roles" />
-                    <RadzenDropDown Multiple="true" Data="@AllRoles" TextProperty="Name" ValueProperty="Name" @bind-Value="SelectedRoles" Style="width:100%" />
-                    <RadzenLabel Text="햞eas" />
-                    <RadzenDropDown Multiple="true" Data="@AllAreas" TextProperty="Name" ValueProperty="Id" @bind-Value="SelectedAreaIds" Style="width:100%" />
-                    <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
-                        <RadzenButton Text="Guardar" ButtonStyle="Radzen.ButtonStyle.Primary" Click="@(args => SaveUser())" />
-                        <RadzenButton Text="Cancelar" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(args => CancelEdit())" />
-                    </RadzenStack>
+<RadzenRow>
+    <RadzenColumn Size="12" SizeMd="10" SizeLg="10" OffsetMd="1" OffsetLg="1">
+        <RadzenCard Class="rz-shadow-3 rz-p-3">
+            <div class="rz-mb-3">
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+                    <RadzenTextBox @bind-Value="search" Placeholder="Buscar" Style="width: 300px" Change="@(args => Filter())" />
                 </RadzenStack>
-            </RadzenFieldset>
+            </div>
+
+            <RadzenDataGrid TItem="Application.Admin.Dtos.UserAdminDto" Data="@filteredUsers" AllowPaging="true" PageSize="10">
+                <Columns>
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="UserName" Title="Usuario" />
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="Email" Title="Correo" />
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Roles">
+                        <Template Context="u">@string.Join(", ", u.Roles)</Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="햞eas">
+                        <Template Context="u">@string.Join(", ", u.Areas)</Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Context="u" Width="160px">
+                        <Template Context="u">
+                            <RadzenButton Text="Editar" Icon="manage_accounts" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(args => BeginEdit(u))" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+
+            @if (SelectedUser is not null)
+            {
+                <div class="rz-mt-3">
+                    <RadzenCard>
+                        <RadzenFieldset Text="@($"Editar usuario {SelectedUser.UserName}")">
+                            <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+                                <RadzenLabel Text="Roles" />
+                                <RadzenDropDown Multiple="true" Data="@AllRoles" TextProperty="Name" ValueProperty="Name" @bind-Value="SelectedRoles" />
+                                <RadzenLabel Text="햞eas" />
+                                <RadzenDropDown Multiple="true" Data="@AllAreas" TextProperty="Name" ValueProperty="Id" @bind-Value="SelectedAreaIds" />
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+                                    <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" Click="@(args => SaveUser())" />
+                                    <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@(args => CancelEdit())" />
+                                </RadzenStack>
+                            </RadzenStack>
+                        </RadzenFieldset>
+                    </RadzenCard>
+                </div>
+            }
         </RadzenCard>
-    }
-</RadzenStack>
+    </RadzenColumn>
+</RadzenRow>

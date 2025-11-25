@@ -1,51 +1,58 @@
 @page "/admin/clients"
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Admin")]
-@using Auth.Web.Application.Admin.Dtos
+@layout Auth.Web.Components.Admin.AdminLayout
 
-<PageTitle>Clientes</PageTitle>
+<RadzenHeading Size="HeadingSize.H3"
+               Text="Aplicaciones"
+               Class="rz-mb-3" />
 
-<RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
-    <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
-        <RadzenButton Text="Volver" Icon="arrow_back" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(() => NavigationManager.NavigateTo("/admin"))" />
-        <RadzenHeading Size="Radzen.HeadingSize.H3" Text="Clientes" />
-    </RadzenStack>
+<RadzenRow>
+    <RadzenColumn Size="12" SizeMd="10" SizeLg="10" OffsetMd="1" OffsetLg="1">
+        <RadzenCard Class="rz-shadow-3 rz-p-3">
+            <div class="rz-mb-3">
+                <RadzenButton Text="Nuevo" Icon="add" ButtonStyle="ButtonStyle.Primary" Click="@(() => BeginCreate())" />
+            </div>
 
-    <RadzenButton Text="Nuevo" Icon="add" ButtonStyle="Radzen.ButtonStyle.Primary" Click="@(() => BeginCreate())" />
+            <RadzenDataGrid TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Data="@clients" AllowPaging="true" PageSize="10">
+                <Columns>
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Property="ClientId" Title="ClientId" />
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Property="Audience" Title="Audience" />
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Title="ReturnUrls">
+                        <Template Context="c">@string.Join("; ", c.AllowedReturnUrls)</Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Context="c" Width="160px">
+                        <Template Context="c">
+                            <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => BeginEdit(c))" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" class="rz-ml-2" Click="@(() => DeleteClient(c.Id))" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
 
-    <RadzenCard>
-        <RadzenDataGrid TItem="ApplicationClientAdminDto" Data="@clients" AllowPaging="true" PageSize="10">
-            <Columns>
-                <RadzenDataGridColumn TItem="ApplicationClientAdminDto" Property="ClientId" Title="ClientId" />
-                <RadzenDataGridColumn TItem="ApplicationClientAdminDto" Property="Audience" Title="Audience" />
-                <RadzenDataGridColumn TItem="ApplicationClientAdminDto" Title="ReturnUrls">
-                    <Template Context="c">@string.Join("; ", c.AllowedReturnUrls)</Template>
-                </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="ApplicationClientAdminDto" Context="c" Width="160px">
-                    <Template Context="c">
-                        <RadzenButton Icon="edit" Size="Radzen.ButtonSize.Small" Click="@(() => BeginEdit(c))" />
-                        <RadzenButton Icon="delete" ButtonStyle="Radzen.ButtonStyle.Danger" Size="Radzen.ButtonSize.Small" class="rz-ml-2" Click="@(() => DeleteClient(c.Id))" />
-                    </Template>
-                </RadzenDataGridColumn>
-            </Columns>
-        </RadzenDataGrid>
-    </RadzenCard>
-
-    @if (editing)
-    {
-        <RadzenCard Style="max-width:640px">
-            <RadzenFieldset Text="@(editModel.Id == 0 ? "Crear cliente" : $"Editar cliente {editModel.ClientId}")">
-                <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="2">
-                    <RadzenTextBox @bind-Value="editModel.ClientId" Placeholder="ClientId" Style="width:100%" />
-                    <RadzenTextBox @bind-Value="editModel.Audience" Placeholder="Audience" Style="width:100%" />
-                    <RadzenLabel Text="Allowed Return Urls (una por línea)" />
-                    <RadzenTextArea @bind-Value="allowedUrlsText" Rows="5" Style="width:100%" />
-                    <RadzenStack Orientation="Radzen.Orientation.Horizontal" Gap="1">
-                        <RadzenButton Text="Guardar" ButtonStyle="Radzen.ButtonStyle.Primary" Click="@(() => SaveClient())" />
-                        <RadzenButton Text="Cancelar" ButtonStyle="Radzen.ButtonStyle.Light" Click="@(() => CancelEdit())" />
-                    </RadzenStack>
-                </RadzenStack>
-            </RadzenFieldset>
+            @if (editing)
+            {
+                <div class="rz-mt-3">
+                    <RadzenCard>
+                        <RadzenFieldset Text="@(editModel.Id == 0 ? "Crear cliente" : $"Editar cliente {editModel.ClientId}")">
+                            <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+                                <RadzenTextBox @bind-Value="editModel.ClientId" Placeholder="ClientId" />
+                                <RadzenTextBox @bind-Value="editModel.Audience" Placeholder="Audience" />
+                                <RadzenLabel Text="Allowed Return Urls (una por línea)" />
+                                <RadzenTextArea @bind-Value="allowedUrlsText" Rows="5" />
+                                @if (!string.IsNullOrWhiteSpace(validationError))
+                                {
+                                    <RadzenAlert Severity="AlertSeverity.Error">@validationError</RadzenAlert>
+                                }
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+                                    <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" Click="@(() => SaveClient())" />
+                                    <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@(() => CancelEdit())" />
+                                </RadzenStack>
+                            </RadzenStack>
+                        </RadzenFieldset>
+                    </RadzenCard>
+                </div>
+            }
         </RadzenCard>
-    }
-</RadzenStack>
+    </RadzenColumn>
+</RadzenRow>

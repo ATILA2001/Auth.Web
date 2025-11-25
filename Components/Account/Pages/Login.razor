@@ -1,54 +1,81 @@
-锘緻page "/Account/Login"
+@page "/Account/Login"
 @rendermode InteractiveServer
-
-@using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>Inicio de sesion</PageTitle>
 
-<RadzenStack Style="min-height:100vh" AlignItems="Radzen.AlignItems.Center" JustifyContent="Radzen.JustifyContent.Center">
-    <RadzenCard Style="width:100%; max-width:460px;">
-        <RadzenTabs @bind-Value="selectedTabIndex">
-            <Tabs>
-                <RadzenTabsItem Text="Iniciar sesi贸n">
-                    <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="20">
-                        <RadzenLabel Text="Use sus credenciales de Windows para iniciar sesi贸n." />
-                        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
-                        {
-                            <RadzenAlert Severity="Radzen.AlertSeverity.Error" Style="width:100%">@ErrorMessage</RadzenAlert>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(SuccessMessage))
-                        {
-                            <RadzenAlert Severity="Radzen.AlertSeverity.Success" Style="width:100%">@SuccessMessage</RadzenAlert>
-                        }
+<div class="container-fluid vh-100 d-flex justify-content-center align-items-center">
+    <div class="row justify-content-center w-100">
+        <div class="col-11 col-sm-8 col-md-6 col-lg-4">
+            <RadzenCard Class="rz-shadow-3 rz-p-4">
+                <RadzenTabs @bind-Value="selectedTabIndex">
+                    <Tabs>
+                        <RadzenTabsItem Text="INICIAR SESI覰">
+                            <ChildContent>
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="1.25rem">
+                                    <RadzenLabel Text="Use sus credenciales de Windows para iniciar sesi髇." />
 
-                        <form method="post" action="/connect/login">
-                            <input name="UserNameOrEmail" placeholder="Correo electr贸nico / CUIL" style="width:100%" @bind="Input.UserNameOrEmail" />
-                            <input name="Password" type="password" placeholder="Contrase帽a" style="width:100%" @bind="Input.Password" />
-                            <input type="hidden" name="ReturnUrl" value="@ReturnUrlFromQuery" />
-                            <input type="hidden" name="ClientId" value="@ClientIdFromQuery" />
-                            <button type="submit" class="rz-button rz-primary" style="width:100%; margin-top:12px">Iniciar</button>
-                        </form>
-                    </RadzenStack>
-                </RadzenTabsItem>
-                <RadzenTabsItem Text="Registrarse">
-                    <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="20">
-                        @if (!string.IsNullOrWhiteSpace(RegisterMessage))
-                        {
-                            <RadzenAlert Severity="Radzen.AlertSeverity.Error" Style="width:100%">@RegisterMessage</RadzenAlert>
-                        }
-                        <EditForm Model="@RegInput" OnValidSubmit="@RegisterUser">
-                            <DataAnnotationsValidator />
-                            <ValidationSummary />
-                            <RadzenStack Orientation="Radzen.Orientation.Vertical" Gap="20">
-                                <RadzenTextBox @bind-Value="RegInput.FullName" Placeholder="Nombre completo" Style="width:100%" />
-                                <RadzenTextBox @bind-Value="RegInput.Email" Placeholder="Correo electr贸nico" Style="width:100%" />
-                                <RadzenButton ButtonStyle="Radzen.ButtonStyle.Primary" Text="Registrarse" Type="Radzen.ButtonType.Submit" Style="width:100%" />
+                                    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+                                    {
+                                        <RadzenAlert Severity="AlertSeverity.Error" Style="width:100%">@ErrorMessage</RadzenAlert>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(SuccessMessage))
+                                    {
+                                        <RadzenAlert Severity="AlertSeverity.Success" Style="width:100%">@SuccessMessage</RadzenAlert>
+                                    }
+
+                                    <form method="post" action="/connect/login">
+                                        <RadzenStack Orientation="Orientation.Vertical" Gap="1.25rem">
+                                            <RadzenTextBox Name="UserNameOrEmail"
+                                                           Style="width:100%"
+                                                           Placeholder="Correo electr髇ico / CUIL"
+                                                           @bind-Value="Input.UserNameOrEmail" />
+
+                                            <RadzenPassword Name="Password"
+                                                            Style="width:100%"
+                                                            Placeholder="Contrase馻"
+                                                            @bind-Value="Input.Password" />
+
+                                            <input type="hidden" name="ReturnUrl" value="@ReturnUrlFromQuery" />
+                                            <input type="hidden" name="ClientId" value="@ClientIdFromQuery" />
+
+                                            <RadzenButton ButtonType="ButtonType.Submit"
+                                                          Text="Iniciar"
+                                                          ButtonStyle="ButtonStyle.Primary"
+                                                          Size="ButtonSize.Large"
+                                                          class="w-100" />
+                                        </RadzenStack>
+                                    </form>
+                                </RadzenStack>
+                            </ChildContent>
+                        </RadzenTabsItem>
+
+                        <RadzenTabsItem Text="Registrarse">
+                            <RadzenStack Orientation="Orientation.Vertical" Gap="1.25rem">
+                                @if (!string.IsNullOrWhiteSpace(RegisterMessage))
+                                {
+                                    <RadzenAlert Severity="AlertSeverity.Error" Style="width:100%">@RegisterMessage</RadzenAlert>
+                                }
+                                <EditForm Model="@RegInput" OnValidSubmit="@RegisterUser">
+                                    <DataAnnotationsValidator />
+                                    <ValidationSummary />
+                                    <RadzenStack Orientation="Orientation.Vertical" Gap="1.25rem">
+                                        <RadzenTextBox @bind-Value="RegInput.FullName"
+                                                       Placeholder="Nombre completo"
+                                                       Style="width:100%" />
+                                        <RadzenTextBox @bind-Value="RegInput.Email"
+                                                       Placeholder="Correo electr髇ico"
+                                                       Style="width:100%" />
+                                        <RadzenButton ButtonStyle="ButtonStyle.Primary"
+                                                      Text="Registrarse"
+                                                      Type="ButtonType.Submit"
+                                                      class="w-100" />
+                                    </RadzenStack>
+                                </EditForm>
                             </RadzenStack>
-                        </EditForm>
-                    </RadzenStack>
-                </RadzenTabsItem>
-            </Tabs>
-        </RadzenTabs>
-    </RadzenCard>
-    <RadzenLink Text="驴No tienes cuenta? Reg铆strate" Click="@(() => selectedTabIndex = 1)" Style="margin-top:8px" />
-</RadzenStack>
+                        </RadzenTabsItem>
+                    </Tabs>
+                </RadzenTabs>
+            </RadzenCard>
+        </div>
+    </div>
+</div>

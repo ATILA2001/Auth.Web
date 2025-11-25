@@ -11,7 +11,6 @@ public partial class RoutesAdmin : ComponentBase
     [Inject] private IAdminAreaService AdminAreas { get; set; } = default!;
     [Inject] private IAdminClientService AdminClients { get; set; } = default!;
     [Inject] private NotificationService Notifications { get; set; } = default!;
-    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     private List<AreaRouteAdminDto> routes = new();
     private List<AreaAdminDto> areas = new();
@@ -64,11 +63,13 @@ public partial class RoutesAdmin : ComponentBase
     private async Task SaveRoute()
     {
         validationError = null;
+        
         if (selectedAreaId == 0 || selectedClientId == 0 || string.IsNullOrWhiteSpace(editReturnUrl))
         {
             validationError = "Completa todos los campos";
             return;
         }
+        
         try
         {
             if (editModel.Id == 0)
@@ -105,5 +106,9 @@ public partial class RoutesAdmin : ComponentBase
         }
     }
 
-    private void CancelEdit() => editing = false;
+    private void CancelEdit()
+    {
+        editing = false;
+        validationError = null;
+    }
 }

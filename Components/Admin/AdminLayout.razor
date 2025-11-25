@@ -1,0 +1,99 @@
+@inherits LayoutComponentBase
+
+@inject NavigationManager NavigationManager
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@inject Auth.Web.Application.Admin.Abstractions.IAdminClientService AdminClientService
+
+<RadzenLayout>
+    <!-- HEADER -->
+    <RadzenHeader>
+        <RadzenStack Orientation="Orientation.Horizontal"
+                     AlignItems="AlignItems.Center"
+                     Gap="0"
+                     Class="rz-px-3">
+            <!-- Toggle sidebar -->
+            <RadzenSidebarToggle Click="@(() => sidebarExpanded = !sidebarExpanded)" />
+
+            <!-- Título -->
+            <RadzenLabel Text="Administración" Class="rz-ml-2" />
+
+            <!-- Bloque derecho: aplicativos + usuario + logout -->
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Class="rz-ml-auto"
+                         Gap="0.75rem">
+                <RadzenDropDown TValue="int?"
+                                Data="@clients"
+                                TextProperty="ClientId"
+                                ValueProperty="Id"
+                                @bind-Value="selectedClientId"
+                                Placeholder="Aplicativos"
+                                Change="@OnClientChanged" />
+
+                @if (!string.IsNullOrWhiteSpace(CurrentUserName))
+                {
+                    <RadzenLabel Text="@CurrentUserName" />
+                }
+
+                <RadzenButton Icon="logout"
+                              Text="Salir"
+                              ButtonStyle="ButtonStyle.Secondary"
+                              Click="@Logout" />
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenHeader>
+
+    <!-- SIDEBAR -->
+    <RadzenSidebar @bind-Expanded="@sidebarExpanded">
+        <RadzenPanelMenu>
+            <RadzenPanelMenuItem Text="Inicio" Icon="home" Path="/admin" />
+            <RadzenPanelMenuItem Text="Usuarios" Icon="group" Path="/admin/users" />
+            <RadzenPanelMenuItem Text="Áreas" Icon="domain" Path="/admin/areas" />
+            <RadzenPanelMenuItem Text="Roles" Icon="security" Path="/admin/roles" />
+            <RadzenPanelMenuItem Text="Aplicaciones" Icon="dns" Path="/admin/clients" />
+            <RadzenPanelMenuItem Text="Rutas" Icon="device_hub" Path="/admin/routes" />
+        </RadzenPanelMenu>
+    </RadzenSidebar>
+
+    <!-- BODY -->
+    <RadzenBody>
+        <div class="rz-p-4">
+            @Body
+        </div>
+    </RadzenBody>
+
+
+</RadzenLayout>
+
+@code {
+    bool sidebarExpanded = true;
+
+    private List<Application.Admin.Dtos.ApplicationClientAdminDto> clients = new();
+    private int? selectedClientId;
+    private string? CurrentUserName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        CurrentUserName = authState.User.Identity?.Name ?? string.Empty;
+
+        clients = (await AdminClientService.GetClientsAsync()).ToList();
+    }
+
+    private void OnClientChanged(object? value)
+    {
+        var id = value as int?;
+        var client = clients.FirstOrDefault(c => c.Id == id);
+        var url = client?.AllowedReturnUrls?.FirstOrDefault();
+
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            NavigationManager.NavigateTo(url!, true);
+        }
+    }
+
+    private void Logout()
+    {
+        NavigationManager.NavigateTo("/connect/logout", true);
+    }
+}

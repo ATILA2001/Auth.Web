@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Auth.Web.Application.Admin.Abstractions;
 using Auth.Web.Application.Admin.Dtos;
@@ -10,12 +7,11 @@ namespace Auth.Web.Components.Admin;
 
 public partial class RolesAdmin : ComponentBase
 {
-    private List<RoleAdminDto> roles = new();
-    private string newRole = string.Empty;
-
     [Inject] private IAdminRoleService RoleService { get; set; } = default!;
     [Inject] private NotificationService Notifications { get; set; } = default!;
-    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+
+    private List<RoleAdminDto> roles = new();
+    private string newRole = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -24,6 +20,12 @@ public partial class RolesAdmin : ComponentBase
 
     private async Task CreateRole()
     {
+        if (string.IsNullOrWhiteSpace(newRole))
+        {
+            Notifications.Notify(NotificationSeverity.Warning, "Validación", "El nombre del rol no puede estar vacío.");
+            return;
+        }
+
         try
         {
             var id = await RoleService.CreateRoleAsync(newRole);

@@ -60,7 +60,7 @@ public class ConnectControllerTests
     }
 
     [Fact]
-    public async Task Login_Failure_Returns_Unauthorized()
+    public async Task Login_Failure_Redirects_To_Login_With_Error()
     {
         var user = new ApplicationUser { Id = "u3", UserName = "user3@corp", Email = "user3@corp" };
         var authFlow = new Mock<IAuthFlowService>();
@@ -70,6 +70,8 @@ public class ConnectControllerTests
         var smMock = CreateSignInManagerMock(umMock.Object);
         var controller = new ConnectController(authFlow.Object, umMock.Object, smMock.Object);
         var result = await controller.Login(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "bad" }, CancellationToken.None);
-        Assert.IsType<UnauthorizedObjectResult>(result);
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.Contains("/Account/Login", redirect.Url);
+        Assert.Contains("error=", redirect.Url);
     }
 }

@@ -3,6 +3,8 @@ using Auth.Web.Application.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using Auth.Web.Domain.Entities;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace Auth.Web.Controllers;
 
@@ -37,7 +39,7 @@ public class ConnectController : ControllerBase
                            ?? await _userManager.FindByEmailAsync(request.UserNameOrEmail);
                 if (user is null)
                 {
-                    return Unauthorized("No se encontró el usuario admin.");
+                    return RedirectToLoginWithError("No se encontró el usuario admin.", request.ReturnUrl, request.ClientId);
                 }
                 await _signInManager.SignInAsync(user, isPersistent: false);
                 var redirectUrl = outcome.RedirectUrl ?? "/admin";
@@ -47,13 +49,13 @@ public class ConnectController : ControllerBase
             {
                 if (string.IsNullOrEmpty(outcome.RedirectUrl))
                 {
-                    return BadRequest("No se pudo determinar la URL de destino.");
+                    return RedirectToLoginWithError("No se pudo determinar la URL de destino.", request.ReturnUrl, request.ClientId);
                 }
                 return Redirect(outcome.RedirectUrl);
             }
             case LoginOutcomeType.Failure:
             default:
-                return Unauthorized(outcome.ErrorMessage ?? "No se pudo iniciar sesión.");
+                return RedirectToLoginWithError(outcome.ErrorMessage ?? "Usuario o contraseña inválidos.", request.ReturnUrl, request.ClientId);
         }
     }
 
@@ -67,11 +69,34 @@ public class ConnectController : ControllerBase
                        ?? await _userManager.FindByEmailAsync(request.UserNameOrEmail);
             if (user is null)
             {
-                return Unauthorized("No se encontró el usuario admin.");
+                return RedirectToLoginWithError("No se encontró el usuario admin.", request.ReturnUrl, request.ClientId);
             }
             await _signInManager.SignInAsync(user, isPersistent: false);
             return LocalRedirect(outcome.RedirectUrl ?? "/admin");
         }
-        return Unauthorized(outcome.ErrorMessage ?? "No se pudo iniciar sesión.");
+        return RedirectToLoginWithError(outcome.ErrorMessage ?? "Usuario o contraseña inválidos.", request.ReturnUrl, request.ClientId);
+    }
+
+    [HttpGet("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+        return Redirect("/Account/Login");
+    }
+
+    [HttpGet("/Account/Logout")]
+    public Task<IActionResult> AccountLogout() => Logout();
+
+    private IActionResult RedirectToLoginWithError(string errorMessage, string? returnUrl, string? clientId)
+    {
+        var queryParams = new Dictionary<string, string?>
+        {
+            ["error"] = errorMessage,
+            ["returnUrl"] = returnUrl ?? string.Empty,
+            ["clientId"] = clientId ?? string.Empty
+        };
+
+        var loginUrl = QueryHelpers.AddQueryString("/Account/Login", queryParams);
+        return Redirect(loginUrl);
     }
 }

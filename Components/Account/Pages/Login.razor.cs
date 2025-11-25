@@ -16,8 +16,6 @@ public partial class Login : ComponentBase
     [Inject] private IHttpContextAccessor HttpContextAccessor { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private ILogger<Login> Logger { get; set; } = default!;
-
-    // Registro deps para signup manual
     [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
     [Inject] private IUserStore<ApplicationUser> UserStore { get; set; } = default!;
     [Inject] private Auth.Web.Services.Abstractions.IAdAuthService AdAuth { get; set; } = default!;
@@ -29,6 +27,21 @@ public partial class Login : ComponentBase
     public string? RegisterMessage { get; set; }
     public string? SuccessMessage { get; set; }
 
+    protected override void OnInitialized()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var query = QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue("error", out var errorValues))
+            errorMessage = errorValues.FirstOrDefault() ?? string.Empty;
+
+        if (query.TryGetValue("returnUrl", out var r))
+            ReturnUrlFromQuery = r.FirstOrDefault() ?? string.Empty;
+
+        if (query.TryGetValue("clientId", out var c))
+            ClientIdFromQuery = c.FirstOrDefault() ?? string.Empty;
+    }
+
     protected override async Task OnInitializedAsync()
     {
         var httpContext = HttpContextAccessor.HttpContext;
@@ -36,11 +49,6 @@ public partial class Login : ComponentBase
         {
             await httpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         }
-
-        var uri = new Uri(NavigationManager.Uri);
-        var query = QueryHelpers.ParseQuery(uri.Query);
-        if (query.TryGetValue("returnUrl", out var r)) ReturnUrlFromQuery = r.ToString();
-        if (query.TryGetValue("clientId", out var c)) ClientIdFromQuery = c.ToString();
     }
 
     public string? ReturnUrlFromQuery { get; set; }

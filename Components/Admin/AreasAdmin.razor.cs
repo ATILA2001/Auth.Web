@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Auth.Web.Application.Admin.Abstractions;
 using Auth.Web.Application.Admin.Dtos;
@@ -11,13 +8,12 @@ namespace Auth.Web.Components.Admin;
 
 public partial class AreasAdmin : ComponentBase
 {
+    [Inject] private IAdminAreaService AdminAreaService { get; set; } = default!;
+    [Inject] private NotificationService NotificationService { get; set; } = default!;
+
     private List<AreaAdminDto> areas = new();
     private string newArea = string.Empty;
     private RadzenDataGrid<AreaAdminDto> grid = default!;
-
-    [Inject] private IAdminAreaService AdminAreaService { get; set; } = default!;
-    [Inject] private NotificationService NotificationService { get; set; } = default!;
-    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -26,6 +22,12 @@ public partial class AreasAdmin : ComponentBase
 
     private async Task CreateArea()
     {
+        if (string.IsNullOrWhiteSpace(newArea))
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Validación", "El nombre del área no puede estar vacío.");
+            return;
+        }
+
         try
         {
             var id = await AdminAreaService.CreateAreaAsync(newArea);
@@ -49,6 +51,13 @@ public partial class AreasAdmin : ComponentBase
 
     private async Task OnRowUpdate(AreaAdminDto area)
     {
+        if (string.IsNullOrWhiteSpace(area.Name))
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Validación", "El nombre del área no puede estar vacío.");
+            grid.CancelEditRow(area);
+            return;
+        }
+
         try
         {
             await AdminAreaService.UpdateAreaAsync(area.Id, area.Name);

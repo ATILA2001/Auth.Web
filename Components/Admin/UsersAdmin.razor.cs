@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Auth.Web.Application.Admin.Abstractions;
 using Auth.Web.Application.Admin.Dtos;
@@ -14,7 +11,6 @@ public partial class UsersAdmin : ComponentBase
     [Inject] private IAdminRoleService RoleService { get; set; } = default!;
     [Inject] private IAdminAreaService AreaService { get; set; } = default!;
     [Inject] private NotificationService Notifications { get; set; } = default!;
-    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     private string search = string.Empty;
     private List<UserAdminDto> users = new();
@@ -44,8 +40,8 @@ public partial class UsersAdmin : ComponentBase
     {
         filteredUsers = users
             .Where(u => string.IsNullOrWhiteSpace(search)
-                || (u.UserName?.Contains(search, System.StringComparison.OrdinalIgnoreCase) == true)
-                || (u.Email?.Contains(search, System.StringComparison.OrdinalIgnoreCase) == true))
+                || (u.UserName?.Contains(search, StringComparison.OrdinalIgnoreCase) == true)
+                || (u.Email?.Contains(search, StringComparison.OrdinalIgnoreCase) == true))
             .ToList();
     }
 
@@ -60,6 +56,7 @@ public partial class UsersAdmin : ComponentBase
     private async Task SaveUser()
     {
         if (SelectedUser is null) return;
+        
         try
         {
             await UserService.UpdateUserRolesAndAreasAsync(SelectedUser.Id, SelectedRoles, SelectedAreaIds);
