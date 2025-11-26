@@ -74,52 +74,6 @@ public sealed class UserAdminService : IAdminUserService
         };
     }
 
-    public async Task UpdateUserRolesAsync(string userId, IEnumerable<string> roles, CancellationToken cancellationToken = default)
-    {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user is null) return;
-
-        var current = await _userManager.GetRolesAsync(user);
-        var desired = roles.Distinct().ToArray();
-
-        var toAdd = desired.Except(current).ToArray();
-        var toRemove = current.Except(desired).ToArray();
-
-        if (toAdd.Length > 0)
-            await _userManager.AddToRolesAsync(user, toAdd);
-        if (toRemove.Length > 0)
-            await _userManager.RemoveFromRolesAsync(user, toRemove);
-    }
-
-    public async Task UpdateUserAreasAsync(string userId, IEnumerable<int> areaIds, CancellationToken cancellationToken = default)
-    {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user is null) return;
-
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-
-        var current = await db.UserAreas.Where(ua => ua.UserId == userId).Select(ua => ua.AreaId).ToListAsync(cancellationToken);
-        var desired = areaIds.Distinct().ToList();
-
-        var toAdd = desired.Except(current).ToList();
-        var toRemove = current.Except(desired).ToList();
-
-        if (toAdd.Count > 0)
-        {
-            foreach (var aid in toAdd)
-            {
-                db.UserAreas.Add(new UserArea { UserId = userId, AreaId = aid });
-            }
-        }
-        if (toRemove.Count > 0)
-        {
-            var removeEntities = await db.UserAreas.Where(ua => ua.UserId == userId && toRemove.Contains(ua.AreaId)).ToListAsync(cancellationToken);
-            db.UserAreas.RemoveRange(removeEntities);
-        }
-        await db.SaveChangesAsync(cancellationToken);
-    }
-
     public async Task UpdateUserRolesAndAreasAsync(string userId, IEnumerable<string> roles, IEnumerable<int> areaIds, CancellationToken cancellationToken = default)
     {
         var user = await _userManager.FindByIdAsync(userId);
