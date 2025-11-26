@@ -1,4 +1,4 @@
-using Auth.Web.Services.Admin;
+using Auth.Web.Infrastructure.Admin;
 using Auth.Web.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;

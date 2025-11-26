@@ -5,7 +5,7 @@ using Auth.Web.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace Auth.Web.Services.Admin;
+namespace Auth.Web.Infrastructure.Admin;
 
 public sealed class UserAdminService : IAdminUserService
 {

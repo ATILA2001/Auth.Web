@@ -1,4 +1,4 @@
-using Auth.Web.Services.Admin;
+using Auth.Web.Infrastructure.Admin;
 using Auth.Web.Data;
 using Auth.Web.Domain.Entities;
 using Auth.Web.Application.Admin.Abstractions;
@@ -21,8 +21,8 @@ public class UserAdminServiceTests
 
     private static Mock<UserManager<ApplicationUser>> CreateUserManagerMock()
     {
-        var store = new Mock<IUserStore<ApplicationUser>>();
-        return new Mock<UserManager<ApplicationUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
+        var store = new Mock<IUserStore<ApplicationUser>> ();
+        return new Mock<UserManager<ApplicationUser>> (store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
     }
 
     [Fact]
@@ -70,17 +70,17 @@ public class UserAdminServiceTests
         umMock.Setup(m => m.FindByIdAsync(user.Id)).ReturnsAsync(user);
         // Initial roles before update
         umMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string> { "RoleA" });
-        umMock.Setup(m => m.AddToRolesAsync(user, It.Is<IEnumerable<string>>(r => r.Single() == "RoleB")))
+        umMock.Setup(m => m.AddToRolesAsync(user, It.Is<IEnumerable<string>> (r => r.Single() == "RoleB")))
             .ReturnsAsync(IdentityResult.Success);
-        umMock.Setup(m => m.RemoveFromRolesAsync(user, It.Is<IEnumerable<string>>(r => r.Single() == "RoleA")))
+        umMock.Setup(m => m.RemoveFromRolesAsync(user, It.Is<IEnumerable<string>> (r => r.Single() == "RoleA")))
             .ReturnsAsync(IdentityResult.Success);
 
         IAdminUserService svc = new UserAdminService(db, umMock.Object);
         await svc.UpdateUserRolesAndAreasAsync(user.Id, new[] { "RoleB" }, new[] { area2.Id });
 
         // Verify role interactions (not EF persistence of roles)
-        umMock.Verify(m => m.AddToRolesAsync(user, It.Is<IEnumerable<string>>(r => r.Single() == "RoleB")), Times.Once);
-        umMock.Verify(m => m.RemoveFromRolesAsync(user, It.Is<IEnumerable<string>>(r => r.Single() == "RoleA")), Times.Once);
+        umMock.Verify(m => m.AddToRolesAsync(user, It.Is<IEnumerable<string>> (r => r.Single() == "RoleB")), Times.Once);
+        umMock.Verify(m => m.RemoveFromRolesAsync(user, It.Is<IEnumerable<string>> (r => r.Single() == "RoleA")), Times.Once);
 
         // Verify areas updated in EF
         var userAreas = await db.UserAreas.Where(ua => ua.UserId == user.Id).ToListAsync();

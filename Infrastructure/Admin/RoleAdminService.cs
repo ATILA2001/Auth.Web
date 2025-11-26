@@ -4,7 +4,7 @@ using Auth.Web.Data;
 using Auth.Web.Application.Admin.Abstractions;
 using Auth.Web.Application.Admin.Dtos;
 
-namespace Auth.Web.Services.Admin;
+namespace Auth.Web.Infrastructure.Admin;
 
 // Keep legacy public methods but implement only new interface
 public sealed class RoleAdminService : IAdminRoleService

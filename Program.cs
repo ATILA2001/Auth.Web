@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Routing;
-using Auth.Web.Services.Admin;
 using Auth.Web.Application.Abstractions;
 using Auth.Web.Application.Auth;
 using Auth.Web.Application.Users;
@@ -18,8 +17,7 @@ using Auth.Web.Services.Auth;
 using Auth.Web.Services.Clients;
 using Auth.Web.Services.Permissions;
 using Auth.Web.Services.Routing;
-using InfraClientAdminService = Auth.Web.Infrastructure.Admin.ClientAdminService;
-using InfraRoutingAdminService = Auth.Web.Infrastructure.Admin.RoutingAdminService;
+using Auth.Web.Infrastructure.Admin;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -81,12 +79,12 @@ builder.Services.AddScoped<IAuthFlowService, AuthFlowService>();
 builder.Services.AddScoped<UserProvisioningService>();
 builder.Services.AddScoped<UserPermissionsAssembler>();
 
-// Admin services
+// Admin services - all in Infrastructure.Admin
 builder.Services.AddScoped<IAdminUserService, UserAdminService>();
 builder.Services.AddScoped<IAdminRoleService, RoleAdminService>();
 builder.Services.AddScoped<IAdminAreaService, AreaAdminService>();
-builder.Services.AddScoped<IAdminClientService, InfraClientAdminService>();
-builder.Services.AddScoped<IAdminRoutingService, InfraRoutingAdminService>();
+builder.Services.AddScoped<IAdminClientService, ClientAdminService>();
+builder.Services.AddScoped<IAdminRoutingService, RoutingAdminService>();
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("AdminOnly", p => p.RequireRole("Admin"));

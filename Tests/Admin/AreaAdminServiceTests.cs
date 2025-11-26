@@ -1,4 +1,4 @@
-using Auth.Web.Services.Admin;
+using Auth.Web.Infrastructure.Admin;
 using Auth.Web.Data;
 using Auth.Web.Domain.Entities;
 using Auth.Web.Application.Admin.Abstractions;

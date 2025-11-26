@@ -4,7 +4,7 @@ using Auth.Web.Domain.Entities;
 using Auth.Web.Application.Admin.Abstractions;
 using Auth.Web.Application.Admin.Dtos;
 
-namespace Auth.Web.Services.Admin;
+namespace Auth.Web.Infrastructure.Admin;
 
 public sealed class AreaAdminService : IAdminAreaService
 {
