@@ -7,7 +7,7 @@ using Auth.Web.Domain.Entities;
 using Auth.Web.Application.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
-namespace Auth.Web.Services.Clients;
+namespace Auth.Web.Infrastructure.Clients;
 
 public class ClientService : IClientService
 {

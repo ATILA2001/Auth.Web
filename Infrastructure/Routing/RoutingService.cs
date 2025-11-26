@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 
-namespace Auth.Web.Services.Routing
+namespace Auth.Web.Infrastructure.Routing
 {
     public sealed class RoutingService : IRoutingService
     {
@@ -39,7 +39,7 @@ namespace Auth.Web.Services.Routing
 
             if (areaIds.Count == 0)
             {
-                _logger.LogInformation("Routing: usuario {UserId} sin áreas asignadas", userId);
+                _logger.LogInformation("Routing: usuario {UserId} sin ?reas asignadas", userId);
                 return null;
             }
 

@@ -1,6 +1,6 @@
 using Auth.Web.Domain.Entities;
 
-namespace Auth.Web.Services.Abstractions;
+namespace Auth.Web.Application.Abstractions;
 
 public interface IRouteQueryService
 {

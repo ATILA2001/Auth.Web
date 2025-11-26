@@ -1,9 +1,9 @@
 using Auth.Web.Data;
 using Auth.Web.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using Auth.Web.Services.Abstractions;
+using Auth.Web.Application.Abstractions;
 
-namespace Auth.Web.Services.Routing;
+namespace Auth.Web.Infrastructure.Routing;
 
 public sealed class RouteQueryService : IRouteQueryService
 {

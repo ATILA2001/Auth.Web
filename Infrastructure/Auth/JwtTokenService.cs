@@ -7,7 +7,7 @@ using Auth.Web.Application.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Auth.Web.Services.Auth;
+namespace Auth.Web.Infrastructure.Auth;
 
 public class JwtTokenService : IJwtTokenService
 {

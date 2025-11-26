@@ -6,7 +6,7 @@ using Auth.Web.Application.Abstractions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace Auth.Web.Services.Permissions;
+namespace Auth.Web.Infrastructure.Permissions;
 
 public class PermissionService : IPermissionService
 {

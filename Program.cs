@@ -13,10 +13,10 @@ using Auth.Web.Application.Auth;
 using Auth.Web.Application.Users;
 using Auth.Web.Application.Permissions;
 using Auth.Web.Application.Admin.Abstractions;
-using Auth.Web.Services.Auth;
-using Auth.Web.Services.Clients;
-using Auth.Web.Services.Permissions;
-using Auth.Web.Services.Routing;
+using Auth.Web.Infrastructure.Auth;
+using Auth.Web.Infrastructure.Clients;
+using Auth.Web.Infrastructure.Permissions;
+using Auth.Web.Infrastructure.Routing;
 using Auth.Web.Infrastructure.Admin;
 
 var builder = WebApplication.CreateBuilder(args);

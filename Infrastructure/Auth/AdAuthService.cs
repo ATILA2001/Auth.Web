@@ -4,7 +4,7 @@ using Auth.Web.Application.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Auth.Web.Services.Auth;
+namespace Auth.Web.Infrastructure.Auth;
 
 public class AdAuthService : IActiveDirectoryAuthService
 {
