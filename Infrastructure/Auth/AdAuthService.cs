@@ -3,9 +3,11 @@ using Auth.Web.Configuration;
 using Auth.Web.Application.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Runtime.Versioning;
 
 namespace Auth.Web.Infrastructure.Auth;
 
+[SupportedOSPlatform("windows")]
 public class AdAuthService : IActiveDirectoryAuthService
 {
     private readonly AdOptions _options;
