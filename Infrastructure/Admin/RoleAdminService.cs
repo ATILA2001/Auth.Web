@@ -6,21 +6,24 @@ using Auth.Web.Application.Admin.Dtos;
 
 namespace Auth.Web.Infrastructure.Admin;
 
-// Keep legacy public methods but implement only new interface
 public sealed class RoleAdminService : IAdminRoleService
 {
     private readonly RoleManager<IdentityRole> _roleManager;
-    private readonly AuthDbContext _db;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public RoleAdminService(RoleManager<IdentityRole> roleManager, AuthDbContext db)
+    public RoleAdminService(RoleManager<IdentityRole> roleManager, IServiceScopeFactory scopeFactory)
     {
         _roleManager = roleManager;
-        _db = db;
+        _scopeFactory = scopeFactory;
     }
 
     // Legacy-compatible methods (used by existing UI)
     public async Task<List<IdentityRole>> GetRolesAsync(CancellationToken ct = default)
-        => await _db.Roles.AsNoTracking().OrderBy(r => r.Name).ToListAsync(ct);
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        return await db.Roles.AsNoTracking().OrderBy(r => r.Name).ToListAsync(ct);
+    }
 
     public async Task<bool> CreateRoleAsync(string name, CancellationToken ct = default)
     {
@@ -41,8 +44,11 @@ public sealed class RoleAdminService : IAdminRoleService
     // New interface implementation
     async Task<IReadOnlyCollection<RoleAdminDto>> IAdminRoleService.GetRolesAsync(CancellationToken cancellationToken)
     {
-        var roles = await _db.Roles.AsNoTracking().OrderBy(r => r.Name).ToListAsync(cancellationToken);
-        var userRoleCounts = await _db.UserRoles.AsNoTracking().GroupBy(ur => ur.RoleId)
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        
+        var roles = await db.Roles.AsNoTracking().OrderBy(r => r.Name).ToListAsync(cancellationToken);
+        var userRoleCounts = await db.UserRoles.AsNoTracking().GroupBy(ur => ur.RoleId)
             .Select(g => new { RoleId = g.Key, Count = g.Count() }).ToListAsync(cancellationToken);
         var countMap = userRoleCounts.ToDictionary(x => x.RoleId, x => x.Count);
         return roles.Select(r => new RoleAdminDto
@@ -55,9 +61,12 @@ public sealed class RoleAdminService : IAdminRoleService
 
     async Task<RoleAdminDto?> IAdminRoleService.GetRoleByIdAsync(string roleId, CancellationToken cancellationToken)
     {
-        var role = await _db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        
+        var role = await db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
         if (role is null) return null;
-        var count = await _db.UserRoles.CountAsync(ur => ur.RoleId == roleId, cancellationToken);
+        var count = await db.UserRoles.CountAsync(ur => ur.RoleId == roleId, cancellationToken);
         return new RoleAdminDto { Id = role.Id, Name = role.Name ?? string.Empty, UserCount = count };
     }
 

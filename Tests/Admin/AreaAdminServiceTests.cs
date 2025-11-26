@@ -3,7 +3,9 @@ using Auth.Web.Data;
 using Auth.Web.Domain.Entities;
 using Auth.Web.Application.Admin.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Moq;
 
 namespace Auth.Web.Tests.Admin;
 
@@ -17,11 +19,30 @@ public class AreaAdminServiceTests
         return new AuthDbContext(opts);
     }
 
+    private static IServiceScopeFactory CreateScopeFactory(AuthDbContext db)
+    {
+        var serviceProvider = new ServiceCollection()
+            .AddScoped(_ => db)
+            .BuildServiceProvider();
+
+        var scopeFactory = new Mock<IServiceScopeFactory>();
+        scopeFactory.Setup(x => x.CreateScope())
+            .Returns(() =>
+            {
+                var scope = new Mock<IServiceScope>();
+                scope.Setup(x => x.ServiceProvider).Returns(serviceProvider);
+                return scope.Object;
+            });
+
+        return scopeFactory.Object;
+    }
+
     [Fact]
     public async Task CreateAreaAsync_Creates_New_Area()
     {
         using var db = CreateDb();
-        IAdminAreaService svc = new AreaAdminService(db);
+        var scopeFactory = CreateScopeFactory(db);
+        IAdminAreaService svc = new AreaAdminService(scopeFactory);
         var id = await svc.CreateAreaAsync("Ventas");
         Assert.True(id > 0);
         Assert.Equal("Ventas", db.Areas.Single().Name);
@@ -38,7 +59,8 @@ public class AreaAdminServiceTests
         db.UserAreas.Add(new UserArea { UserId = user.Id, AreaId = area.Id });
         await db.SaveChangesAsync();
 
-        IAdminAreaService svc = new AreaAdminService(db);
+        var scopeFactory = CreateScopeFactory(db);
+        IAdminAreaService svc = new AreaAdminService(scopeFactory);
         var list = await svc.GetAreasAsync();
         var dto = list.Single(a => a.Name == "IT");
         Assert.Equal(1, dto.UserCount);

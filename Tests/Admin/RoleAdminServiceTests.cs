@@ -2,6 +2,7 @@ using Auth.Web.Infrastructure.Admin;
 using Auth.Web.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Auth.Web.Application.Admin.Abstractions;
 using Xunit;
 using Moq;
@@ -24,6 +25,24 @@ public class RoleAdminServiceTests
         return new Mock<RoleManager<IdentityRole>>(store.Object, null!, null!, null!, null!);
     }
 
+    private static IServiceScopeFactory CreateScopeFactory(AuthDbContext db)
+    {
+        var serviceProvider = new ServiceCollection()
+            .AddScoped(_ => db)
+            .BuildServiceProvider();
+
+        var scopeFactory = new Mock<IServiceScopeFactory>();
+        scopeFactory.Setup(x => x.CreateScope())
+            .Returns(() =>
+            {
+                var scope = new Mock<IServiceScope>();
+                scope.Setup(x => x.ServiceProvider).Returns(serviceProvider);
+                return scope.Object;
+            });
+
+        return scopeFactory.Object;
+    }
+
     [Fact]
     public async Task CreateRoleAsync_Creates_Role()
     {
@@ -36,7 +55,8 @@ public class RoleAdminServiceTests
             .Callback<IdentityRole>(r => { created = r; r.Id = "role-123"; db.Roles.Add(r); db.SaveChanges(); });
         rmMock.Setup(r => r.FindByNameAsync("NuevoRol")).ReturnsAsync(() => created!);
 
-        IAdminRoleService svc = new RoleAdminService(rmMock.Object, db);
+        var scopeFactory = CreateScopeFactory(db);
+        IAdminRoleService svc = new RoleAdminService(rmMock.Object, scopeFactory);
         var id = await svc.CreateRoleAsync("NuevoRol");
 
         rmMock.Verify(r => r.CreateAsync(It.Is<IdentityRole>(x => x.Name == "NuevoRol")), Times.Once);
@@ -54,7 +74,8 @@ public class RoleAdminServiceTests
         await db.SaveChangesAsync();
 
         var rmMock = CreateRoleManagerMock();
-        IAdminRoleService svc = new RoleAdminService(rmMock.Object, db);
+        var scopeFactory = CreateScopeFactory(db);
+        IAdminRoleService svc = new RoleAdminService(rmMock.Object, scopeFactory);
         var roles = await svc.GetRolesAsync();
         var dto = roles.Single(r => r.Name == "User");
         Assert.Equal(1, dto.UserCount);

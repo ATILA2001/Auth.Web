@@ -4,6 +4,7 @@ using Auth.Web.Domain.Entities;
 using Auth.Web.Application.Admin.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Moq;
 
@@ -23,6 +24,24 @@ public class UserAdminServiceTests
     {
         var store = new Mock<IUserStore<ApplicationUser>> ();
         return new Mock<UserManager<ApplicationUser>> (store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
+    }
+
+    private static IServiceScopeFactory CreateScopeFactory(AuthDbContext db)
+    {
+        var serviceProvider = new ServiceCollection()
+            .AddScoped(_ => db)
+            .BuildServiceProvider();
+
+        var scopeFactory = new Mock<IServiceScopeFactory>();
+        scopeFactory.Setup(x => x.CreateScope())
+            .Returns(() =>
+            {
+                var scope = new Mock<IServiceScope>();
+                scope.Setup(x => x.ServiceProvider).Returns(serviceProvider);
+                return scope.Object;
+            });
+
+        return scopeFactory.Object;
     }
 
     [Fact]
@@ -45,7 +64,8 @@ public class UserAdminServiceTests
         umMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
         umMock.Setup(m => m.FindByIdAsync(user.Id)).ReturnsAsync(user);
 
-        IAdminUserService svc = new UserAdminService(db, umMock.Object);
+        var scopeFactory = CreateScopeFactory(db);
+        IAdminUserService svc = new UserAdminService(scopeFactory, umMock.Object);
         var users = await svc.GetUsersAsync();
         var dto = users.Single();
         Assert.Contains("Admin", dto.Roles);
@@ -68,14 +88,14 @@ public class UserAdminServiceTests
 
         var umMock = CreateUserManagerMock();
         umMock.Setup(m => m.FindByIdAsync(user.Id)).ReturnsAsync(user);
-        // Initial roles before update
         umMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string> { "RoleA" });
         umMock.Setup(m => m.AddToRolesAsync(user, It.Is<IEnumerable<string>> (r => r.Single() == "RoleB")))
             .ReturnsAsync(IdentityResult.Success);
         umMock.Setup(m => m.RemoveFromRolesAsync(user, It.Is<IEnumerable<string>> (r => r.Single() == "RoleA")))
             .ReturnsAsync(IdentityResult.Success);
 
-        IAdminUserService svc = new UserAdminService(db, umMock.Object);
+        var scopeFactory = CreateScopeFactory(db);
+        IAdminUserService svc = new UserAdminService(scopeFactory, umMock.Object);
         await svc.UpdateUserRolesAndAreasAsync(user.Id, new[] { "RoleB" }, new[] { area2.Id });
 
         // Verify role interactions (not EF persistence of roles)

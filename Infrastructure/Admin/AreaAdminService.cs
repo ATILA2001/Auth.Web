@@ -8,45 +8,66 @@ namespace Auth.Web.Infrastructure.Admin;
 
 public sealed class AreaAdminService : IAdminAreaService
 {
-    private readonly AuthDbContext _db;
-    public AreaAdminService(AuthDbContext db) => _db = db;
+    private readonly IServiceScopeFactory _scopeFactory;
+    
+    public AreaAdminService(IServiceScopeFactory scopeFactory)
+    {
+        _scopeFactory = scopeFactory;
+    }
 
     // Legacy-compatible methods (used by existing UI)
     public async Task<List<Area>> GetAreasAsync(CancellationToken ct = default)
-        => await _db.Areas.AsNoTracking().OrderBy(a => a.Name).ToListAsync(ct);
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        return await db.Areas.AsNoTracking().OrderBy(a => a.Name).ToListAsync(ct);
+    }
 
     public async Task<Area?> CreateAsync(string name, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(name)) return null;
+        
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        
         var area = new Area { Name = name.Trim() };
-        _db.Areas.Add(area);
-        await _db.SaveChangesAsync(ct);
+        db.Areas.Add(area);
+        await db.SaveChangesAsync(ct);
         return area;
     }
 
     public async Task<bool> UpdateNameAsync(int id, string name, CancellationToken ct = default)
     {
-        var area = await _db.Areas.FindAsync(new object[] { id }, ct);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        
+        var area = await db.Areas.FindAsync(new object[] { id }, ct);
         if (area is null) return false;
         area.Name = name.Trim();
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
         return true;
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var area = await _db.Areas.FindAsync(new object[] { id }, ct);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        
+        var area = await db.Areas.FindAsync(new object[] { id }, ct);
         if (area is null) return false;
-        _db.Areas.Remove(area);
-        await _db.SaveChangesAsync(ct);
+        db.Areas.Remove(area);
+        await db.SaveChangesAsync(ct);
         return true;
     }
 
     // New interface explicit implementation
     async Task<IReadOnlyCollection<AreaAdminDto>> IAdminAreaService.GetAreasAsync(CancellationToken cancellationToken)
     {
-        var areas = await _db.Areas.AsNoTracking().OrderBy(a => a.Name).ToListAsync(cancellationToken);
-        var counts = await _db.UserAreas.AsNoTracking().GroupBy(ua => ua.AreaId)
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        
+        var areas = await db.Areas.AsNoTracking().OrderBy(a => a.Name).ToListAsync(cancellationToken);
+        var counts = await db.UserAreas.AsNoTracking().GroupBy(ua => ua.AreaId)
             .Select(g => new { AreaId = g.Key, Count = g.Count() }).ToListAsync(cancellationToken);
         var map = counts.ToDictionary(x => x.AreaId, x => x.Count);
         return areas.Select(a => new AreaAdminDto
@@ -59,34 +80,47 @@ public sealed class AreaAdminService : IAdminAreaService
 
     async Task<AreaAdminDto?> IAdminAreaService.GetAreaByIdAsync(int areaId, CancellationToken cancellationToken)
     {
-        var area = await _db.Areas.AsNoTracking().FirstOrDefaultAsync(a => a.Id == areaId, cancellationToken);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        
+        var area = await db.Areas.AsNoTracking().FirstOrDefaultAsync(a => a.Id == areaId, cancellationToken);
         if (area is null) return null;
-        var count = await _db.UserAreas.CountAsync(ua => ua.AreaId == areaId, cancellationToken);
+        var count = await db.UserAreas.CountAsync(ua => ua.AreaId == areaId, cancellationToken);
         return new AreaAdminDto { Id = area.Id, Name = area.Name, UserCount = count };
     }
 
     async Task<int> IAdminAreaService.CreateAreaAsync(string name, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(name)) return 0;
+        
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        
         var area = new Area { Name = name.Trim() };
-        _db.Areas.Add(area);
-        await _db.SaveChangesAsync(cancellationToken);
+        db.Areas.Add(area);
+        await db.SaveChangesAsync(cancellationToken);
         return area.Id;
     }
 
     async Task IAdminAreaService.UpdateAreaAsync(int areaId, string name, CancellationToken cancellationToken)
     {
-        var area = await _db.Areas.FindAsync(new object[] { areaId }, cancellationToken);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        
+        var area = await db.Areas.FindAsync(new object[] { areaId }, cancellationToken);
         if (area is null) return;
         area.Name = name.Trim();
-        await _db.SaveChangesAsync(cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     async Task IAdminAreaService.DeleteAreaAsync(int areaId, CancellationToken cancellationToken)
     {
-        var area = await _db.Areas.FindAsync(new object[] { areaId }, cancellationToken);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        
+        var area = await db.Areas.FindAsync(new object[] { areaId }, cancellationToken);
         if (area is null) return;
-        _db.Areas.Remove(area);
-        await _db.SaveChangesAsync(cancellationToken);
+        db.Areas.Remove(area);
+        await db.SaveChangesAsync(cancellationToken);
     }
 }

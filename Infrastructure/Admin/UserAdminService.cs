@@ -9,22 +9,25 @@ namespace Auth.Web.Infrastructure.Admin;
 
 public sealed class UserAdminService : IAdminUserService
 {
-    private readonly AuthDbContext _db;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public UserAdminService(AuthDbContext db, UserManager<ApplicationUser> userManager)
+    public UserAdminService(IServiceScopeFactory scopeFactory, UserManager<ApplicationUser> userManager)
     {
-        _db = db;
+        _scopeFactory = scopeFactory;
         _userManager = userManager;
     }
 
     public async Task<IReadOnlyCollection<UserAdminDto>> GetUsersAsync(CancellationToken cancellationToken = default)
     {
-        var users = await _db.Users.AsNoTracking().OrderBy(u => u.UserName).ToListAsync(cancellationToken);
-        var roles = await _db.Roles.AsNoTracking().ToListAsync(cancellationToken);
-        var userRoles = await _db.UserRoles.AsNoTracking().ToListAsync(cancellationToken);
-        var userAreas = await _db.UserAreas.AsNoTracking().ToListAsync(cancellationToken);
-        var areas = await _db.Areas.AsNoTracking().ToListAsync(cancellationToken);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        
+        var users = await db.Users.AsNoTracking().OrderBy(u => u.UserName).ToListAsync(cancellationToken);
+        var roles = await db.Roles.AsNoTracking().ToListAsync(cancellationToken);
+        var userRoles = await db.UserRoles.AsNoTracking().ToListAsync(cancellationToken);
+        var userAreas = await db.UserAreas.AsNoTracking().ToListAsync(cancellationToken);
+        var areas = await db.Areas.AsNoTracking().ToListAsync(cancellationToken);
         var roleMap = roles.ToDictionary(r => r.Id, r => r.Name!);
         var areaMap = areas.ToDictionary(a => a.Id, a => a.Name);
 
@@ -49,13 +52,16 @@ public sealed class UserAdminService : IAdminUserService
 
     public async Task<UserAdminDto?> GetUserByIdAsync(string userId, CancellationToken cancellationToken = default)
     {
-        var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        
+        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (user is null) return null;
 
-        var roleIds = await _db.UserRoles.AsNoTracking().Where(ur => ur.UserId == user.Id).Select(ur => ur.RoleId).ToListAsync(cancellationToken);
-        var roles = await _db.Roles.AsNoTracking().Where(r => roleIds.Contains(r.Id)).Select(r => r.Name!).OrderBy(n => n).ToListAsync(cancellationToken);
-        var areaIds = await _db.UserAreas.AsNoTracking().Where(ua => ua.UserId == user.Id).Select(ua => ua.AreaId).Distinct().ToListAsync(cancellationToken);
-        var areaNames = await _db.Areas.AsNoTracking().Where(a => areaIds.Contains(a.Id)).Select(a => a.Name).OrderBy(n => n).ToListAsync(cancellationToken);
+        var roleIds = await db.UserRoles.AsNoTracking().Where(ur => ur.UserId == user.Id).Select(ur => ur.RoleId).ToListAsync(cancellationToken);
+        var roles = await db.Roles.AsNoTracking().Where(r => roleIds.Contains(r.Id)).Select(r => r.Name!).OrderBy(n => n).ToListAsync(cancellationToken);
+        var areaIds = await db.UserAreas.AsNoTracking().Where(ua => ua.UserId == user.Id).Select(ua => ua.AreaId).Distinct().ToListAsync(cancellationToken);
+        var areaNames = await db.Areas.AsNoTracking().Where(a => areaIds.Contains(a.Id)).Select(a => a.Name).OrderBy(n => n).ToListAsync(cancellationToken);
 
         return new UserAdminDto
         {
@@ -90,7 +96,10 @@ public sealed class UserAdminService : IAdminUserService
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null) return;
 
-        var current = await _db.UserAreas.Where(ua => ua.UserId == userId).Select(ua => ua.AreaId).ToListAsync(cancellationToken);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+
+        var current = await db.UserAreas.Where(ua => ua.UserId == userId).Select(ua => ua.AreaId).ToListAsync(cancellationToken);
         var desired = areaIds.Distinct().ToList();
 
         var toAdd = desired.Except(current).ToList();
@@ -100,15 +109,15 @@ public sealed class UserAdminService : IAdminUserService
         {
             foreach (var aid in toAdd)
             {
-                _db.UserAreas.Add(new UserArea { UserId = userId, AreaId = aid });
+                db.UserAreas.Add(new UserArea { UserId = userId, AreaId = aid });
             }
         }
         if (toRemove.Count > 0)
         {
-            var removeEntities = await _db.UserAreas.Where(ua => ua.UserId == userId && toRemove.Contains(ua.AreaId)).ToListAsync(cancellationToken);
-            _db.UserAreas.RemoveRange(removeEntities);
+            var removeEntities = await db.UserAreas.Where(ua => ua.UserId == userId && toRemove.Contains(ua.AreaId)).ToListAsync(cancellationToken);
+            db.UserAreas.RemoveRange(removeEntities);
         }
-        await _db.SaveChangesAsync(cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     public async Task UpdateUserRolesAndAreasAsync(string userId, IEnumerable<string> roles, IEnumerable<int> areaIds, CancellationToken cancellationToken = default)
@@ -123,7 +132,10 @@ public sealed class UserAdminService : IAdminUserService
         if (toAddRoles.Length > 0) await _userManager.AddToRolesAsync(user, toAddRoles);
         if (toRemoveRoles.Length > 0) await _userManager.RemoveFromRolesAsync(user, toRemoveRoles);
 
-        var currentAreaIds = await _db.UserAreas.Where(ua => ua.UserId == userId).Select(ua => ua.AreaId).ToListAsync(cancellationToken);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+
+        var currentAreaIds = await db.UserAreas.Where(ua => ua.UserId == userId).Select(ua => ua.AreaId).ToListAsync(cancellationToken);
         var desiredAreaIds = areaIds.Distinct().ToList();
         var toAddAreas = desiredAreaIds.Except(currentAreaIds).ToList();
         var toRemoveAreas = currentAreaIds.Except(desiredAreaIds).ToList();
@@ -132,14 +144,14 @@ public sealed class UserAdminService : IAdminUserService
         {
             foreach (var aid in toAddAreas)
             {
-                _db.UserAreas.Add(new UserArea { UserId = userId, AreaId = aid });
+                db.UserAreas.Add(new UserArea { UserId = userId, AreaId = aid });
             }
         }
         if (toRemoveAreas.Count > 0)
         {
-            var removeEntities = await _db.UserAreas.Where(ua => ua.UserId == userId && toRemoveAreas.Contains(ua.AreaId)).ToListAsync(cancellationToken);
-            _db.UserAreas.RemoveRange(removeEntities);
+            var removeEntities = await db.UserAreas.Where(ua => ua.UserId == userId && toRemoveAreas.Contains(ua.AreaId)).ToListAsync(cancellationToken);
+            db.UserAreas.RemoveRange(removeEntities);
         }
-        await _db.SaveChangesAsync(cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
     }
 }
