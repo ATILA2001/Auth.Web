@@ -13,8 +13,8 @@ Más detalle de flujos y del módulo Admin en `docs/auth-admin-overview.md`.
 
 ## 3) Configuración y puesta en marcha
 Requisitos:
-- .NET 8 SDK
-- SQL Server (LocalDB o instancia)
+- .NET 8
+- SQL Server
 
 Pasos:
 1. Restaurar paquetes

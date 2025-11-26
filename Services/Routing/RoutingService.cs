@@ -1,14 +1,13 @@
 using Auth.Web.Data;
-using Microsoft.EntityFrameworkCore;
-using Auth.Web.Services.Abstractions; // legacy
-using Microsoft.AspNetCore.Identity;
 using Auth.Web.Domain.Entities;
+using Auth.Web.Application.Abstractions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
-using AppRoutingService = Auth.Web.Application.Abstractions.IRoutingService;
 
 namespace Auth.Web.Services.Routing
 {
-    public sealed class RoutingService : IRoutingService, AppRoutingService
+    public sealed class RoutingService : IRoutingService
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly UserManager<ApplicationUser> _userManager;
@@ -26,7 +25,7 @@ namespace Auth.Web.Services.Routing
             var user = await _userManager.FindByIdAsync(userId);
             if (user != null && await _userManager.IsInRoleAsync(user, "Admin"))
             {
-                return null; // Admin fuera de este flujo
+                return null;
             }
 
             using var scope = _scopeFactory.CreateScope();

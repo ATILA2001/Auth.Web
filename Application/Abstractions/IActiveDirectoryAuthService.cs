@@ -3,6 +3,7 @@ namespace Auth.Web.Application.Abstractions;
 public interface IActiveDirectoryAuthService
 {
     Task<bool> ValidateCredentialsAsync(string userNameOrEmail, string password);
+    Task<bool> ExistsByEmailAsync(string email);
     Task<AdUserInfo?> GetUserInfoAsync(string userNameOrEmail);
 }
 

@@ -2,14 +2,13 @@ using Auth.Web.Data;
 using Auth.Web.Domain.Dtos;
 using Auth.Web.Domain.Entities;
 using Auth.Web.Utils;
+using Auth.Web.Application.Abstractions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using LegacyIPermissionService = Auth.Web.Services.Abstractions.IPermissionService;
-using AppIPermissionService = Auth.Web.Application.Abstractions.IPermissionService;
 
 namespace Auth.Web.Services.Permissions;
 
-public class PermissionService : LegacyIPermissionService, AppIPermissionService
+public class PermissionService : IPermissionService
 {
     private readonly AuthDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
@@ -30,7 +29,7 @@ public class PermissionService : LegacyIPermissionService, AppIPermissionService
             {
                 Pages = new List<PagePermissionDto>(),
                 Areas = new List<int>(),
-                Version = 1 // TODO: Leer versión desde almacenamiento cuando esté disponible.
+                Version = 1
             };
         }
 
@@ -84,7 +83,7 @@ public class PermissionService : LegacyIPermissionService, AppIPermissionService
         {
             Pages = pagePermissions,
             Areas = areaIds,
-            Version = 1 // TODO: Leer versión desde almacenamiento cuando esté disponible.
+            Version = 1
         };
     }
 }

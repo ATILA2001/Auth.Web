@@ -13,12 +13,8 @@ using Auth.Web.Application.Abstractions;
 using Auth.Web.Application.Auth;
 using Auth.Web.Application.Users;
 using Auth.Web.Application.Permissions;
-using Auth.Web.Application.Admin.Abstractions; // new admin interfaces
-using LegacyRoutingService = Auth.Web.Services.Abstractions.IRoutingService;
-using LegacyPermissionService = Auth.Web.Services.Abstractions.IPermissionService;
-using LegacyClientService = Auth.Web.Services.Abstractions.IClientService;
-using LegacyAdAuthService = Auth.Web.Services.Abstractions.IAdAuthService;
-using Auth.Web.Services.Auth; // AdAuthService
+using Auth.Web.Application.Admin.Abstractions;
+using Auth.Web.Services.Auth;
 using Auth.Web.Services.Clients;
 using Auth.Web.Services.Permissions;
 using Auth.Web.Services.Routing;
@@ -73,31 +69,19 @@ builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuth
 
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
-// AD service implements both legacy and new interface
-builder.Services.AddScoped<LegacyAdAuthService, AdAuthService>();
+// Application services
 builder.Services.AddScoped<IActiveDirectoryAuthService, AdAuthService>();
-
-// JWT token service
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
-
-// Permission service implements both interfaces
-builder.Services.AddScoped<LegacyPermissionService, PermissionService>();
-builder.Services.AddScoped<Auth.Web.Application.Abstractions.IPermissionService, PermissionService>();
-
-// Client service implements both
-builder.Services.AddScoped<LegacyClientService, ClientService>();
-builder.Services.AddScoped<Auth.Web.Application.Abstractions.IClientService, ClientService>();
-
-// Routing service implements both
-builder.Services.AddScoped<LegacyRoutingService, RoutingService>();
-builder.Services.AddScoped<Auth.Web.Application.Abstractions.IRoutingService, RoutingService>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<IClientService, ClientService>();
+builder.Services.AddScoped<IRoutingService, RoutingService>();
 
 // Application layer orchestrators
-builder.Services.AddScoped<IAuthFlowService, AuthFlowService>(); // register via interface
+builder.Services.AddScoped<IAuthFlowService, AuthFlowService>();
 builder.Services.AddScoped<UserProvisioningService>();
 builder.Services.AddScoped<UserPermissionsAssembler>();
 
-// New admin interfaces mapping
+// Admin services
 builder.Services.AddScoped<IAdminUserService, UserAdminService>();
 builder.Services.AddScoped<IAdminRoleService, RoleAdminService>();
 builder.Services.AddScoped<IAdminAreaService, AreaAdminService>();

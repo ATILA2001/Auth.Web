@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Auth.Web.Domain.Entities;
+using Auth.Web.Application.Abstractions;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.WebUtilities;
 
@@ -18,7 +19,7 @@ public partial class Login : ComponentBase
     [Inject] private ILogger<Login> Logger { get; set; } = default!;
     [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
     [Inject] private IUserStore<ApplicationUser> UserStore { get; set; } = default!;
-    [Inject] private Auth.Web.Services.Abstractions.IAdAuthService AdAuth { get; set; } = default!;
+    [Inject] private IActiveDirectoryAuthService AdAuth { get; set; } = default!;
 
     public LoginInputModel Input { get; set; } = new();
     public string? ErrorMessage => errorMessage;

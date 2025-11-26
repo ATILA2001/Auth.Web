@@ -4,13 +4,12 @@ using System.Linq;
 using System.Text.Json;
 using Auth.Web.Data;
 using Auth.Web.Domain.Entities;
-using Auth.Web.Services.Abstractions; // legacy
+using Auth.Web.Application.Abstractions;
 using Microsoft.EntityFrameworkCore;
-using AppClientService = Auth.Web.Application.Abstractions.IClientService;
 
 namespace Auth.Web.Services.Clients;
 
-public class ClientService : IClientService, AppClientService
+public class ClientService : IClientService
 {
     private readonly AuthDbContext _context;
 
