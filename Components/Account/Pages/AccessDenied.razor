@@ -1,8 +1,31 @@
 ﻿@page "/Account/AccessDenied"
 
-<PageTitle>Access denied</PageTitle>
+<PageTitle>Acceso Denegado</PageTitle>
 
-<header>
-    <h1 class="text-danger">Access denied</h1>
-    <p class="text-danger">You do not have access to this resource.</p>
-</header>
+<RadzenStack Orientation="Orientation.Vertical" 
+             AlignItems="AlignItems.Center" 
+             JustifyContent="JustifyContent.Center"
+             Gap="1.5rem"
+             Class="rz-p-4">
+    <RadzenIcon Icon="block" Style="font-size: 4rem; color: var(--rz-danger);" />
+    
+    <RadzenHeading Size="HeadingSize.H3" 
+                   Text="Acceso Denegado" 
+                   Class="rz-text-align-center" />
+    
+    <RadzenAlert Severity="AlertSeverity.Error" 
+                 Variant="Variant.Flat"
+                 AllowClose="false"
+                 Style="width: 100%; max-width: 600px;">
+        No tiene permiso para acceder a este recurso.
+    </RadzenAlert>
+    
+    <RadzenButton Text="Volver al Inicio" 
+                  Icon="home"
+                  ButtonStyle="ButtonStyle.Secondary"
+                  Click="@(() => NavigationManager.NavigateTo("/Account/Login"))" />
+</RadzenStack>
+
+@code {
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+}
