@@ -1,6 +1,7 @@
 using Auth.Web.Application.Abstractions;
 using Auth.Web.Application.Dtos;
 using Auth.Web.Application.Permissions;
+using Auth.Web.Application.Users;
 using Auth.Web.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
@@ -15,7 +16,7 @@ public sealed class AuthFlowService : IAuthFlowService
     private readonly IRoutingService _routingService;
     private readonly IClientService _clientService;
     private readonly IJwtTokenService _jwtTokenService;
-    private readonly Users.UserProvisioningService _userProvisioningService;
+    private readonly IUserProvisioningService _userProvisioningService;
     private readonly UserPermissionsAssembler _permissionsAssembler;
 
     public AuthFlowService(
@@ -25,7 +26,7 @@ public sealed class AuthFlowService : IAuthFlowService
         IRoutingService routingService,
         IClientService clientService,
         IJwtTokenService jwtTokenService,
-        Users.UserProvisioningService userProvisioningService,
+        IUserProvisioningService userProvisioningService,
         UserPermissionsAssembler permissionsAssembler)
     {
         _adAuth = adAuth;

@@ -1,10 +1,11 @@
 using Auth.Web.Application.Abstractions;
 using Auth.Web.Application.Dtos;
+using Auth.Web.Application.Users;
 using Auth.Web.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 
-namespace Auth.Web.Application.Users;
+namespace Auth.Web.Infrastructure.Users;
 
 public sealed class UserRegistrationService : IUserRegistrationService
 {

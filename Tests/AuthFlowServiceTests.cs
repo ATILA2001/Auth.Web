@@ -20,7 +20,7 @@ public class AuthFlowServiceTests
         Mock<IPermissionService>? perms = null,
         Mock<IJwtTokenService>? jwt = null,
         UserManager<ApplicationUser>? userManager = null,
-        UserProvisioningService? provisioning = null,
+        Mock<IUserProvisioningService>? provisioning = null,
         UserPermissionsAssembler? assembler = null)
     {
         ad ??= new Mock<IActiveDirectoryAuthService>();
@@ -32,10 +32,10 @@ public class AuthFlowServiceTests
         var store = new Mock<IUserStore<ApplicationUser>>();
         userManager ??= new UserManager<ApplicationUser>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
-        provisioning ??= new UserProvisioningService(userManager, new Mock<Microsoft.Extensions.Logging.ILogger<UserProvisioningService>>().Object);
+        provisioning ??= new Mock<IUserProvisioningService>();
         assembler ??= new UserPermissionsAssembler();
 
-        return new AuthFlowService(ad.Object, userManager, perms.Object, routing.Object, client.Object, jwt.Object, provisioning, assembler);
+        return new AuthFlowService(ad.Object, userManager, perms.Object, routing.Object, client.Object, jwt.Object, provisioning.Object, assembler);
     }
 
     private static ApplicationUser MakeUser(string id, string name) => new ApplicationUser { Id = id, UserName = name, Email = name };

@@ -11,13 +11,14 @@ using Microsoft.AspNetCore.Routing;
 using Auth.Web.Application.Abstractions;
 using Auth.Web.Application.Auth;
 using Auth.Web.Application.Users;
-using Auth.Web.Application.Permissions;
 using Auth.Web.Application.Admin.Abstractions;
+using Auth.Web.Application.Permissions;
 using Auth.Web.Infrastructure.Auth;
 using Auth.Web.Infrastructure.Clients;
 using Auth.Web.Infrastructure.Permissions;
 using Auth.Web.Infrastructure.Routing;
 using Auth.Web.Infrastructure.Admin;
+using Auth.Web.Infrastructure.Users; // <-- Añadido para acceder a los servicios movidos
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -76,8 +77,8 @@ builder.Services.AddScoped<IRoutingService, RoutingService>();
 
 // Application layer orchestrators
 builder.Services.AddScoped<IAuthFlowService, AuthFlowService>();
+builder.Services.AddScoped<IUserProvisioningService, UserProvisioningService>();
 builder.Services.AddScoped<IUserRegistrationService, UserRegistrationService>();
-builder.Services.AddScoped<UserProvisioningService>();
 builder.Services.AddScoped<UserPermissionsAssembler>();
 
 // Admin services - all in Infrastructure.Admin

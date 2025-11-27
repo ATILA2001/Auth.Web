@@ -1,10 +1,11 @@
+using Auth.Web.Application.Users;
 using Auth.Web.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 
-namespace Auth.Web.Application.Users;
+namespace Auth.Web.Infrastructure.Users;
 
-public sealed class UserProvisioningService
+public sealed class UserProvisioningService : IUserProvisioningService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<UserProvisioningService> _logger;
@@ -15,7 +16,7 @@ public sealed class UserProvisioningService
         _logger = logger;
     }
 
-    // Intención: asegurar existencia de usuario local sin password.
+    // Intenci?n: asegurar existencia de usuario local sin password.
     public async Task<ApplicationUser> EnsureUserAsync(string userNameOrEmail, CancellationToken ct = default)
     {
         // Intento buscar por nombre y email
