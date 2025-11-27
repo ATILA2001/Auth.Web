@@ -18,10 +18,7 @@
                                     {
                                         <RadzenAlert Severity="AlertSeverity.Error" Style="width:100%">@ErrorMessage</RadzenAlert>
                                     }
-                                    @if (!string.IsNullOrWhiteSpace(SuccessMessage))
-                                    {
-                                        <RadzenAlert Severity="AlertSeverity.Success" Style="width:100%">@SuccessMessage</RadzenAlert>
-                                    }
+                                  
 
                                     <form method="post" action="/connect/login">
                                         <RadzenStack Orientation="Orientation.Vertical" Gap="1.25rem">
@@ -51,6 +48,8 @@
 
                         <RadzenTabsItem Text="Registrarse">
                             <RadzenStack Orientation="Orientation.Vertical" Gap="1.25rem">
+                                <RadzenLabel> Ingrese nombre completo y correo laboral (@@buenosaires).</RadzenLabel>
+
                                 @if (!string.IsNullOrWhiteSpace(RegisterMessage))
                                 {
                                     <RadzenAlert Severity="AlertSeverity.Error" Style="width:100%">@RegisterMessage</RadzenAlert>

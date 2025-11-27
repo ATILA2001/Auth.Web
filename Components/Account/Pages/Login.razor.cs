@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Auth.Web.Domain.Entities;
 using Auth.Web.Application.Abstractions;
+using Auth.Web.Application.Users;
+using Auth.Web.Application.Dtos;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.WebUtilities;
 
@@ -20,6 +22,7 @@ public partial class Login : ComponentBase
     [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
     [Inject] private IUserStore<ApplicationUser> UserStore { get; set; } = default!;
     [Inject] private IActiveDirectoryAuthService AdAuth { get; set; } = default!;
+    [Inject] private IUserRegistrationService UserRegistrationService { get; set; } = default!;
 
     public LoginInputModel Input { get; set; } = new();
     public string? ErrorMessage => errorMessage;
@@ -60,46 +63,28 @@ public partial class Login : ComponentBase
         RegisterMessage = null;
         SuccessMessage = null;
 
-        var email = RegInput.Email?.Trim() ?? string.Empty;
-        var fullName = RegInput.FullName?.Trim() ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(fullName))
+        var request = new RegisterUserRequest
         {
-            RegisterMessage = "Complete los campos requeridos.";
-            return;
-        }
+            FullName = RegInput.FullName,
+            Email = RegInput.Email
+        };
 
-        var existing = await UserManager.FindByEmailAsync(email);
-        if (existing is not null)
+        var result = await UserRegistrationService.RegisterUserAsync(request);
+
+        switch (result.Type)
         {
-            RegisterMessage = "El correo ya está registrado.";
-            return;
+            case RegisterUserResultType.Success:
+                SuccessMessage = result.Message;
+                Input.UserNameOrEmail = RegInput.Email;
+                selectedTabIndex = 0;
+                StateHasChanged();
+                break;
+            case RegisterUserResultType.AlreadyExists:
+            case RegisterUserResultType.NotInActiveDirectory:
+            case RegisterUserResultType.ValidationError:
+                RegisterMessage = result.Message;
+                break;
         }
-
-        var existsInAd = await AdAuth.ExistsByEmailAsync(email);
-        if (!existsInAd)
-        {
-            RegisterMessage = "El correo no pertenece al dominio (AD) o no existe en el directorio.";
-            return;
-        }
-
-        var user = new ApplicationUser { Nombre = fullName };
-        await UserStore.SetUserNameAsync(user, email, CancellationToken.None);
-        var emailStore = GetEmailStore();
-        await emailStore.SetEmailAsync(user, email, CancellationToken.None);
-
-        var result = await UserManager.CreateAsync(user);
-        if (!result.Succeeded)
-        {
-            RegisterMessage = string.Join(", ", result.Errors.Select(e => e.Description));
-            return;
-        }
-
-        Logger.LogInformation("Usuario creado sin password local (AD-backed).");
-        SuccessMessage = "Cuenta creada correctamente. Inicie sesión.";
-        Input.UserNameOrEmail = email;
-        selectedTabIndex = 0;
-        StateHasChanged();
     }
 
     private IUserEmailStore<ApplicationUser> GetEmailStore()
@@ -113,9 +98,9 @@ public partial class Login : ComponentBase
 
     public sealed class RegisterInputModel
     {
-        [Required]
+        [Required (ErrorMessage ="Debe ingresar nombre completo.")]
         public string FullName { get; set; } = string.Empty;
-        [Required, EmailAddress]
+        [Required (ErrorMessage = "Debe ingresar correo electronico."), EmailAddress]
         public string Email { get; set; } = string.Empty;
     }
 }

@@ -30,3 +30,35 @@ public sealed class LoginOutcome
     public static LoginOutcome ExternalApp(string redirectUrl)
         => new() { Type = LoginOutcomeType.SuccessExternalApp, RedirectUrl = redirectUrl };
 }
+
+public sealed class RegisterUserRequest
+{
+    public string FullName { get; init; } = default!;
+    public string Email { get; init; } = default!;
+}
+
+public enum RegisterUserResultType
+{
+    Success,
+    AlreadyExists,
+    NotInActiveDirectory,
+    ValidationError
+}
+
+public sealed class RegisterUserResult
+{
+    public RegisterUserResultType Type { get; init; }
+    public string Message { get; init; } = default!;
+
+    public static RegisterUserResult Success(string message)
+        => new() { Type = RegisterUserResultType.Success, Message = message };
+
+    public static RegisterUserResult AlreadyExists(string message)
+        => new() { Type = RegisterUserResultType.AlreadyExists, Message = message };
+
+    public static RegisterUserResult NotInActiveDirectory(string message)
+        => new() { Type = RegisterUserResultType.NotInActiveDirectory, Message = message };
+
+    public static RegisterUserResult ValidationError(string message)
+        => new() { Type = RegisterUserResultType.ValidationError, Message = message };
+}
