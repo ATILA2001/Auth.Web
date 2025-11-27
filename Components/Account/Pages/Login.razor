@@ -19,29 +19,32 @@
                                         <RadzenAlert Severity="AlertSeverity.Error" Style="width:100%">@ErrorMessage</RadzenAlert>
                                     }
                                   
+                                    <EditForm Model="Input">
+                                        <DataAnnotationsValidator />
+                                        <ValidationSummary />
+                                        <form method="post" action="/connect/login">
+                                            <RadzenStack Orientation="Orientation.Vertical" Gap="1.25rem">
+                                                <RadzenTextBox Name="UserNameOrEmail"
+                                                               Style="width:100%"
+                                                               Placeholder="Correo electrónico / CUIL"
+                                                               @bind-Value="Input.UserNameOrEmail" />
 
-                                    <form method="post" action="/connect/login">
-                                        <RadzenStack Orientation="Orientation.Vertical" Gap="1.25rem">
-                                            <RadzenTextBox Name="UserNameOrEmail"
-                                                           Style="width:100%"
-                                                           Placeholder="Correo electrónico / CUIL"
-                                                           @bind-Value="Input.UserNameOrEmail" />
+                                                <RadzenPassword Name="Password"
+                                                                Style="width:100%"
+                                                                Placeholder="Contraseña"
+                                                                @bind-Value="Input.Password" />
 
-                                            <RadzenPassword Name="Password"
-                                                            Style="width:100%"
-                                                            Placeholder="Contraseña"
-                                                            @bind-Value="Input.Password" />
+                                                <input type="hidden" name="ReturnUrl" value="@ReturnUrlFromQuery" />
+                                                <input type="hidden" name="ClientId" value="@ClientIdFromQuery" />
 
-                                            <input type="hidden" name="ReturnUrl" value="@ReturnUrlFromQuery" />
-                                            <input type="hidden" name="ClientId" value="@ClientIdFromQuery" />
-
-                                            <RadzenButton ButtonType="ButtonType.Submit"
-                                                          Text="Iniciar"
-                                                          ButtonStyle="ButtonStyle.Primary"
-                                                          Size="ButtonSize.Large"
-                                                          class="w-100" />
-                                        </RadzenStack>
-                                    </form>
+                                                <RadzenButton ButtonType="ButtonType.Submit"
+                                                              Text="Iniciar"
+                                                              ButtonStyle="ButtonStyle.Primary"
+                                                              Size="ButtonSize.Large"
+                                                              class="w-100" />
+                                            </RadzenStack>
+                                        </form>
+                                    </EditForm>
                                 </RadzenStack>
                             </ChildContent>
                         </RadzenTabsItem>
