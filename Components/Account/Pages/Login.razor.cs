@@ -1,13 +1,10 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Logging;
-using Auth.Web.Domain.Entities;
-using Auth.Web.Application.Abstractions;
 using Auth.Web.Application.Users;
 using Auth.Web.Application.Dtos;
-using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.WebUtilities;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Identity;
 
 namespace Auth.Web.Components.Account.Pages;
 
@@ -18,10 +15,6 @@ public partial class Login : ComponentBase
 
     [Inject] private IHttpContextAccessor HttpContextAccessor { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
-    [Inject] private ILogger<Login> Logger { get; set; } = default!;
-    [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
-    [Inject] private IUserStore<ApplicationUser> UserStore { get; set; } = default!;
-    [Inject] private IActiveDirectoryAuthService AdAuth { get; set; } = default!;
     [Inject] private IUserRegistrationService UserRegistrationService { get; set; } = default!;
 
     public LoginInputModel Input { get; set; } = new();
@@ -85,15 +78,6 @@ public partial class Login : ComponentBase
                 RegisterMessage = result.Message;
                 break;
         }
-    }
-
-    private IUserEmailStore<ApplicationUser> GetEmailStore()
-    {
-        if (!UserManager.SupportsUserEmail)
-        {
-            throw new NotSupportedException("Se requiere un UserStore con soporte de email.");
-        }
-        return (IUserEmailStore<ApplicationUser>)UserStore;
     }
 
     public sealed class RegisterInputModel
