@@ -3,7 +3,6 @@ using Auth.Web.Application.Dtos;
 using Auth.Web.Application.Permissions;
 using Auth.Web.Application.Users;
 using Auth.Web.Domain.Entities;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace Auth.Web.Application.Auth;
@@ -11,7 +10,7 @@ namespace Auth.Web.Application.Auth;
 public sealed class AuthFlowService : IAuthFlowService
 {
     private readonly IActiveDirectoryAuthService _adAuth;
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IUserManagementService _userManagement;
     private readonly IPermissionService _permissionService;
     private readonly IRoutingService _routingService;
     private readonly IClientService _clientService;
@@ -21,7 +20,7 @@ public sealed class AuthFlowService : IAuthFlowService
 
     public AuthFlowService(
         IActiveDirectoryAuthService adAuth,
-        UserManager<ApplicationUser> userManager,
+        IUserManagementService userManagement,
         IPermissionService permissionService,
         IRoutingService routingService,
         IClientService clientService,
@@ -30,7 +29,7 @@ public sealed class AuthFlowService : IAuthFlowService
         UserPermissionsAssembler permissionsAssembler)
     {
         _adAuth = adAuth;
-        _userManager = userManager;
+        _userManagement = userManagement;
         _permissionService = permissionService;
         _routingService = routingService;
         _clientService = clientService;
@@ -52,11 +51,11 @@ public sealed class AuthFlowService : IAuthFlowService
             return LoginOutcome.Failure("Usuario o contraseña inválidos.");
         }
 
-        var user = await _userManager.FindByNameAsync(request.UserNameOrEmail)
-                   ?? await _userManager.FindByEmailAsync(request.UserNameOrEmail)
+        var user = await _userManagement.FindByNameAsync(request.UserNameOrEmail)
+                   ?? await _userManagement.FindByEmailAsync(request.UserNameOrEmail)
                    ?? await _userProvisioningService.EnsureUserAsync(request.UserNameOrEmail, cancellationToken);
 
-        var rolesList = await _userManager.GetRolesAsync(user);
+        var rolesList = await _userManagement.GetRolesAsync(user);
         var roles = rolesList.ToArray();
         var isAdmin = roles.Contains("Admin") || roles.Contains("Administrador");
         if (isAdmin)

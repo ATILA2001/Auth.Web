@@ -19,7 +19,7 @@ public class AuthFlowServiceTests
         Mock<IRoutingService>? routing = null,
         Mock<IPermissionService>? perms = null,
         Mock<IJwtTokenService>? jwt = null,
-        UserManager<ApplicationUser>? userManager = null,
+        Mock<IUserManagementService>? userManagement = null,
         Mock<IUserProvisioningService>? provisioning = null,
         UserPermissionsAssembler? assembler = null)
     {
@@ -29,13 +29,11 @@ public class AuthFlowServiceTests
         perms ??= new Mock<IPermissionService>();
         jwt ??= new Mock<IJwtTokenService>();
 
-        var store = new Mock<IUserStore<ApplicationUser>>();
-        userManager ??= new UserManager<ApplicationUser>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
-
+        userManagement ??= new Mock<IUserManagementService>();
         provisioning ??= new Mock<IUserProvisioningService>();
         assembler ??= new UserPermissionsAssembler();
 
-        return new AuthFlowService(ad.Object, userManager, perms.Object, routing.Object, client.Object, jwt.Object, provisioning.Object, assembler);
+        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, jwt.Object, provisioning.Object, assembler);
     }
 
     private static ApplicationUser MakeUser(string id, string name) => new ApplicationUser { Id = id, UserName = name, Email = name };
@@ -57,14 +55,13 @@ public class AuthFlowServiceTests
         var ad = new Mock<IActiveDirectoryAuthService>();
         ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
 
-        var store = new Mock<IUserStore<ApplicationUser>>();
-        var userManager = new Mock<UserManager<ApplicationUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
+        var userManagement = new Mock<IUserManagementService>();
         var user = MakeUser("u1", "admin@corp");
-        userManager.Setup(x => x.FindByNameAsync(user.UserName)).ReturnsAsync(user);
-        userManager.Setup(x => x.FindByEmailAsync(user.Email)).ReturnsAsync(user);
-        userManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
+        userManagement.Setup(x => x.FindByNameAsync(user.UserName)).ReturnsAsync(user);
+        userManagement.Setup(x => x.FindByEmailAsync(user.Email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
 
-        var svc = CreateService(ad: ad, userManager: userManager.Object);
+        var svc = CreateService(ad: ad, userManagement: userManagement);
         var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
         Assert.Equal(LoginOutcomeType.SuccessAdmin, outcome.Type);
         Assert.Equal("/admin", outcome.RedirectUrl);
@@ -76,12 +73,11 @@ public class AuthFlowServiceTests
         var ad = new Mock<IActiveDirectoryAuthService>();
         ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
 
-        var store = new Mock<IUserStore<ApplicationUser>>();
-        var userManager = new Mock<UserManager<ApplicationUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
+        var userManagement = new Mock<IUserManagementService>();
         var user = MakeUser("u2", "user@corp");
-        userManager.Setup(x => x.FindByNameAsync(user.UserName)).ReturnsAsync(user);
-        userManager.Setup(x => x.FindByEmailAsync(user.Email)).ReturnsAsync(user);
-        userManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Usuario" });
+        userManagement.Setup(x => x.FindByNameAsync(user.UserName)).ReturnsAsync(user);
+        userManagement.Setup(x => x.FindByEmailAsync(user.Email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Usuario" });
 
         var routing = new Mock<IRoutingService>();
         routing.Setup(x => x.ResolveForUserAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(("clientA", "https://app/landing"));
@@ -99,7 +95,7 @@ public class AuthFlowServiceTests
 
         var assembler = new UserPermissionsAssembler();
 
-        var svc = CreateService(ad: ad, client: clientSvc, routing: routing, perms: perms, jwt: jwt, userManager: userManager.Object, assembler: assembler);
+        var svc = CreateService(ad: ad, client: clientSvc, routing: routing, perms: perms, jwt: jwt, userManagement: userManagement, assembler: assembler);
         var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
 
         Assert.Equal(LoginOutcomeType.SuccessExternalApp, outcome.Type);
@@ -112,17 +108,16 @@ public class AuthFlowServiceTests
     {
         var ad = new Mock<IActiveDirectoryAuthService>();
         ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-        var store = new Mock<IUserStore<ApplicationUser>>();
-        var userManager = new Mock<UserManager<ApplicationUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
+        var userManagement = new Mock<IUserManagementService>();
         var user = MakeUser("u3", "user3@corp");
-        userManager.Setup(x => x.FindByNameAsync(user.UserName)).ReturnsAsync(user);
-        userManager.Setup(x => x.FindByEmailAsync(user.Email)).ReturnsAsync(user);
-        userManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Usuario" });
+        userManagement.Setup(x => x.FindByNameAsync(user.UserName)).ReturnsAsync(user);
+        userManagement.Setup(x => x.FindByEmailAsync(user.Email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Usuario" });
 
         var routing = new Mock<IRoutingService>();
         routing.Setup(x => x.ResolveForUserAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(((string ClientId, string ReturnUrl)?)null);
 
-        var svc = CreateService(ad: ad, routing: routing, userManager: userManager.Object);
+        var svc = CreateService(ad: ad, routing: routing, userManagement: userManagement);
         var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
         Assert.Equal(LoginOutcomeType.Failure, outcome.Type);
         Assert.Contains("aplicación de destino", outcome.ErrorMessage);
@@ -133,12 +128,11 @@ public class AuthFlowServiceTests
     {
         var ad = new Mock<IActiveDirectoryAuthService>();
         ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-        var store = new Mock<IUserStore<ApplicationUser>>();
-        var userManager = new Mock<UserManager<ApplicationUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
+        var userManagement = new Mock<IUserManagementService>();
         var user = MakeUser("u4", "user4@corp");
-        userManager.Setup(x => x.FindByNameAsync(user.UserName)).ReturnsAsync(user);
-        userManager.Setup(x => x.FindByEmailAsync(user.Email)).ReturnsAsync(user);
-        userManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Usuario" });
+        userManagement.Setup(x => x.FindByNameAsync(user.UserName)).ReturnsAsync(user);
+        userManagement.Setup(x => x.FindByEmailAsync(user.Email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Usuario" });
 
         var routing = new Mock<IRoutingService>();
         routing.Setup(x => x.ResolveForUserAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(("clientB", "https://bad/forbidden"));
@@ -148,7 +142,7 @@ public class AuthFlowServiceTests
         clientSvc.Setup(x => x.GetAsync("clientB")).ReturnsAsync(client);
         clientSvc.Setup(x => x.IsReturnUrlAllowed(client, "https://bad/forbidden")).Returns(false);
 
-        var svc = CreateService(ad: ad, client: clientSvc, routing: routing, userManager: userManager.Object);
+        var svc = CreateService(ad: ad, client: clientSvc, routing: routing, userManagement: userManagement);
         var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
         Assert.Equal(LoginOutcomeType.Failure, outcome.Type);
         Assert.Contains("URL de retorno inválida", outcome.ErrorMessage);

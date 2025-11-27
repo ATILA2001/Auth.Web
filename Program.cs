@@ -77,6 +77,7 @@ builder.Services.AddScoped<IRoutingService, RoutingService>();
 
 // Application layer orchestrators
 builder.Services.AddScoped<IAuthFlowService, AuthFlowService>();
+builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IUserProvisioningService, UserProvisioningService>();
 builder.Services.AddScoped<IUserRegistrationService, UserRegistrationService>();
 builder.Services.AddScoped<UserPermissionsAssembler>();
