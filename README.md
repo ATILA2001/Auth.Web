@@ -1,60 +1,60 @@
-# Auth.Web – Sistema de Autenticación y Administración de Aplicaciones
+# Auth.Web â€” Sistema de AutenticaciÃ³n y AdministraciÃ³n de Aplicaciones
 
-## 1) Propósito
+## 1) PropÃ³sito
 
-`Auth.Web` es el servicio central de autenticación SSO interno y panel de administración para aplicaciones de la organización. Sus responsabilidades principales son:
+`Auth.Web` es el servicio central de autenticaciÃ³n SSO interno y panel de administraciÃ³n para aplicaciones de la organizaciÃ³n. Sus responsabilidades principales son:
 
-- Autenticación contra Active Directory (AD).
-- Emisión de tokens JWT con claims (roles, áreas, aplicaciones y versión de permisos).
-- Panel de administración para gestionar roles, áreas, clientes y rutas (Blazor Server UI).
+- AutenticaciÃ³n contra Active Directory (AD).
+- EmisiÃ³n de tokens JWT con claims (roles, Ã¡reas, aplicaciones y versiÃ³n de permisos).
+- Panel de administraciÃ³n para gestionar roles, Ã¡reas, clientes y rutas (Blazor Server UI).
 - Enrutamiento por cliente: reglas que determinan la URL de retorno por `ClientId` + `Area`.
 
-La UI está implementada con Blazor Server y utiliza componentes propios bajo `Components/`. El backend expone endpoints de conexión (por ejemplo `/connect/login`) y APIs de permisos.
+La UI estÃ¡ implementada con Blazor Server y utiliza componentes propios bajo `Components/`. El backend expone endpoints de conexiÃ³n (por ejemplo `/connect/login`) y APIs de permisos.
 
 ## 2) Estructura del proyecto
 
-A continuación se lista la estructura real del proyecto y una breve descripción de lo que va dentro de cada carpeta. Mantener esta convención ayuda a preservar separación de responsabilidades y escalabilidad.
+A continuaciÃ³n se lista la estructura real del proyecto y una breve descripciÃ³n de lo que va dentro de cada carpeta. Mantener esta convenciÃ³n ayuda a preservar separaciÃ³n de responsabilidades y escalabilidad.
 
 ```
 Application/
-?? Abstractions/
-?  ?? IActiveDirectoryAuthService.cs
-?  ?? IClientService.cs
-?  ?? IJwtTokenService.cs
-?  ?? IPermissionService.cs
-?  ?? IRouteQueryService.cs
-?  ?? IRoutingService.cs
-?? Admin/
-?  ?? Abstractions/
-?  ?? Dtos/
-?? Auth/
-?? Dtos/
-?? Permissions/
-?? Users/
+â”œâ”€ Abstractions/
+â”‚  â”œâ”€ IActiveDirectoryAuthService.cs
+â”‚  â”œâ”€ IClientService.cs
+â”‚  â”œâ”€ IJwtTokenService.cs
+â”‚  â”œâ”€ IPermissionService.cs
+â”‚  â”œâ”€ IRouteQueryService.cs
+â”‚  â””â”€ IRoutingService.cs
+â”œâ”€ Admin/
+â”‚  â”œâ”€ Abstractions/
+â”‚  â””â”€ Dtos/
+â”œâ”€ Auth/
+â”œâ”€ Dtos/
+â”œâ”€ Permissions/
+â””â”€ Users/
 
 Domain/
-?? Dtos/
-?? Entities/
+â”œâ”€ Dtos/
+â””â”€ Entities/
 
 Infrastructure/
-?? Admin/
-?? Auth/
-?? Clients/
-?? Permissions/
-?? Routing/
-?? Users/
+â”œâ”€ Admin/
+â”œâ”€ Auth/
+â”œâ”€ Clients/
+â”œâ”€ Permissions/
+â”œâ”€ Routing/
+â””â”€ Users/
 
 Components/
-?? Account/
-?  ?? Pages/
-?  ?? Shared/
-?? Admin/
-?? Layout/
-?? Pages/
+â”œâ”€ Account/
+â”‚  â”œâ”€ Pages/
+â”‚  â””â”€ Shared/
+â”œâ”€ Admin/
+â”œâ”€ Layout/
+â””â”€ Pages/
 
 Controllers/
-?? ConnectController.cs
-?? PermissionsController.cs
+â”œâ”€ ConnectController.cs
+â””â”€ PermissionsController.cs
 
 Configuration/
 
@@ -64,104 +64,104 @@ Tests/
 wwwroot/
 ```
 
-### Qué contiene cada carpeta
+### QuÃ© contiene cada carpeta
 
-- `Application/` ? Orquestación y contratos. Contiene interfaces y servicios de alto nivel que implementan los casos de uso: flujos de autenticación (`AuthFlowService`, `AuthClaimsModel`), servicios administrativos (Dtos bajo `Application/Admin/Dtos`), abstracciones para AD, JWT, permisos, clientes y routing. Aquí no debe haber dependencias directas a EF o AD concretos.
+- `Application/` â€” OrquestaciÃ³n y contratos. Contiene interfaces y servicios de alto nivel que implementan los casos de uso: flujos de autenticaciÃ³n (`AuthFlowService`, `AuthClaimsModel`), servicios administrativos (Dtos bajo `Application/Admin/Dtos`), abstracciones para AD, JWT, permisos, clientes y routing. AquÃ­ no debe haber dependencias directas a EF o AD concretos.
 
-- `Application/Abstractions/` ? Interfaces públicas que usa la capa superior: `IActiveDirectoryAuthService`, `IClientService`, `IJwtTokenService`, `IPermissionService`, `IRoutingService`, `IRouteQueryService`.
+- `Application/Abstractions/` â€” Interfaces pÃºblicas que usa la capa superior: `IActiveDirectoryAuthService`, `IClientService`, `IJwtTokenService`, `IPermissionService`, `IRoutingService`, `IRouteQueryService`.
 
-- `Application/Admin/` ? DTOs y contratos específicos del panel de administración. Ejemplos: `ApplicationClientAdminDto.cs`, `AreaAdminDto.cs`, `AreaRouteAdminDto.cs`.
+- `Application/Admin/` â€” DTOs y contratos especÃ­ficos del panel de administraciÃ³n. Ejemplos: `ApplicationClientAdminDto.cs`, `AreaAdminDto.cs`, `AreaRouteAdminDto.cs`.
 
-- `Application/Auth/` ? Modelos del flujo de autenticación como `AuthClaimsModel.cs` y `AuthFlowService` que orquesta validación AD y emisión de token.
+- `Application/Auth/` â€” Modelos del flujo de autenticaciÃ³n como `AuthClaimsModel.cs` y `AuthFlowService` que orquesta validaciÃ³n AD y emisiÃ³n de token.
 
-- `Domain/` ? Entidades de negocio y DTOs que representan el modelo persistido. Contiene entidades como `ApplicationUser`, `ApplicationClient`, `Area`, `AreaRoute`, `ActionPermission`.
+- `Domain/` â€” Entidades de negocio y DTOs que representan el modelo persistido. Contiene entidades como `ApplicationUser`, `ApplicationClient`, `Area`, `AreaRoute`, `ActionPermission`.
 
-- `Infrastructure/` ? Implementaciones concretas de repositorios y servicios: autenticación AD (`Infrastructure/Auth/AdAuthService.cs`), servicios admin (`Infrastructure/Admin/AreaAdminService.cs`, `Infrastructure/Admin/ClientAdminService.cs`), `Clients/ClientService.cs` y `Routing`/`Permissions` concretos. También contiene `AuthDbContext` en `Data/` y migraciones EF Core en `Migrations/`.
+- `Infrastructure/` â€” Implementaciones concretas de repositorios y servicios: autenticaciÃ³n AD (`Infrastructure/Auth/AdAuthService.cs`), servicios admin (`Infrastructure/Admin/AreaAdminService.cs`, `Infrastructure/Admin/ClientAdminService.cs`), `Clients/ClientService.cs` y `Routing`/`Permissions` concretos. TambiÃ©n contiene `AuthDbContext` en `Data/` y migraciones EF Core en `Migrations/`.
 
-- `Components/` ? Toda la UI Blazor Server. Contiene páginas y componentes reutilizables:
+- `Components/` â€” Toda la UI Blazor Server. Contiene pÃ¡ginas y componentes reutilizables:
   - `Components/Account/Pages/` y `Components/Account/Shared/` (`AccountLayout.razor`, `AccessDenied.razor`).
   - `Components/Admin/` (por ejemplo `Admin.razor`, `AreasAdmin.razor`, `ClientsAdmin.razor`).
-  - `Components/Layout/` y `Components/Pages/` (páginas públicas, `Error.razor`).
+  - `Components/Layout/` y `Components/Pages/` (pÃ¡ginas pÃºblicas, `Error.razor`).
 
-- `Controllers/` ? Endpoints HTTP/REST y de conexión:
-  - `ConnectController.cs` ? punto de entrada para login y portal-login.
-  - `PermissionsController.cs` ? API de permisos consumida por clientes.
+- `Controllers/` â€” Endpoints HTTP/REST y de conexiÃ³n:
+  - `ConnectController.cs` â€” punto de entrada para login y portal-login.
+  - `PermissionsController.cs` â€” API de permisos consumida por clientes.
 
-- `Configuration/` ? Clases de opciones (por ejemplo `AdOptions.cs`) usadas para binder `IOptions<T>` en `Program.cs`.
+- `Configuration/` â€” Clases de opciones (por ejemplo `AdOptions.cs`) usadas para binder `IOptions<T>` en `Program.cs`.
 
-- `Data/` ? `AuthDbContext.cs` y migraciones EF Core usadas para persistencia en SQL Server.
+- `Data/` â€” `AuthDbContext.cs` y migraciones EF Core usadas para persistencia en SQL Server.
 
-- `Migrations/` ? Migraciones EF Core (ej.: `InitialCreate`, `AddAreaRoutes`).
+- `Migrations/` â€” Migraciones EF Core (ej.: `InitialCreate`, `AddAreaRoutes`).
 
-- `Tests/` ? Pruebas unitarias y de integración para servicios clave: `Tests/AuthFlowServiceTests.cs`, `Tests/ConnectControllerTests.cs`, `Tests/Admin/*`.
+- `Tests/` â€” Pruebas unitarias y de integraciÃ³n para servicios clave: `Tests/AuthFlowServiceTests.cs`, `Tests/ConnectControllerTests.cs`, `Tests/Admin/*`.
 
 ## 3) Flujos clave
 
 - Flujo de login (resumen):
   1. El cliente redirige al formulario de login o invoca `/connect/login`.
   2. `AuthFlowService` valida credenciales con `IActiveDirectoryAuthService` (concrete: `Infrastructure/Auth/AdAuthService.cs`).
-  3. Si la validación es exitosa, se construye un `AuthClaimsModel` con roles, áreas y aplicaciones del usuario.
+  3. Si la validaciÃ³n es exitosa, se construye un `AuthClaimsModel` con roles, Ã¡reas y aplicaciones del usuario.
   4. `IJwtTokenService` genera el JWT que incluye `sub`, `email`, `name`, `role`, `area`, `app` y `perms_ver`.
-  5. Si es una sesión administrativa, se autentica con cookie y se redirige al panel `/admin`.
+  5. Si es una sesiÃ³n administrativa, se autentica con cookie y se redirige al panel `/admin`.
   6. Para clientes externos, se valida `ReturnUrl` con `IClientService.IsReturnUrlAllowed` y se redirige con `?token=...`.
 
-- Administración (panel Blazor): CRUD de `ApplicationClient`, `Area`, `AreaRoute` y asignación de roles/areas a usuarios. Las páginas de administración usan Radzen Blazor components y están protegidas con `[Authorize(Roles = "Admin")]`.
+- AdministraciÃ³n (panel Blazor): CRUD de `ApplicationClient`, `Area`, `AreaRoute` y asignaciÃ³n de roles/areas a usuarios. Las pÃ¡ginas de administraciÃ³n usan Radzen Blazor components y estÃ¡n protegidas con `[Authorize(Roles = "Admin")]`.
 
-## 4) Convenciones y buenas prácticas (Reglas del equipo)
+## 4) Convenciones y buenas prÃ¡cticas (Reglas del equipo)
 
 Convenciones de nombres
 - Namespaces: `Auth.Web.Application`, `Auth.Web.Domain`, `Auth.Web.Infrastructure`, `Auth.Web.Components`.
 - Interfaces: prefijo `I` y sufijo descriptivo (`IClientService`, `IJwtTokenService`).
-- DTOs: sufijo `Dto` o `AdminDto` según propósito (p. ej. `AreaAdminDto`).
-- Blazor components: `PascalCase.razor` y código asociado en `PascalCase.razor.cs` para code-behind.
+- DTOs: sufijo `Dto` o `AdminDto` segÃºn propÃ³sito (p. ej. `AreaAdminDto`).
+- Blazor components: `PascalCase.razor` y cÃ³digo asociado en `PascalCase.razor.cs` para code-behind.
 
-Cómo trabajar día a día
+CÃ³mo trabajar dÃ­a a dÃ­a
 - Crear ramas `feature/<descripcion>`, `bugfix/<descripcion>` desde `dev`.
 - Mantener `dev` como rama activa y `main` para releases estables.
-- Hacer PRs pequeñas y atómicas, referenciando issues.
+- Hacer PRs pequeÃ±as y atÃ³micas, referenciando issues.
 
-Qué va en cada capa
-- UI (Components): únicamente UI, validación superficial y llamadas a servicios de Application.
-- Application: orquestación, casos de uso y interfaces. No dependencias a EF o AD concretos.
+QuÃ© va en cada capa
+- UI (Components): Ãºnicamente UI, validaciÃ³n superficial y llamadas a servicios de Application.
+- Application: orquestaciÃ³n, casos de uso y interfaces. No dependencias a EF o AD concretos.
 - Domain: entidades y reglas de negocio (POCOs).
 - Infrastructure: dependencias concretas (EF Core, AD, JWT, proveedores externos) y adaptadores.
 
-Buenas prácticas
+Buenas prÃ¡cticas
 - No realizar llamadas a infraestructura desde Components directamente: inyectar servicios de `Application`.
 - Validar `ReturnUrl` siempre con `IClientService`.
-- Mantener `Jwt:SigningKey` fuera del código fuente (usar User Secrets o variables de entorno).
+- Mantener `Jwt:SigningKey` fuera del cÃ³digo fuente (usar User Secrets o variables de entorno).
 - Tests unitarios para `AuthFlowService`, `JwtTokenService` y servicios admin.
 
 Reglas de carpetas para componentes
-- Un componente por archivo `.razor` y opcional `*.razor.cs` para lógica.
+- Un componente por archivo `.razor` y opcional `*.razor.cs` para lÃ³gica.
 - Components agrupados por dominio: `Account/`, `Admin/`, `Layout/`, `Pages/`.
 
-## 5) Inyección de dependencias y lifetimes
+## 5) InyecciÃ³n de dependencias y lifetimes
 
-Recomendación de lifetimes para servicios registrados en `Program.cs`:
+RecomendaciÃ³n de lifetimes para servicios registrados en `Program.cs`:
 - `Singleton`:
-  - Configuración (`IOptions<T>`), proveedores de configuración inmutables.
-- `Scoped` (por petición / circuito Blazor Server):
+  - ConfiguraciÃ³n (`IOptions<T>`), proveedores de configuraciÃ³n inmutables.
+- `Scoped` (por peticiÃ³n / circuito Blazor Server):
   - `AuthDbContext` (EF Core), servicios que usan DbContext.
   - Servicios de Application que agrupan operaciones sobre la base de datos.
 - `Transient`:
   - Servicios ligeros y sin estado que se crean por uso.
 
 Ejemplos reales en el proyecto:
-- `Infrastructure/Auth/AdAuthService` ? implementa `IActiveDirectoryAuthService` (normalmente `Scoped` o `Transient` según la estrategia de conexión AD).
-- `Infrastructure/Clients/ClientService` ? implementa `IClientService` y normalmente es `Scoped`.
-- `Infrastructure/*Admin*Service` ? `Scoped`.
+- `Infrastructure/Auth/AdAuthService` â€” implementa `IActiveDirectoryAuthService` (normalmente `Scoped` o `Transient` segÃºn la estrategia de conexiÃ³n AD).
+- `Infrastructure/Clients/ClientService` â€” implementa `IClientService` y normalmente es `Scoped`.
+- `Infrastructure/*Admin*Service` â€” `Scoped`.
 
-## 6) Configuración y requisitos
+## 6) ConfiguraciÃ³n y requisitos
 
-Requisitos mínimos
+Requisitos mÃ­nimos
 - .NET 8 SDK
-- SQL Server (o compatibilidad con cadena de conexión SQL Server)
+- SQL Server (o compatibilidad con cadena de conexiÃ³n SQL Server)
 
-Configuración principal (appsettings)
-- `ConnectionStrings:DefaultConnection` ? cadena de conexión a SQL Server.
-- `ActiveDirectory` ? opciones para conexión AD (ver `Configuration/AdOptions.cs`).
-- `Jwt` ? `Issuer`, `Audience`, `SigningKey` (mín. 32 chars), `TokenLifetimeMinutes`.
+ConfiguraciÃ³n principal (appsettings)
+- `ConnectionStrings:DefaultConnection` â€” cadena de conexiÃ³n a SQL Server.
+- `ActiveDirectory` â€” opciones para conexiÃ³n AD (ver `Configuration/AdOptions.cs`).
+- `Jwt` â€” `Issuer`, `Audience`, `SigningKey` (mÃ­n. 32 chars), `TokenLifetimeMinutes`.
 
 Paquetes NuGet recomendados (presentes o esperados)
 - `Microsoft.EntityFrameworkCore.SqlServer`
@@ -169,46 +169,46 @@ Paquetes NuGet recomendados (presentes o esperados)
 - `Microsoft.AspNetCore.Authentication.JwtBearer`
 - `Microsoft.IdentityModel.Tokens`
 - `Radzen.Blazor` (UI)
-- `System.DirectoryServices.Protocols` o librería para comunicación con AD
+- `System.DirectoryServices.Protocols` o librerÃ­a para comunicaciÃ³n con AD
 
 Notas de seguridad
 - Nunca commitear `Jwt:SigningKey` ni credenciales AD.
-- Usar User Secrets en desarrollo y variables de entorno / secret store en producción.
+- Usar User Secrets en desarrollo y variables de entorno / secret store en producciÃ³n.
 
 ## 7) Tests
 
 Estructura de pruebas
 - `Tests/` contiene unit tests para:
-  - `AuthFlowServiceTests` (orquestación del login).
-  - `ConnectControllerTests` (endpoints de conexión).
+  - `AuthFlowServiceTests` (orquestaciÃ³n del login).
+  - `ConnectControllerTests` (endpoints de conexiÃ³n).
   - Servicios administrativos (`Tests/Admin/*`).
 
-Cómo ejecutar
-- `dotnet test` en la raíz del repositorio ejecuta todas las pruebas.
+CÃ³mo ejecutar
+- `dotnet test` en la raÃ­z del repositorio ejecuta todas las pruebas.
 
 Cobertura objetivo
-- Validación AD y manejo de errores.
-- Generación y contenido de JWT (`JwtTokenService`).
+- ValidaciÃ³n AD y manejo de errores.
+- GeneraciÃ³n y contenido de JWT (`JwtTokenService`).
 - Reglas de `IClientService.IsReturnUrlAllowed`.
 - Operaciones CRUD del panel admin (Services).
 
 ## 8) Branching model
 
-- `main`: versiones de producción estables y tags de release.
-- `dev`: integración continua de features completados y aprobados.
-- `feature/*`: ramas de desarrollo por característica.
-- `hotfix/*`: correcciones criticas a `main`.
+- `main`: versiones de producciÃ³n estables y tags de release.
+- `dev`: integraciÃ³n continua de features completados y aprobados.
+- `feature/*`: ramas de desarrollo por caracterÃ­stica.
+- `hotfix/*`: correcciones crÃ­ticas a `main`.
 
-Política de PR
-- PR hacia `dev` con descripción, pasos para test y referencia a issue.
-- Al menos una revisión de código aprobada antes de merge.
+PolÃ­tica de PR
+- PR hacia `dev` con descripciÃ³n, pasos para test y referencia a issue.
+- Al menos una revisiÃ³n de cÃ³digo aprobada antes de merge.
 
 ## 9) Notas operacionales y seguridad
 
 - Migraciones EF Core en `Migrations/` y `AuthDbContext` en `Data/`.
 - Revisar `docs/` para diagramas y flujos adicionales: `docs/auth-admin-overview.md`, `docs/auth-login-flow.md`.
-- Consideraciones futuras: agregar `jti` y revocación de tokens, firma asimétrica (RSA) si hay múltiples emisores, y caching distribuido para permissions/versioning (`perms_ver`).
+- Consideraciones futuras: agregar `jti` y revocaciÃ³n de tokens, firma asimÃ©trica (RSA) si hay mÃºltiples emisores, y caching distribuido para permissions/versioning (`perms_ver`).
 
 ---
 
-Mantener este README como referencia de alto nivel. Para detalles de implementación y flujos concretos consulte el código en `Application/`, `Infrastructure/` y las guías en `docs/`.
+Mantener este README como referencia de alto nivel. Para detalles de implementaciÃ³n y flujos concretos consulte el cÃ³digo en `Application/`, `Infrastructure/` y las guÃ­as en `docs/`.
