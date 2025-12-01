@@ -1,8 +1,11 @@
-using Auth.Web.Application.Auth;
-using Auth.Web.Application.Abstractions;
+using AuthClaimsModel = Auth.Web.Application.Auth.AuthClaimsModel;
+using Auth.Web.Services.Abstractions.Auth;
 using Auth.Web.Application.Dtos;
 using Auth.Web.Application.Permissions;
-using Auth.Web.Application.Users;
+using Auth.Web.Services.Abstractions.Users;
+using Auth.Web.Services.Abstractions.Permissions;
+using Auth.Web.Services.Abstractions.Routing;
+using Auth.Web.Services.Abstractions.Clients;
 using Auth.Web.Domain.Dtos;
 using Auth.Web.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -13,7 +16,7 @@ namespace Auth.Web.Tests;
 
 public class AuthFlowServiceTests
 {
-    private static AuthFlowService CreateService(
+    private static Services.Implementations.Auth.AuthFlowService CreateService(
         Mock<IActiveDirectoryAuthService>? ad = null,
         Mock<IClientService>? client = null,
         Mock<IRoutingService>? routing = null,
@@ -33,7 +36,7 @@ public class AuthFlowServiceTests
         provisioning ??= new Mock<IUserProvisioningService>();
         assembler ??= new UserPermissionsAssembler();
 
-        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, jwt.Object, provisioning.Object, assembler);
+        return new Services.Implementations.Auth.AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, jwt.Object, provisioning.Object, assembler);
     }
 
     private static ApplicationUser MakeUser(string id, string name) => new ApplicationUser { Id = id, UserName = name, Email = name };
@@ -44,8 +47,8 @@ public class AuthFlowServiceTests
         var ad = new Mock<IActiveDirectoryAuthService>();
         ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
         var svc = CreateService(ad: ad);
-        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = "user", Password = "pwd" });
-        Assert.Equal(LoginOutcomeType.Failure, outcome.Type);
+        var outcome = await svc.LoginAsync(new Auth.Web.Application.Dtos.LoginRequestDto { UserNameOrEmail = "user", Password = "pwd" });
+        Assert.Equal(Auth.Web.Application.Dtos.LoginOutcomeType.Failure, outcome.Type);
         Assert.Contains("inválidos", outcome.ErrorMessage);
     }
 
@@ -62,8 +65,8 @@ public class AuthFlowServiceTests
         userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
 
         var svc = CreateService(ad: ad, userManagement: userManagement);
-        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
-        Assert.Equal(LoginOutcomeType.SuccessAdmin, outcome.Type);
+        var outcome = await svc.LoginAsync(new Auth.Web.Application.Dtos.LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
+        Assert.Equal(Auth.Web.Application.Dtos.LoginOutcomeType.SuccessAdmin, outcome.Type);
         Assert.Equal("/admin", outcome.RedirectUrl);
     }
 
@@ -88,7 +91,7 @@ public class AuthFlowServiceTests
         clientSvc.Setup(x => x.IsReturnUrlAllowed(client, "https://app/landing")).Returns(true);
 
         var perms = new Mock<IPermissionService>();
-        perms.Setup(x => x.GetAsync(user.UserName!)).ReturnsAsync(new UserPermissionsDto { Areas = new List<int> { 1 }, Version = 1 });
+        perms.Setup(x => x.GetAsync(user.UserName!)).ReturnsAsync(new Auth.Web.Domain.Dtos.UserPermissionsDto { Areas = new List<int> { 1 }, Version = 1 });
 
         var jwt = new Mock<IJwtTokenService>();
         jwt.Setup(x => x.CreateToken(It.IsAny<AuthClaimsModel>(), client.Audience)).Returns("TOKEN_X");
@@ -96,9 +99,9 @@ public class AuthFlowServiceTests
         var assembler = new UserPermissionsAssembler();
 
         var svc = CreateService(ad: ad, client: clientSvc, routing: routing, perms: perms, jwt: jwt, userManagement: userManagement, assembler: assembler);
-        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
+        var outcome = await svc.LoginAsync(new Auth.Web.Application.Dtos.LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
 
-        Assert.Equal(LoginOutcomeType.SuccessExternalApp, outcome.Type);
+        Assert.Equal(Auth.Web.Application.Dtos.LoginOutcomeType.SuccessExternalApp, outcome.Type);
         Assert.NotNull(outcome.RedirectUrl);
         Assert.Contains("token=TOKEN_X", outcome.RedirectUrl);
     }
@@ -118,8 +121,8 @@ public class AuthFlowServiceTests
         routing.Setup(x => x.ResolveForUserAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(((string ClientId, string ReturnUrl)?)null);
 
         var svc = CreateService(ad: ad, routing: routing, userManagement: userManagement);
-        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
-        Assert.Equal(LoginOutcomeType.Failure, outcome.Type);
+        var outcome = await svc.LoginAsync(new Auth.Web.Application.Dtos.LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
+        Assert.Equal(Auth.Web.Application.Dtos.LoginOutcomeType.Failure, outcome.Type);
         Assert.Contains("aplicación de destino", outcome.ErrorMessage);
     }
 
@@ -143,8 +146,8 @@ public class AuthFlowServiceTests
         clientSvc.Setup(x => x.IsReturnUrlAllowed(client, "https://bad/forbidden")).Returns(false);
 
         var svc = CreateService(ad: ad, client: clientSvc, routing: routing, userManagement: userManagement);
-        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
-        Assert.Equal(LoginOutcomeType.Failure, outcome.Type);
+        var outcome = await svc.LoginAsync(new Auth.Web.Application.Dtos.LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
+        Assert.Equal(Auth.Web.Application.Dtos.LoginOutcomeType.Failure, outcome.Type);
         Assert.Contains("URL de retorno inválida", outcome.ErrorMessage);
     }
 }

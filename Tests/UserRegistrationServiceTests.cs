@@ -2,7 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Auth.Web.Application.Dtos;
 using Auth.Web.Domain.Entities;
-using Auth.Web.Infrastructure.Users;
+using Auth.Web.Services.Implementations.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -26,7 +26,7 @@ namespace Auth.Web.Tests
         [Fact]
         public async Task RegisterUserAsync_Returns_ValidationError_When_Missing_Fields()
         {
-            var ad = new Mock<Auth.Web.Application.Abstractions.IActiveDirectoryAuthService>();
+            var ad = new Mock<Auth.Web.Services.Abstractions.Auth.IActiveDirectoryAuthService>();
             var um = CreateUserManagerMock();
             var store = CreateUserStoreMock();
             var svc = new UserRegistrationService(ad.Object, um.Object, store.Object, new Mock<ILogger<UserRegistrationService>>().Object);
@@ -38,7 +38,7 @@ namespace Auth.Web.Tests
         [Fact]
         public async Task RegisterUserAsync_Returns_AlreadyExists_When_Email_Exists()
         {
-            var ad = new Mock<Auth.Web.Application.Abstractions.IActiveDirectoryAuthService>();
+            var ad = new Mock<Auth.Web.Services.Abstractions.Auth.IActiveDirectoryAuthService>();
             var um = CreateUserManagerMock();
             var store = CreateUserStoreMock();
 
@@ -52,7 +52,7 @@ namespace Auth.Web.Tests
         [Fact]
         public async Task RegisterUserAsync_Returns_NotInActiveDirectory_When_NotInAd()
         {
-            var ad = new Mock<Auth.Web.Application.Abstractions.IActiveDirectoryAuthService>();
+            var ad = new Mock<Auth.Web.Services.Abstractions.Auth.IActiveDirectoryAuthService>();
             ad.Setup(x => x.ExistsByEmailAsync("c@d.com")).ReturnsAsync(false);
             var um = CreateUserManagerMock();
             var store = CreateUserStoreMock();
@@ -65,7 +65,7 @@ namespace Auth.Web.Tests
         [Fact]
         public async Task RegisterUserAsync_Creates_User_When_Valid_And_InAD()
         {
-            var ad = new Mock<Auth.Web.Application.Abstractions.IActiveDirectoryAuthService>();
+            var ad = new Mock<Auth.Web.Services.Abstractions.Auth.IActiveDirectoryAuthService>();
             ad.Setup(x => x.ExistsByEmailAsync("e@d.com")).ReturnsAsync(true);
             var um = CreateUserManagerMock();
             var store = CreateUserStoreMock();

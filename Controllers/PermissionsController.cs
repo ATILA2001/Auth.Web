@@ -1,5 +1,5 @@
 using Auth.Web.Domain.Dtos;
-using Auth.Web.Application.Abstractions;
+using Auth.Web.Services.Abstractions.Permissions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Auth.Web.Controllers;

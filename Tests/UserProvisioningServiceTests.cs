@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Auth.Web.Domain.Entities;
-using Auth.Web.Infrastructure.Users;
+using Auth.Web.Services.Implementations.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Moq;

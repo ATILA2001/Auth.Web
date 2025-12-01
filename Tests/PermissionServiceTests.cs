@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Auth.Web.Data;
 using Auth.Web.Domain.Entities;
-using Auth.Web.Infrastructure.Permissions;
+using Auth.Web.Services.Implementations.Permissions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Moq;

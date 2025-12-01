@@ -1,11 +1,11 @@
 using System.DirectoryServices.AccountManagement;
 using Auth.Web.Configuration;
-using Auth.Web.Application.Abstractions;
+using Auth.Web.Services.Abstractions.Auth;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Runtime.Versioning;
 
-namespace Auth.Web.Infrastructure.Auth;
+namespace Auth.Web.Services.Implementations.Auth;
 
 [SupportedOSPlatform("windows")]
 public class AdAuthService : IActiveDirectoryAuthService

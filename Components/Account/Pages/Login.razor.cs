@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Authentication;
-using Auth.Web.Application.Users;
+using Auth.Web.Services.Abstractions.Users;
 using Auth.Web.Application.Dtos;
 using Microsoft.AspNetCore.WebUtilities;
 using System.ComponentModel.DataAnnotations;

@@ -1,4 +1,4 @@
-using Auth.Web.Application.Auth;
+using Auth.Web.Services.Abstractions.Auth;
 using Auth.Web.Application.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;

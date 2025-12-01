@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 using Auth.Web.Controllers;
-using Auth.Web.Application.Abstractions;
+using Auth.Web.Services.Abstractions.Permissions;
 using Auth.Web.Domain.Dtos;
 using Moq;
 using Xunit;

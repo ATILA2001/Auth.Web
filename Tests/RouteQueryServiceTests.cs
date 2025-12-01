@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Auth.Web.Data;
 using Auth.Web.Domain.Entities;
-using Auth.Web.Infrastructure.Routing;
+using Auth.Web.Services.Implementations.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;

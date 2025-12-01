@@ -1,8 +1,8 @@
 using System.IdentityModel.Tokens.Jwt;
 using Auth.Web.Application.Auth;
-using Auth.Web.Application.Abstractions;
+using Auth.Web.Services.Abstractions.Auth;
 using Auth.Web.Configuration;
-using Auth.Web.Infrastructure.Auth;
+using Auth.Web.Services.Implementations.Auth;
 using Microsoft.Extensions.Options;
 using Xunit;
 

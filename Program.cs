@@ -8,17 +8,19 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Routing;
-using Auth.Web.Application.Abstractions;
-using Auth.Web.Application.Auth;
-using Auth.Web.Application.Users;
-using Auth.Web.Application.Admin.Abstractions;
+using Auth.Web.Services.Abstractions.Auth;
+using Auth.Web.Services.Abstractions.Users;
+using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Permissions;
-using Auth.Web.Infrastructure.Auth;
-using Auth.Web.Infrastructure.Clients;
-using Auth.Web.Infrastructure.Permissions;
-using Auth.Web.Infrastructure.Routing;
-using Auth.Web.Infrastructure.Admin;
-using Auth.Web.Infrastructure.Users; // <-- Añadido para acceder a los servicios movidos
+using Auth.Web.Services.Abstractions.Permissions;
+using Auth.Web.Services.Abstractions.Routing;
+using Auth.Web.Services.Abstractions.Clients;
+using Auth.Web.Services.Implementations.Auth;
+using Auth.Web.Services.Implementations.Clients;
+using Auth.Web.Services.Implementations.Permissions;
+using Auth.Web.Services.Implementations.Routing;
+using Auth.Web.Services.Implementations.Admin;
+using Auth.Web.Services.Implementations.Users;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,21 +70,21 @@ builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuth
 
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
-// Application services
+// Services
 builder.Services.AddScoped<IActiveDirectoryAuthService, AdAuthService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IRoutingService, RoutingService>();
 
-// Application layer orchestrators
+// Orchestrators and user-related services
 builder.Services.AddScoped<IAuthFlowService, AuthFlowService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IUserProvisioningService, UserProvisioningService>();
 builder.Services.AddScoped<IUserRegistrationService, UserRegistrationService>();
 builder.Services.AddScoped<UserPermissionsAssembler>();
 
-// Admin services - all in Infrastructure.Admin
+// Admin services
 builder.Services.AddScoped<IAdminUserService, UserAdminService>();
 builder.Services.AddScoped<IAdminRoleService, RoleAdminService>();
 builder.Services.AddScoped<IAdminAreaService, AreaAdminService>();

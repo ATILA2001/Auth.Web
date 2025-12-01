@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Auth.Web.Data;
 using Auth.Web.Domain.Entities;
-using Auth.Web.Infrastructure.Clients;
+using Auth.Web.Services.Implementations.Clients;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
