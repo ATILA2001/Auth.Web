@@ -1,8 +1,10 @@
-using Auth.Web.Infrastructure.Admin;
+using Auth.Web.Services.Implementations.Admin;
 using Auth.Web.Data;
 using Auth.Web.Domain.Entities;
-using Auth.Web.Application.Admin.Abstractions;
-using Auth.Web.Application.Abstractions;
+using Auth.Web.Services.Abstractions.Admin;
+using Auth.Web.Services.Abstractions.Clients;
+using Auth.Web.Repositories.Abstractions.Admin;
+using Auth.Web.Repositories.Implementations.Admin;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
@@ -22,6 +24,7 @@ public class ClientAdminServiceTests
         var services = new ServiceCollection();
         services.AddDbContext<AuthDbContext>(opts => opts.UseInMemoryDatabase(dbName, root));
         services.AddScoped<IClientService>(_ => clientSvcMock.Object);
+        services.AddScoped<IClientAdminRepository, ClientAdminRepository>();
         services.AddScoped<IAdminClientService, ClientAdminService>();
         var provider = services.BuildServiceProvider();
 
@@ -44,6 +47,7 @@ public class ClientAdminServiceTests
         var services = new ServiceCollection();
         services.AddDbContext<AuthDbContext>(opts => opts.UseInMemoryDatabase(dbName, root));
         services.AddScoped<IClientService>(_ => new Mock<IClientService>().Object);
+        services.AddScoped<IClientAdminRepository, ClientAdminRepository>();
         services.AddScoped<IAdminClientService, ClientAdminService>();
         var provider = services.BuildServiceProvider();
 

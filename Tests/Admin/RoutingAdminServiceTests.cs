@@ -1,8 +1,10 @@
-using Auth.Web.Infrastructure.Admin;
+using Auth.Web.Services.Implementations.Admin;
 using Auth.Web.Data;
 using Auth.Web.Domain.Entities;
-using Auth.Web.Application.Admin.Abstractions;
-using Auth.Web.Application.Abstractions;
+using Auth.Web.Services.Abstractions.Admin;
+using Auth.Web.Services.Abstractions.Clients;
+using Auth.Web.Repositories.Abstractions.Admin;
+using Auth.Web.Repositories.Implementations.Admin;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
@@ -22,6 +24,8 @@ public class RoutingAdminServiceTests
         var services = new ServiceCollection();
         services.AddDbContext<AuthDbContext>(opts => opts.UseInMemoryDatabase(dbName, root));
         services.AddScoped<IClientService>(_ => clientSvc.Object);
+        services.AddScoped<IClientAdminRepository, ClientAdminRepository>();
+        services.AddScoped<IRoutingAdminRepository, RoutingAdminRepository>();
         services.AddScoped<IAdminRoutingService, RoutingAdminService>();
         var provider = services.BuildServiceProvider();
 
@@ -37,6 +41,8 @@ public class RoutingAdminServiceTests
             await dbSeed.SaveChangesAsync();
         }
 
+        // Mock retrieval of domain client and return url validation
+        clientSvc.Setup(x => x.GetAsync("cli1")).ReturnsAsync(client);
         clientSvc.Setup(x => x.IsReturnUrlAllowed(It.Is<ApplicationClient>(c => c.ClientId == "cli1"), "https://app/x")).Returns(true);
 
         var admin = provider.GetRequiredService<IAdminRoutingService>();
@@ -56,6 +62,8 @@ public class RoutingAdminServiceTests
         var services = new ServiceCollection();
         services.AddDbContext<AuthDbContext>(opts => opts.UseInMemoryDatabase(dbName, root));
         services.AddScoped<IClientService>(_ => clientSvc.Object);
+        services.AddScoped<IClientAdminRepository, ClientAdminRepository>();
+        services.AddScoped<IRoutingAdminRepository, RoutingAdminRepository>();
         services.AddScoped<IAdminRoutingService, RoutingAdminService>();
         var provider = services.BuildServiceProvider();
 
@@ -71,6 +79,7 @@ public class RoutingAdminServiceTests
             await dbSeed.SaveChangesAsync();
         }
 
+        clientSvc.Setup(x => x.GetAsync("cli2")).ReturnsAsync(client);
         clientSvc.Setup(x => x.IsReturnUrlAllowed(It.Is<ApplicationClient>(c => c.ClientId == "cli2"), "https://bad/url")).Returns(false);
 
         var admin = provider.GetRequiredService<IAdminRoutingService>();

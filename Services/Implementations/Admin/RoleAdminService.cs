@@ -1,28 +1,23 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Auth.Web.Data;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
+using Auth.Web.Repositories.Abstractions.Admin;
 
 namespace Auth.Web.Services.Implementations.Admin;
 
 public sealed class RoleAdminService : IAdminRoleService
 {
     private readonly RoleManager<IdentityRole> _roleManager;
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IRoleAdminRepository _repository;
 
-    public RoleAdminService(RoleManager<IdentityRole> roleManager, IServiceScopeFactory scopeFactory)
+    public RoleAdminService(RoleManager<IdentityRole> roleManager, IRoleAdminRepository repository)
     {
         _roleManager = roleManager;
-        _scopeFactory = scopeFactory;
+        _repository = repository;
     }
 
-    public async Task<List<IdentityRole>> GetRolesAsync(CancellationToken ct = default)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-        return await db.Roles.AsNoTracking().OrderBy(r => r.Name).ToListAsync(ct);
-    }
+    public Task<List<IdentityRole>> GetRolesAsync(CancellationToken ct = default)
+        => _repository.GetRolesAsync(ct);
 
     public async Task<bool> CreateRoleAsync(string name, CancellationToken ct = default)
     {
@@ -40,33 +35,11 @@ public sealed class RoleAdminService : IAdminRoleService
         return res.Succeeded;
     }
 
-    async Task<IReadOnlyCollection<RoleAdminDto>> IAdminRoleService.GetRolesAsync(CancellationToken cancellationToken)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-        
-        var roles = await db.Roles.AsNoTracking().OrderBy(r => r.Name).ToListAsync(cancellationToken);
-        var userRoleCounts = await db.UserRoles.AsNoTracking().GroupBy(ur => ur.RoleId)
-            .Select(g => new { RoleId = g.Key, Count = g.Count() }).ToListAsync(cancellationToken);
-        var countMap = userRoleCounts.ToDictionary(x => x.RoleId, x => x.Count);
-        return roles.Select(r => new RoleAdminDto
-        {
-            Id = r.Id,
-            Name = r.Name ?? string.Empty,
-            UserCount = countMap.TryGetValue(r.Id, out var c) ? c : 0
-        }).ToList();
-    }
+    Task<IReadOnlyCollection<RoleAdminDto>> IAdminRoleService.GetRolesAsync(CancellationToken cancellationToken)
+        => _repository.GetRolesWithUserCountAsync(cancellationToken);
 
-    async Task<RoleAdminDto?> IAdminRoleService.GetRoleByIdAsync(string roleId, CancellationToken cancellationToken)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-        
-        var role = await db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
-        if (role is null) return null;
-        var count = await db.UserRoles.CountAsync(ur => ur.RoleId == roleId, cancellationToken);
-        return new RoleAdminDto { Id = role.Id, Name = role.Name ?? string.Empty, UserCount = count };
-    }
+    Task<RoleAdminDto?> IAdminRoleService.GetRoleByIdAsync(string roleId, CancellationToken cancellationToken)
+        => _repository.GetRoleByIdWithUserCountAsync(roleId, cancellationToken);
 
     async Task<string> IAdminRoleService.CreateRoleAsync(string name, CancellationToken cancellationToken)
     {
