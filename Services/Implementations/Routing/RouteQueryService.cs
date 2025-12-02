@@ -1,10 +1,9 @@
 using Auth.Web.Data;
 using Microsoft.EntityFrameworkCore;
-using Auth.Web.Services.Abstractions.Routing;
 
 namespace Auth.Web.Services.Implementations.Routing;
 
-public sealed class RouteQueryService : IRouteQueryService
+public sealed class RouteQueryService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     public RouteQueryService(IServiceScopeFactory scopeFactory) => _scopeFactory = scopeFactory;
@@ -37,3 +36,11 @@ public sealed class RouteQueryService : IRouteQueryService
         return routes.Select(r => new UserRouteInfo(r.AreaId, areaNames[r.AreaId], r.ClientId, r.ReturnUrl, r.Priority, r.IsActive)).ToList();
     }
 }
+
+public readonly record struct UserRouteInfo(
+    int AreaId,
+    string AreaName,
+    string ClientId,
+    string ReturnUrl,
+    int Priority,
+    bool IsActive);

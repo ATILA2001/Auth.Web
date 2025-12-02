@@ -1,7 +1,6 @@
 using Auth.Web.Data;
 using Auth.Web.Domain.Dtos;
 using Auth.Web.Domain.Entities;
-using Auth.Web.Utils;
 using Auth.Web.Services.Abstractions.Permissions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -62,7 +61,7 @@ public class PermissionService : IPermissionService
             .Where(x => !string.IsNullOrWhiteSpace(x.PageUrl) && !string.IsNullOrWhiteSpace(x.ActionName))
             .Select(x => new
             {
-                Url = Urls.NormalizePagePath(x.PageUrl!),
+                Url = NormalizePagePath(x.PageUrl!),
                 Action = x.ActionName!.Trim()
             })
             .GroupBy(x => x.Url, StringComparer.OrdinalIgnoreCase)
@@ -85,5 +84,13 @@ public class PermissionService : IPermissionService
             Areas = areaIds,
             Version = 1
         };
+    }
+
+    private static string NormalizePagePath(string url)
+    {
+        url = url.Trim();
+        if (url.StartsWith("~/")) url = url.Substring(1);
+        if (!url.StartsWith("/")) url = "/" + url;
+        return url;
     }
 }
