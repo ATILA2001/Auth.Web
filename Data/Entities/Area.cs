@@ -1,4 +1,4 @@
-namespace Auth.Web.Domain.Entities;
+namespace Auth.Web.Data.Entities;
 
 public class Area
 {

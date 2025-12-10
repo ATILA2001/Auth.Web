@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Auth.Web.Data;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Clients;
 using Microsoft.EntityFrameworkCore;
 

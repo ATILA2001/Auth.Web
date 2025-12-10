@@ -1,4 +1,4 @@
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 
 namespace Auth.Web.Services.Abstractions.Auth;
 

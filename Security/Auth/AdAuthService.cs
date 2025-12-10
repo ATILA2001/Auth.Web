@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Runtime.Versioning;
 
-namespace Auth.Web.Services.Implementations.Auth;
+namespace Auth.Web.Security.Auth;
 
 [SupportedOSPlatform("windows")]
 public class AdAuthService : IActiveDirectoryAuthService

@@ -2,7 +2,7 @@ using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Auth.Web.Services.Abstractions.Clients;
 using Auth.Web.Repositories.Abstractions.Admin;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 
 namespace Auth.Web.Services.Implementations.Admin;
 
@@ -29,19 +29,17 @@ public sealed class RoutingAdminService : IAdminRoutingService
     {
         // Ensure client exists via repository
         var clientDto = await _clientAdminRepository.GetClientAsync(clientId, cancellationToken) ?? throw new InvalidOperationException("Cliente inexistente.");
-        // Load domain client entity directly from client service by string identifier
+        // Load client entity directly from client service by string identifier
         var domainClient = await _clientService.GetAsync(clientDto.ClientId);
         if (domainClient is null)
         {
             throw new InvalidOperationException("Cliente inexistente.");
         }
-        // Validate return url via IsReturnUrlAllowed on hydrated domain client entity
+        // Validate return url via IsReturnUrlAllowed
         if (!_clientService.IsReturnUrlAllowed(domainClient, returnUrl))
         {
-            // However repository will persist any value, so guard here ensures consistency
             throw new InvalidOperationException("ReturnUrl no permitido para el cliente.");
         }
-        // Repository persists with numeric clientId and stores ClientId (string) internally
         return await _repository.CreateRouteAsync(areaId, clientId, returnUrl, priority, isActive, cancellationToken);
     }
 

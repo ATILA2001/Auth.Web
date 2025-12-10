@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Auth.Web.Application.Dtos;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 using Auth.Web.Services.Implementations.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;

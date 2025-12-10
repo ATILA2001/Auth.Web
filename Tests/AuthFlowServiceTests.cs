@@ -7,7 +7,7 @@ using Auth.Web.Services.Abstractions.Permissions;
 using Auth.Web.Services.Abstractions.Routing;
 using Auth.Web.Services.Abstractions.Clients;
 using Auth.Web.Domain.Dtos;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 using Xunit;
@@ -86,7 +86,7 @@ public class AuthFlowServiceTests
         routing.Setup(x => x.ResolveForUserAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(("clientA", "https://app/landing"));
 
         var clientSvc = new Mock<IClientService>();
-        var client = new Domain.Entities.ApplicationClient { Audience = "audA", ClientId = "clientA" };
+        var client = new ApplicationClient { Audience = "audA", ClientId = "clientA" };
         clientSvc.Setup(x => x.GetAsync("clientA")).ReturnsAsync(client);
         clientSvc.Setup(x => x.IsReturnUrlAllowed(client, "https://app/landing")).Returns(true);
 
@@ -141,7 +141,7 @@ public class AuthFlowServiceTests
         routing.Setup(x => x.ResolveForUserAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(("clientB", "https://bad/forbidden"));
 
         var clientSvc = new Mock<IClientService>();
-        var client = new Domain.Entities.ApplicationClient { Audience = "audB", ClientId = "clientB" };
+        var client = new ApplicationClient { Audience = "audB", ClientId = "clientB" };
         clientSvc.Setup(x => x.GetAsync("clientB")).ReturnsAsync(client);
         clientSvc.Setup(x => x.IsReturnUrlAllowed(client, "https://bad/forbidden")).Returns(false);
 

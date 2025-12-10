@@ -1,6 +1,6 @@
 using Auth.Web.Services.Implementations.Admin;
 using Auth.Web.Data;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Services.Abstractions.Clients;
 using Auth.Web.Repositories.Abstractions.Admin;

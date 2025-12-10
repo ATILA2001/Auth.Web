@@ -1,6 +1,6 @@
 using Auth.Web.Application.Admin.Dtos;
 using Auth.Web.Data;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 using Auth.Web.Repositories.Abstractions.Admin;
 using Microsoft.EntityFrameworkCore;
 

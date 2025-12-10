@@ -1,5 +1,5 @@
 using Auth.Web.Application.Admin.Dtos;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 
 namespace Auth.Web.Repositories.Abstractions.Admin;
 

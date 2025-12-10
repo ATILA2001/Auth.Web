@@ -1,7 +1,7 @@
 using Auth.Web.Controllers;
 using Auth.Web.Services.Abstractions.Auth;
 using Auth.Web.Application.Dtos;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Moq;

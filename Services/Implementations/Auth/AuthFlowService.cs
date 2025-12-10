@@ -1,7 +1,7 @@
 using AuthClaimsModel = Auth.Web.Application.Auth.AuthClaimsModel;
 using Auth.Web.Application.Dtos;
 using Auth.Web.Application.Permissions;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Auth;
 using Auth.Web.Services.Abstractions.Clients;
 using Auth.Web.Services.Abstractions.Routing;

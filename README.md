@@ -32,7 +32,7 @@ Services/
 │  ├─ Routing/
 │  └─ Users/
 
-Repository/
+Repositories/
 ├─ Abstractions/
 │  ├─ Auth/
 │  ├─ Admin/
@@ -99,13 +99,13 @@ wwwroot/
 
 ### Qué contiene cada carpeta
 
-- `Services/` — Orquestación y contratos del dominio de aplicación (excepto JWT). Contiene interfaces en `Abstractions/` y servicios de alto nivel en `Implementations/` que implementan los casos de uso (autenticación, permisos, clientes, routing, administración). No deben tener lógica de persistencia directa; acceden a `Repository/` cuando sea necesario.
+- `Services/` — Orquestación y contratos del dominio de aplicación (excepto JWT). Contiene interfaces en `Abstractions/` y servicios de alto nivel en `Implementations/` que implementan los casos de uso (autenticación, permisos, clientes, routing, administración). No deben tener lógica de persistencia directa; acceden a `Repositories/` cuando sea necesario.
 
 - `Services/Abstractions/` — Interfaces públicas usadas por la capa superior para dominios de negocio: `IActiveDirectoryAuthService` (si se expone vía Services), `IClientService`, `IPermissionService`, `IRoutingService`, `IRouteQueryService`, `IUserService`, etc.
 
 - `Services/Implementations/` — Implementaciones concretas de servicios de negocio: autenticación de sesión administrativa (`Auth/`), administración (`Admin/`), clientes (`Clients/`), permisos (`Permissions/`), routing (`Routing/`), usuarios (`Users/`).
 
-- `Repository/` — Persistencia y acceso a datos, con la misma división que `Services`: `Abstractions/` para interfaces de repositorios y contratos de acceso a datos, y `Implementations/` para repositorios concretos y adaptadores.
+- `Repositories/` — Persistencia y acceso a datos, con la misma división que `Services`: `Abstractions/` para interfaces de repositorios y contratos de acceso a datos, y `Implementations/` para repositorios concretos y adaptadores.
 
 - `Data/Entities/` — Entidades de negocio y DTOs persistidos (POCOs): `ApplicationUser`, `ApplicationClient`, `Area`, `AreaRoute`, `ActionPermission`.
 
@@ -144,7 +144,7 @@ wwwroot/
 ## 4) Convenciones y buenas prácticas (Reglas del equipo)
 
 Convenciones de nombres
-- Namespaces: `Auth.Web.Services`, `Auth.Web.Repository`, `Auth.Web.Security`, `Auth.Web.Components`, `Auth.Web.Data`, `Auth.Web.Configuration`.
+- Namespaces: `Auth.Web.Services`, `Auth.Web.Repositories`, `Auth.Web.Security`, `Auth.Web.Components`, `Auth.Web.Data`, `Auth.Web.Configuration`.
 - Interfaces: prefijo `I` y sufijo descriptivo (`IClientService`, `IPermissionService`).
 - DTOs: sufijo `Dto` o `AdminDto` según propósito.
 - Blazor components y ViewModels: `PascalCase.razor`, `PascalCase.razor.cs` y `PascalCaseViewModel.cs`.
@@ -157,20 +157,20 @@ Cómo trabajar día a día
 Qué va en cada capa
 - UI (Components): únicamente UI, validación superficial y llamadas a servicios de `Services`.
 - Services: orquestación, casos de uso e interfaces; sin dependencias directas al proveedor de datos.
-- Repository: EF Core, repositorios y acceso a datos, dividido en `Abstractions` e `Implementations`.
+- Repositories: EF Core, repositorios y acceso a datos, dividido en `Abstractions` e `Implementations`.
 - Data/Entities: entidades y reglas de negocio (POCOs).
 - Security: autenticación, JWT y claves.
 - Configuration: opciones de configuración vinculadas a `IOptions<T>`.
 
 Buenas prácticas
-- No realizar llamadas a `Repository` desde Components directamente: inyectar servicios de `Services`.
+- No realizar llamadas a `Repositories` desde Components directamente: inyectar servicios de `Services`.
 - Validar `ReturnUrl` siempre con `IClientService`.
 - Mantener `Jwt:SigningKey` fuera del código fuente (usar User Secrets o variables de entorno).
 - Tests unitarios para servicios de autenticación, JWT y administración.
 
 Reglas de carpetas para componentes
 - Un componente por archivo `.razor` y opcional `*.razor.cs` para code-behind, más su `*ViewModel.cs`.
-- Components agrupados por dominio: `Account/`, `Admin/`, `Layout/`, `Pages/.
+- Components agrupados por dominio: `Account/`, `Admin/`, `Layout/`, `Pages/.`
 
 ## 5) Inyección de dependencias y lifetimes
 
@@ -227,7 +227,7 @@ Cobertura objetivo
 - Validación AD y manejo de errores.
 - Generación y contenido de JWT (servicios bajo `Security/Jwt`).
 - Reglas de `IClientService.IsReturnUrlAllowed`.
-- Operaciones CRUD del panel admin (Services + Repository).
+- Operaciones CRUD del panel admin (Services + Repositories).
 
 ## 8) Branching model
 
@@ -248,4 +248,4 @@ Política de PR
 
 ---
 
-Mantener este README como referencia de alto nivel. Para detalles de implementación y flujos concretos consulte el código en `Services/`, `Repository/`, `Security/`, `Data/` y las guías en `docs/`.
+Mantener este README como referencia de alto nivel. Para detalles de implementación y flujos concretos consulte el código en `Services/`, `Repositories/`, `Security/`, `Data/` y las guías en `docs/`.

@@ -1,5 +1,5 @@
 using Auth.Web.Data;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;

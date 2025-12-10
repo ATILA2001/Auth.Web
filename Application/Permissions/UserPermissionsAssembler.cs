@@ -1,5 +1,5 @@
 using Auth.Web.Application.Auth;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 using Auth.Web.Domain.Dtos;
 
 namespace Auth.Web.Application.Permissions;

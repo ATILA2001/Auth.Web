@@ -2,7 +2,7 @@ using Auth.Web.Services.Abstractions.Auth;
 using Auth.Web.Application.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 

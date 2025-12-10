@@ -1,6 +1,6 @@
 using Auth.Web.Data;
 using Auth.Web.Domain.Dtos;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Permissions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

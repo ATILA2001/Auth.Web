@@ -1,4 +1,4 @@
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;

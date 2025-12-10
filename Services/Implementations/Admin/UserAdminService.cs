@@ -1,7 +1,7 @@
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Auth.Web.Repositories.Abstractions.Admin;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 using Microsoft.AspNetCore.Identity;
 
 namespace Auth.Web.Services.Implementations.Admin;

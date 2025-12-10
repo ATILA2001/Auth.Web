@@ -1,5 +1,5 @@
 using Auth.Web.Application.Dtos;
-using Auth.Web.Domain.Entities;
+using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Auth;
 using Auth.Web.Services.Abstractions.Users;
 using Microsoft.AspNetCore.Identity;
