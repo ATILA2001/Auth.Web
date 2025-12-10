@@ -3,9 +3,9 @@ using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
 
-namespace Auth.Web.Components.Admin;
+namespace Auth.Web.Components.Admin.Users;
 
-public partial class UsersAdmin : ComponentBase
+public partial class Users : ComponentBase
 {
     [Inject] private IAdminUserService UserService { get; set; } = default!;
     [Inject] private IAdminRoleService RoleService { get; set; } = default!;

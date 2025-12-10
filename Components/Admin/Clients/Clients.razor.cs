@@ -3,9 +3,9 @@ using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
 
-namespace Auth.Web.Components.Admin;
+namespace Auth.Web.Components.Admin.Clients;
 
-public partial class ClientsAdmin : ComponentBase
+public partial class Clients : ComponentBase
 {
     [Inject] private IAdminClientService ClientService { get; set; } = default!;
     [Inject] private NotificationService NotificationService { get; set; } = default!;
@@ -70,7 +70,7 @@ public partial class ClientsAdmin : ComponentBase
             else
             {
                 await ClientService.UpdateClientAsync(editModel.Id, editModel.ClientId, editModel.Audience, urls);
-                NotificationService.Notify(NotificationSeverity.Success, "Cliente actualizado", $"Se actualizó '{editModel.ClientId}'.");;
+                NotificationService.Notify(NotificationSeverity.Success, "Cliente actualizado", $"Se actualizó '{editModel.ClientId}'.");
             }
             editing = false;
             await LoadAsync();

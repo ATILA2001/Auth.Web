@@ -3,9 +3,9 @@ using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
 
-namespace Auth.Web.Components.Admin;
+namespace Auth.Web.Components.Admin.Routes;
 
-public partial class RoutesAdmin : ComponentBase
+public partial class Routes : ComponentBase
 {
     [Inject] private IAdminRoutingService AdminRouting { get; set; } = default!;
     [Inject] private IAdminAreaService AdminAreas { get; set; } = default!;

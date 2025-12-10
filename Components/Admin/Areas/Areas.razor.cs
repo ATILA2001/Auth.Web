@@ -4,9 +4,9 @@ using Auth.Web.Application.Admin.Dtos;
 using Radzen;
 using Radzen.Blazor;
 
-namespace Auth.Web.Components.Admin;
+namespace Auth.Web.Components.Admin.Areas;
 
-public partial class AreasAdmin : ComponentBase
+public partial class Areas : ComponentBase
 {
     [Inject] private IAdminAreaService AdminAreaService { get; set; } = default!;
     [Inject] private NotificationService NotificationService { get; set; } = default!;
