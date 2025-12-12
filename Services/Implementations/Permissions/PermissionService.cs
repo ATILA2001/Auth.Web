@@ -1,20 +1,19 @@
-using Auth.Web.Data;
 using Auth.Web.Domain.Dtos;
 using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Permissions;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using Auth.Web.Repositories.Abstractions.Permissions;
 
 namespace Auth.Web.Services.Implementations.Permissions;
 
 public class PermissionService : IPermissionService
 {
-    private readonly AuthDbContext _context;
+    private readonly IPermissionRepository _repository;
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public PermissionService(AuthDbContext context, UserManager<ApplicationUser> userManager)
+    public PermissionService(IPermissionRepository repository, UserManager<ApplicationUser> userManager)
     {
-        _context = context;
+        _repository = repository;
         _userManager = userManager;
     }
 
@@ -33,37 +32,13 @@ public class PermissionService : IPermissionService
         }
 
         var roleNames = await _userManager.GetRolesAsync(user);
-
-        var roleIds = roleNames.Count == 0
-            ? new List<string>()
-            : await _context.Roles
-                .Where(role => roleNames.Contains(role.Name!))
-                .Select(role => role.Id)
-                .ToListAsync();
-
-        var areaIds = await _context.UserAreas
-            .Where(ua => ua.UserId == user.Id)
-            .Select(ua => ua.AreaId)
-            .Distinct()
-            .OrderBy(id => id)
-            .ToListAsync();
-
-        var rolePermissions = await _context.RolePagePermissions
-            .Where(rpp => roleIds.Contains(rpp.RoleId))
-            .Select(rpp => new
-            {
-                PageUrl = rpp.Page != null ? rpp.Page.Url : null,
-                ActionName = rpp.ActionPermission != null ? rpp.ActionPermission.Name : null
-            })
-            .ToListAsync();
+        var roleIds = await _repository.GetUserRoleIdsAsync(roleNames);
+        var areaIds = await _repository.GetUserAreaIdsAsync(user.Id);
+        var rolePermissions = await _repository.GetRolePagePermissionsAsync(roleIds);
 
         var pagePermissions = rolePermissions
-            .Where(x => !string.IsNullOrWhiteSpace(x.PageUrl) && !string.IsNullOrWhiteSpace(x.ActionName))
-            .Select(x => new
-            {
-                Url = NormalizePagePath(x.PageUrl!),
-                Action = x.ActionName!.Trim()
-            })
+            .Where(rpp => !string.IsNullOrWhiteSpace(rpp.Page?.Url) && !string.IsNullOrWhiteSpace(rpp.ActionPermission?.Name))
+            .Select(rpp => new { Url = NormalizePagePath(rpp.Page!.Url), Action = rpp.ActionPermission!.Name!.Trim() })
             .GroupBy(x => x.Url, StringComparer.OrdinalIgnoreCase)
             .Select(group => new PagePermissionDto
             {
@@ -81,7 +56,7 @@ public class PermissionService : IPermissionService
         return new UserPermissionsDto
         {
             Pages = pagePermissions,
-            Areas = areaIds,
+            Areas = areaIds.ToList(),
             Version = 1
         };
     }

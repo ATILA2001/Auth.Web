@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Auth.Web.Data;
 using Auth.Web.Data.Entities;
-using Auth.Web.Services.Implementations.Clients;
+using Auth.Web.Repositories.Implementations.Clients;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -28,7 +28,7 @@ public class ClientServiceTests
         db.ApplicationClients.Add(client);
         await db.SaveChangesAsync();
 
-        var svc = new ClientService(db);
+        var svc = new Auth.Web.Services.Implementations.Clients.ClientService(new ClientRepository(db));
         var fetched = await svc.GetAsync("cli1");
 
         Assert.NotNull(fetched);
@@ -39,7 +39,7 @@ public class ClientServiceTests
     public void IsReturnUrlAllowed_Returns_True_For_Matching_Url()
     {
         var db = CreateDb(Guid.NewGuid().ToString());
-        var svc = new ClientService(db);
+        var svc = new Auth.Web.Services.Implementations.Clients.ClientService(new ClientRepository(db));
         var client = new ApplicationClient { ClientId = "c1", Audience = "a", AllowedReturnUrlsJson = JsonSerializer.Serialize(new[] { "https://app/x" }) };
 
         var ok = svc.IsReturnUrlAllowed(client, "https://app/x");
@@ -50,7 +50,7 @@ public class ClientServiceTests
     public void IsReturnUrlAllowed_Returns_False_For_NonMatching_Url()
     {
         var db = CreateDb(Guid.NewGuid().ToString());
-        var svc = new ClientService(db);
+        var svc = new Auth.Web.Services.Implementations.Clients.ClientService(new ClientRepository(db));
         var client = new ApplicationClient { ClientId = "c2", Audience = "a", AllowedReturnUrlsJson = JsonSerializer.Serialize(new[] { "https://app/x" }) };
 
         var ok = svc.IsReturnUrlAllowed(client, "https://other/x");
@@ -61,7 +61,7 @@ public class ClientServiceTests
     public void IsReturnUrlAllowed_Returns_False_For_MalformedJson()
     {
         var db = CreateDb(Guid.NewGuid().ToString());
-        var svc = new ClientService(db);
+        var svc = new Auth.Web.Services.Implementations.Clients.ClientService(new ClientRepository(db));
         var client = new ApplicationClient { ClientId = "c3", Audience = "a", AllowedReturnUrlsJson = "NOT JSON" };
 
         var ok = svc.IsReturnUrlAllowed(client, "https://any");

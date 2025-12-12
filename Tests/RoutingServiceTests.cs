@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using Auth.Web.Data;
 using Auth.Web.Data.Entities;
-using Auth.Web.Services.Implementations.Routing;
+using Auth.Web.Repositories.Implementations.Routing;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,7 +41,7 @@ public class RoutingServiceTests
         um.Setup(x => x.FindByIdAsync(user.Id)).ReturnsAsync(user);
         um.Setup(x => x.IsInRoleAsync(user, "Admin")).ReturnsAsync(true);
 
-        var svc = new RoutingService(CreateScopeFactory(CreateDb("r1")), um.Object, new Mock<Microsoft.Extensions.Logging.ILogger<RoutingService>>().Object);
+        var svc = new Auth.Web.Services.Implementations.Routing.RoutingService(new RoutingRepository(CreateDb("r1")), um.Object, new Mock<Microsoft.Extensions.Logging.ILogger<Auth.Web.Services.Implementations.Routing.RoutingService>>().Object);
         var res = await svc.ResolveForUserAsync(user.Id);
         Assert.Null(res);
     }
@@ -63,8 +63,8 @@ public class RoutingServiceTests
         um.Setup(x => x.FindByIdAsync(user.Id)).ReturnsAsync(user);
         um.Setup(x => x.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
 
-        var svc = new RoutingService(CreateScopeFactory(db), um.Object, new Mock<Microsoft.Extensions.Logging.ILogger<RoutingService>>().Object);
-        var res = await svc.ResolveForUserAsync(user.Id);
+        var svc2 = new Auth.Web.Services.Implementations.Routing.RoutingService(new RoutingRepository(db), um.Object, new Mock<Microsoft.Extensions.Logging.ILogger<Auth.Web.Services.Implementations.Routing.RoutingService>>().Object);
+        var res = await svc2.ResolveForUserAsync(user.Id);
         Assert.NotNull(res);
         Assert.Equal("cli", res!.Value.ClientId);
         Assert.Equal("https://app/", res.Value.ReturnUrl);

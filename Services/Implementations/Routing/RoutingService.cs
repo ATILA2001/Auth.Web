@@ -1,21 +1,20 @@
-using Auth.Web.Data;
 using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Routing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using Auth.Web.Repositories.Abstractions.Routing;
 
 namespace Auth.Web.Services.Implementations.Routing;
 
 public sealed class RoutingService : IRoutingService
 {
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IRoutingRepository _repository;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<RoutingService> _logger;
 
-    public RoutingService(IServiceScopeFactory scopeFactory, UserManager<ApplicationUser> userManager, ILogger<RoutingService> logger)
+    public RoutingService(IRoutingRepository repository, UserManager<ApplicationUser> userManager, ILogger<RoutingService> logger)
     {
-        _scopeFactory = scopeFactory;
+        _repository = repository;
         _userManager = userManager;
         _logger = logger;
     }
@@ -28,14 +27,7 @@ public sealed class RoutingService : IRoutingService
             return null;
         }
 
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-
-        var areaIds = await db.UserAreas
-            .AsNoTracking()
-            .Where(ua => ua.UserId == userId)
-            .Select(ua => ua.AreaId)
-            .ToListAsync(ct);
+        var areaIds = await _repository.GetUserAreaIdsAsync(userId, ct);
 
         if (areaIds.Count == 0)
         {
@@ -43,11 +35,7 @@ public sealed class RoutingService : IRoutingService
             return null;
         }
 
-        var rule = await db.AreaRoutes
-            .AsNoTracking()
-            .Where(r => r.IsActive && areaIds.Contains(r.AreaId))
-            .OrderBy(r => r.Priority)
-            .FirstOrDefaultAsync(ct);
+        var rule = await _repository.GetFirstActiveRouteForAreasAsync(areaIds, ct);
 
         if (rule is null)
         {

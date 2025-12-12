@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Auth.Web.Data;
 using Auth.Web.Data.Entities;
+using Auth.Web.Repositories.Implementations.Permissions;
 using Auth.Web.Services.Implementations.Permissions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +27,7 @@ public class PermissionServiceTests
     {
         var db = CreateDb("perm1");
         var um = new Mock<UserManager<ApplicationUser>>(new Mock<IUserStore<ApplicationUser>>().Object, null!, null!, null!, null!, null!, null!, null!, null!);
-        var svc = new PermissionService(db, um.Object);
+        var svc = new Auth.Web.Services.Implementations.Permissions.PermissionService(new PermissionRepository(db), um.Object);
         var result = await svc.GetAsync("missing");
         Assert.NotNull(result);
         Assert.Empty(result.Pages);
@@ -55,7 +56,7 @@ public class PermissionServiceTests
         um.Setup(x => x.FindByNameAsync(user.UserName)).ReturnsAsync(user);
         um.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
 
-        var svc = new PermissionService(db, um.Object);
+        var svc = new Auth.Web.Services.Implementations.Permissions.PermissionService(new PermissionRepository(db), um.Object);
         var result = await svc.GetAsync(user.UserName);
 
         Assert.Single(result.Pages);

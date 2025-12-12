@@ -1,23 +1,22 @@
 using System.Text.Json;
-using Auth.Web.Data;
 using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Clients;
-using Microsoft.EntityFrameworkCore;
+using Auth.Web.Repositories.Abstractions.Clients;
 
 namespace Auth.Web.Services.Implementations.Clients;
 
 public class ClientService : IClientService
 {
-    private readonly AuthDbContext _context;
+    private readonly IClientRepository _repository;
 
-    public ClientService(AuthDbContext context)
+    public ClientService(IClientRepository repository)
     {
-        _context = context;
+        _repository = repository;
     }
 
     public Task<ApplicationClient?> GetAsync(string clientId)
     {
-        return _context.ApplicationClients.SingleOrDefaultAsync(c => c.ClientId == clientId);
+        return _repository.GetAsync(clientId);
     }
 
     public bool IsReturnUrlAllowed(ApplicationClient client, string returnUrl)

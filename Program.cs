@@ -25,6 +25,12 @@ using Auth.Web.Services.Implementations.Admin;
 using Auth.Web.Services.Implementations.Users;
 using Auth.Web.Repositories.Abstractions.Admin;
 using Auth.Web.Repositories.Implementations.Admin;
+using Auth.Web.Repositories.Abstractions.Permissions;
+using Auth.Web.Repositories.Implementations.Permissions;
+using Auth.Web.Repositories.Abstractions.Routing;
+using Auth.Web.Repositories.Implementations.Routing;
+using Auth.Web.Repositories.Abstractions.Clients;
+using Auth.Web.Repositories.Implementations.Clients;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -101,6 +107,11 @@ builder.Services.AddScoped<IClientAdminRepository, ClientAdminRepository>();
 builder.Services.AddScoped<IRoutingAdminRepository, RoutingAdminRepository>();
 builder.Services.AddScoped<IRoleAdminRepository, RoleAdminRepository>();
 builder.Services.AddScoped<IUserAdminRepository, UserAdminRepository>();
+
+// Non-admin repositories
+builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
+builder.Services.AddScoped<IRoutingRepository, RoutingRepository>();
+builder.Services.AddScoped<IClientRepository, ClientRepository>();
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
