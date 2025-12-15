@@ -35,11 +35,27 @@ public sealed class RoleAdminService : IAdminRoleService
         return res.Succeeded;
     }
 
-    Task<IReadOnlyCollection<RoleAdminDto>> IAdminRoleService.GetRolesAsync(CancellationToken cancellationToken)
-        => _repository.GetRolesWithUserCountAsync(cancellationToken);
+    async Task<IReadOnlyCollection<RoleAdminDto>> IAdminRoleService.GetRolesAsync(CancellationToken cancellationToken)
+    {
+        var roles = await _repository.GetRolesAsync(cancellationToken);
+        if (roles.Count == 0)
+        {
+            return Array.Empty<RoleAdminDto>();
+        }
+        var counts = await _repository.GetRoleUserCountsAsync(cancellationToken);
+        return roles.Select(r => MapRole(r, counts.TryGetValue(r.Id, out var count) ? count : 0)).ToList();
+    }
 
-    Task<RoleAdminDto?> IAdminRoleService.GetRoleByIdAsync(string roleId, CancellationToken cancellationToken)
-        => _repository.GetRoleByIdWithUserCountAsync(roleId, cancellationToken);
+    async Task<RoleAdminDto?> IAdminRoleService.GetRoleByIdAsync(string roleId, CancellationToken cancellationToken)
+    {
+        var role = await _roleManager.FindByIdAsync(roleId);
+        if (role is null)
+        {
+            return null;
+        }
+        var count = await _repository.GetRoleUserCountAsync(roleId, cancellationToken);
+        return MapRole(role, count);
+    }
 
     async Task<string> IAdminRoleService.CreateRoleAsync(string name, CancellationToken cancellationToken)
     {
@@ -68,4 +84,11 @@ public sealed class RoleAdminService : IAdminRoleService
         if (role is null) return;
         await _roleManager.DeleteAsync(role);
     }
+
+    private static RoleAdminDto MapRole(IdentityRole role, int userCount) => new()
+    {
+        Id = role.Id,
+        Name = role.Name ?? string.Empty,
+        UserCount = userCount
+    };
 }

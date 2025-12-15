@@ -3,7 +3,9 @@ using Auth.Web.Data;
 using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Services.Abstractions.Clients;
+using Auth.Web.Repositories.Abstractions;
 using Auth.Web.Repositories.Abstractions.Admin;
+using Auth.Web.Repositories.Implementations;
 using Auth.Web.Repositories.Implementations.Admin;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -25,6 +27,8 @@ public class RoutingAdminServiceTests
         services.AddDbContext<AuthDbContext>(opts => opts.UseInMemoryDatabase(dbName, root));
         services.AddScoped<IClientService>(_ => clientSvc.Object);
         services.AddScoped<IClientAdminRepository, ClientAdminRepository>();
+        services.AddScoped<IAreaAdminRepository, AreaAdminRepository>();
+        services.AddScoped<IAreaRepository, AreaRepository>();
         services.AddScoped<IRoutingAdminRepository, RoutingAdminRepository>();
         services.AddScoped<IAdminRoutingService, RoutingAdminService>();
         var provider = services.BuildServiceProvider();
@@ -50,7 +54,7 @@ public class RoutingAdminServiceTests
         Assert.True(id > 0);
         var routes = await admin.GetRoutesAsync();
         Assert.Equal(1, routes.Count);
-        Assert.Contains(routes, r => r.ReturnUrl == "https://app/x");
+        Assert.Contains(routes, r => r.ReturnUrl == "https://app/x" && r.AreaName == "IT");
     }
 
     [Fact]
@@ -63,6 +67,8 @@ public class RoutingAdminServiceTests
         services.AddDbContext<AuthDbContext>(opts => opts.UseInMemoryDatabase(dbName, root));
         services.AddScoped<IClientService>(_ => clientSvc.Object);
         services.AddScoped<IClientAdminRepository, ClientAdminRepository>();
+        services.AddScoped<IAreaAdminRepository, AreaAdminRepository>();
+        services.AddScoped<IAreaRepository, AreaRepository>();
         services.AddScoped<IRoutingAdminRepository, RoutingAdminRepository>();
         services.AddScoped<IAdminRoutingService, RoutingAdminService>();
         var provider = services.BuildServiceProvider();

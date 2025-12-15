@@ -1,4 +1,3 @@
-using Auth.Web.Application.Admin.Dtos;
 using Auth.Web.Data;
 using Auth.Web.Repositories.Abstractions.Admin;
 using Microsoft.AspNetCore.Identity;
@@ -18,25 +17,15 @@ public sealed class RoleAdminRepository : IRoleAdminRepository
     public Task<List<IdentityRole>> GetRolesAsync(CancellationToken ct = default)
         => _db.Roles.AsNoTracking().OrderBy(r => r.Name).ToListAsync(ct);
 
-    public async Task<IReadOnlyCollection<RoleAdminDto>> GetRolesWithUserCountAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyDictionary<string, int>> GetRoleUserCountsAsync(CancellationToken ct = default)
     {
-        var roles = await _db.Roles.AsNoTracking().OrderBy(r => r.Name).ToListAsync(ct);
-        var userRoleCounts = await _db.UserRoles.AsNoTracking().GroupBy(ur => ur.RoleId)
-            .Select(g => new { RoleId = g.Key, Count = g.Count() }).ToListAsync(ct);
-        var countMap = userRoleCounts.ToDictionary(x => x.RoleId, x => x.Count);
-        return roles.Select(r => new RoleAdminDto
-        {
-            Id = r.Id,
-            Name = r.Name ?? string.Empty,
-            UserCount = countMap.TryGetValue(r.Id, out var c) ? c : 0
-        }).ToList();
+        var counts = await _db.UserRoles.AsNoTracking()
+            .GroupBy(ur => ur.RoleId)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+        return counts.ToDictionary(x => x.Key, x => x.Count);
     }
 
-    public async Task<RoleAdminDto?> GetRoleByIdWithUserCountAsync(string roleId, CancellationToken ct = default)
-    {
-        var role = await _db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == roleId, ct);
-        if (role is null) return null;
-        var count = await _db.UserRoles.CountAsync(ur => ur.RoleId == roleId, ct);
-        return new RoleAdminDto { Id = role.Id, Name = role.Name ?? string.Empty, UserCount = count };
-    }
+    public Task<int> GetRoleUserCountAsync(string roleId, CancellationToken ct = default)
+        => _db.UserRoles.CountAsync(ur => ur.RoleId == roleId, ct);
 }

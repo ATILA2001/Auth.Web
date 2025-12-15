@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Auth.Web.Application.Admin.Dtos;
 using Auth.Web.Data;
 using Auth.Web.Data.Entities;
 using Auth.Web.Repositories.Abstractions.Admin;
@@ -16,17 +15,11 @@ public sealed class ClientAdminRepository : IClientAdminRepository
         _db = db;
     }
 
-    public async Task<IReadOnlyCollection<ApplicationClientAdminDto>> GetClientsAsync(CancellationToken ct = default)
-    {
-        var clients = await _db.ApplicationClients.AsNoTracking().OrderBy(c => c.ClientId).ToListAsync(ct);
-        return clients.Select(Map).ToList();
-    }
+    public async Task<IReadOnlyCollection<ApplicationClient>> GetClientsAsync(CancellationToken ct = default)
+        => await _db.ApplicationClients.AsNoTracking().OrderBy(c => c.ClientId).ToListAsync(ct);
 
-    public async Task<ApplicationClientAdminDto?> GetClientAsync(int id, CancellationToken ct = default)
-    {
-        var entity = await _db.ApplicationClients.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
-        return entity is null ? null : Map(entity);
-    }
+    public Task<ApplicationClient?> GetClientAsync(int id, CancellationToken ct = default)
+        => _db.ApplicationClients.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
 
     public async Task<int> CreateClientAsync(string clientId, string audience, IEnumerable<string> allowedUrls, CancellationToken ct = default)
     {
@@ -70,26 +63,4 @@ public sealed class ClientAdminRepository : IClientAdminRepository
 
     private static List<string> NormalizeUrls(IEnumerable<string> urls)
         => urls.Where(u => !string.IsNullOrWhiteSpace(u)).Select(u => u.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-
-    private static ApplicationClientAdminDto Map(ApplicationClient c)
-    {
-        List<string> allowed;
-        try
-        {
-            allowed = string.IsNullOrWhiteSpace(c.AllowedReturnUrlsJson)
-                ? new List<string>()
-                : (JsonSerializer.Deserialize<List<string>>(c.AllowedReturnUrlsJson) ?? new List<string>());
-        }
-        catch
-        {
-            allowed = new List<string>();
-        }
-        return new ApplicationClientAdminDto
-        {
-            Id = c.Id,
-            ClientId = c.ClientId,
-            Audience = c.Audience,
-            AllowedReturnUrls = allowed
-        };
-    }
 }

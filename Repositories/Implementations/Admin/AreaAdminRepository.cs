@@ -1,4 +1,3 @@
-using Auth.Web.Application.Admin.Dtos;
 using Auth.Web.Data;
 using Auth.Web.Data.Entities;
 using Auth.Web.Repositories.Abstractions.Admin;
@@ -47,25 +46,15 @@ public sealed class AreaAdminRepository : IAreaAdminRepository
         return true;
     }
 
-    public async Task<IReadOnlyCollection<AreaAdminDto>> GetAreasWithUserCountAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyDictionary<int, int>> GetAreaUserCountsAsync(CancellationToken ct = default)
     {
-        var areas = await _db.Areas.AsNoTracking().OrderBy(a => a.Name).ToListAsync(ct);
-        var counts = await _db.UserAreas.AsNoTracking().GroupBy(ua => ua.AreaId)
-            .Select(g => new { AreaId = g.Key, Count = g.Count() }).ToListAsync(ct);
-        var map = counts.ToDictionary(x => x.AreaId, x => x.Count);
-        return areas.Select(a => new AreaAdminDto
-        {
-            Id = a.Id,
-            Name = a.Name,
-            UserCount = map.TryGetValue(a.Id, out var c) ? c : 0
-        }).ToList();
+        var counts = await _db.UserAreas.AsNoTracking()
+            .GroupBy(ua => ua.AreaId)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+        return counts.ToDictionary(x => x.Key, x => x.Count);
     }
 
-    public async Task<AreaAdminDto?> GetAreaWithUserCountByIdAsync(int areaId, CancellationToken ct = default)
-    {
-        var area = await _db.Areas.AsNoTracking().FirstOrDefaultAsync(a => a.Id == areaId, ct);
-        if (area is null) return null;
-        var count = await _db.UserAreas.CountAsync(ua => ua.AreaId == areaId, ct);
-        return new AreaAdminDto { Id = area.Id, Name = area.Name, UserCount = count };
-    }
+    public Task<int> GetAreaUserCountAsync(int areaId, CancellationToken ct = default)
+        => _db.UserAreas.CountAsync(ua => ua.AreaId == areaId, ct);
 }

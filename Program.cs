@@ -23,7 +23,9 @@ using Auth.Web.Services.Implementations.Permissions;
 using Auth.Web.Services.Implementations.Routing;
 using Auth.Web.Services.Implementations.Admin;
 using Auth.Web.Services.Implementations.Users;
+using Auth.Web.Repositories.Abstractions;
 using Auth.Web.Repositories.Abstractions.Admin;
+using Auth.Web.Repositories.Implementations;
 using Auth.Web.Repositories.Implementations.Admin;
 using Auth.Web.Repositories.Abstractions.Permissions;
 using Auth.Web.Repositories.Implementations.Permissions;
@@ -107,6 +109,7 @@ builder.Services.AddScoped<IUserAdminRepository, UserAdminRepository>();
 builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
 builder.Services.AddScoped<IRoutingRepository, RoutingRepository>();
 builder.Services.AddScoped<IClientRepository, ClientRepository>();
+builder.Services.AddScoped<IAreaRepository, AreaRepository>();
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("AdminOnly", p => p.RequireRole("Admin"));

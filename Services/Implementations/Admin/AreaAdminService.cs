@@ -17,8 +17,8 @@ public sealed class AreaAdminService : IAdminAreaService
     public Task<List<Area>> GetAreasAsync(CancellationToken ct = default)
         => _repository.GetAreasAsync(ct);
 
-    public Task<Area?> CreateAsync(string name, CancellationToken ct = default)
-        => string.IsNullOrWhiteSpace(name) ? Task.FromResult<Area?>(null) : _repository.CreateAsync(name, ct);
+    public async Task<Area?> CreateAsync(string name, CancellationToken ct = default)
+        => string.IsNullOrWhiteSpace(name) ? null : await _repository.CreateAsync(name, ct);
 
     public Task<bool> UpdateNameAsync(int id, string name, CancellationToken ct = default)
         => _repository.UpdateNameAsync(id, name, ct);
@@ -27,10 +27,26 @@ public sealed class AreaAdminService : IAdminAreaService
         => _repository.DeleteAsync(id, ct);
 
     async Task<IReadOnlyCollection<AreaAdminDto>> IAdminAreaService.GetAreasAsync(CancellationToken cancellationToken)
-        => await _repository.GetAreasWithUserCountAsync(cancellationToken);
+    {
+        var areas = await _repository.GetAreasAsync(cancellationToken);
+        if (areas.Count == 0)
+        {
+            return Array.Empty<AreaAdminDto>();
+        }
+        var counts = await _repository.GetAreaUserCountsAsync(cancellationToken);
+        return areas.Select(area => MapArea(area, counts.TryGetValue(area.Id, out var count) ? count : 0)).ToList();
+    }
 
-    Task<AreaAdminDto?> IAdminAreaService.GetAreaByIdAsync(int areaId, CancellationToken cancellationToken)
-        => _repository.GetAreaWithUserCountByIdAsync(areaId, cancellationToken);
+    async Task<AreaAdminDto?> IAdminAreaService.GetAreaByIdAsync(int areaId, CancellationToken cancellationToken)
+    {
+        var area = await _repository.GetByIdAsync(areaId, cancellationToken);
+        if (area is null)
+        {
+            return null;
+        }
+        var count = await _repository.GetAreaUserCountAsync(areaId, cancellationToken);
+        return MapArea(area, count);
+    }
 
     async Task<int> IAdminAreaService.CreateAreaAsync(string name, CancellationToken cancellationToken)
     {
@@ -44,4 +60,11 @@ public sealed class AreaAdminService : IAdminAreaService
 
     Task IAdminAreaService.DeleteAreaAsync(int areaId, CancellationToken cancellationToken)
         => _repository.DeleteAsync(areaId, cancellationToken);
+
+    private static AreaAdminDto MapArea(Area area, int userCount) => new()
+    {
+        Id = area.Id,
+        Name = area.Name,
+        UserCount = userCount
+    };
 }

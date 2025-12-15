@@ -1,7 +1,7 @@
-using Auth.Web.Application.Admin.Dtos;
 using Auth.Web.Data;
 using Auth.Web.Data.Entities;
 using Auth.Web.Repositories.Abstractions.Admin;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Auth.Web.Repositories.Implementations.Admin;
@@ -15,54 +15,52 @@ public sealed class UserAdminRepository : IUserAdminRepository
         _db = db;
     }
 
-    public async Task<IReadOnlyCollection<UserAdminDto>> GetUsersAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyCollection<ApplicationUser>> GetUsersAsync(CancellationToken ct = default)
+        => await _db.Users.AsNoTracking().OrderBy(u => u.UserName).ToListAsync(ct);
+
+    public Task<ApplicationUser?> GetUserByIdAsync(string userId, CancellationToken ct = default)
+        => _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, ct);
+
+    public async Task<IReadOnlyCollection<IdentityUserRole<string>>> GetUserRolesAsync(IEnumerable<string> userIds, CancellationToken ct = default)
     {
-        var users = await _db.Users.AsNoTracking().OrderBy(u => u.UserName).ToListAsync(ct);
-        var roles = await _db.Roles.AsNoTracking().ToListAsync(ct);
-        var userRoles = await _db.UserRoles.AsNoTracking().ToListAsync(ct);
-        var userAreas = await _db.UserAreas.AsNoTracking().ToListAsync(ct);
-        var areas = await _db.Areas.AsNoTracking().ToListAsync(ct);
-        var roleMap = roles.ToDictionary(r => r.Id, r => r.Name!);
-        var areaMap = areas.ToDictionary(a => a.Id, a => a.Name);
-
-        var dtos = users.Select(u =>
+        var ids = Normalize(userIds);
+        var query = _db.UserRoles.AsNoTracking();
+        if (ids.Length > 0)
         {
-            var rs = userRoles.Where(ur => ur.UserId == u.Id).Select(ur => roleMap[ur.RoleId]).OrderBy(n => n).ToList();
-            var areaIds = userAreas.Where(ua => ua.UserId == u.Id).Select(ua => ua.AreaId).Distinct().ToList();
-            var areaNames = areaIds.Select(id => areaMap[id]).OrderBy(n => n).ToList();
-            return new UserAdminDto
-            {
-                Id = u.Id,
-                UserName = u.UserName ?? string.Empty,
-                Email = u.Email,
-                Roles = rs,
-                Areas = areaNames,
-                AreaIds = areaIds
-            };
-        }).ToList();
-
-        return dtos;
+            query = query.Where(ur => ids.Contains(ur.UserId));
+        }
+        return await query.ToListAsync(ct);
     }
 
-    public async Task<UserAdminDto?> GetUserByIdAsync(string userId, CancellationToken ct = default)
+    public async Task<IReadOnlyCollection<IdentityRole>> GetRolesByIdsAsync(IEnumerable<string> roleIds, CancellationToken ct = default)
     {
-        var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, ct);
-        if (user is null) return null;
-
-        var roleIds = await _db.UserRoles.AsNoTracking().Where(ur => ur.UserId == user.Id).Select(ur => ur.RoleId).ToListAsync(ct);
-        var roles = await _db.Roles.AsNoTracking().Where(r => roleIds.Contains(r.Id)).Select(r => r.Name!).OrderBy(n => n).ToListAsync(ct);
-        var areaIds = await _db.UserAreas.AsNoTracking().Where(ua => ua.UserId == user.Id).Select(ua => ua.AreaId).Distinct().ToListAsync(ct);
-        var areaNames = await _db.Areas.AsNoTracking().Where(a => areaIds.Contains(a.Id)).Select(a => a.Name).OrderBy(n => n).ToListAsync(ct);
-
-        return new UserAdminDto
+        var ids = Normalize(roleIds);
+        if (ids.Length == 0)
         {
-            Id = user.Id,
-            UserName = user.UserName ?? string.Empty,
-            Email = user.Email,
-            Roles = roles,
-            Areas = areaNames,
-            AreaIds = areaIds
-        };
+            return Array.Empty<IdentityRole>();
+        }
+        return await _db.Roles.AsNoTracking().Where(r => ids.Contains(r.Id)).ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyCollection<UserArea>> GetUserAreasAsync(IEnumerable<string> userIds, CancellationToken ct = default)
+    {
+        var ids = Normalize(userIds);
+        var query = _db.UserAreas.AsNoTracking();
+        if (ids.Length > 0)
+        {
+            query = query.Where(ua => ids.Contains(ua.UserId));
+        }
+        return await query.ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyCollection<Area>> GetAreasByIdsAsync(IEnumerable<int> areaIds, CancellationToken ct = default)
+    {
+        var ids = areaIds?.Distinct().ToArray() ?? Array.Empty<int>();
+        if (ids.Length == 0)
+        {
+            return Array.Empty<Area>();
+        }
+        return await _db.Areas.AsNoTracking().Where(a => ids.Contains(a.Id)).ToListAsync(ct);
     }
 
     public async Task UpdateUserAreasAsync(string userId, IEnumerable<int> areaIds, CancellationToken ct = default)
@@ -86,4 +84,7 @@ public sealed class UserAdminRepository : IUserAdminRepository
         }
         await _db.SaveChangesAsync(ct);
     }
+
+    private static string[] Normalize(IEnumerable<string> values)
+        => values?.Where(v => !string.IsNullOrWhiteSpace(v)).Select(v => v.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray() ?? Array.Empty<string>();
 }
