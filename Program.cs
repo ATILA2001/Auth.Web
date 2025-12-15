@@ -31,8 +31,6 @@ using Auth.Web.Repositories.Abstractions.Routing;
 using Auth.Web.Repositories.Implementations.Routing;
 using Auth.Web.Repositories.Abstractions.Clients;
 using Auth.Web.Repositories.Implementations.Clients;
-using Auth.Web.Contracts.Auth;
-using Auth.Web.Services.Abstractions.Auth.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,15 +70,10 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 
-builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddScoped<IdentityUserAccessor>();
-builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
-
-builder.Services.AddScoped<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
 // Services
 builder.Services.AddScoped<IActiveDirectoryAuthService, AdAuthService>();
@@ -137,7 +130,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 
-// Redirección inmediata del root a /Account/Login (HTTP 302) para evitar delay en cliente
+// Redireccion inmediata del root a /Account/Login (HTTP 302) para evitar delay en cliente
 app.MapGet("/", (HttpContext ctx) =>
 {
     var returnUrl = ctx.Request.Query["returnUrl"].ToString();
