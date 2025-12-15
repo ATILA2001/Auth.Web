@@ -80,6 +80,7 @@ builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuth
 // Services
 builder.Services.AddScoped<IActiveDirectoryAuthService, AdAuthService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddScoped<IAdminSignInService, AdminSignInService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IRoutingService, RoutingService>();

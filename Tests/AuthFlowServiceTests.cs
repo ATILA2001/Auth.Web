@@ -1,3 +1,4 @@
+using System.Threading;
 using AuthClaimsModel = Auth.Web.Application.Auth.AuthClaimsModel;
 using Auth.Web.Services.Abstractions.Auth;
 using Auth.Web.Services.Abstractions.Users;
@@ -25,7 +26,8 @@ public class AuthFlowServiceTests
         Mock<IJwtTokenService>? jwt = null,
         Mock<IUserManagementService>? userManagement = null,
         Mock<IUserProvisioningService>? provisioning = null,
-        UserPermissionsAssembler? assembler = null)
+        UserPermissionsAssembler? assembler = null,
+        Mock<IAdminSignInService>? adminSignIn = null)
     {
         ad ??= new Mock<IActiveDirectoryAuthService>();
         client ??= new Mock<IClientService>();
@@ -36,8 +38,9 @@ public class AuthFlowServiceTests
         userManagement ??= new Mock<IUserManagementService>();
         provisioning ??= new Mock<IUserProvisioningService>();
         assembler ??= new UserPermissionsAssembler();
+        adminSignIn ??= new Mock<IAdminSignInService>();
 
-        return new Services.Implementations.Auth.AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, jwt.Object, provisioning.Object, assembler);
+        return new Services.Implementations.Auth.AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, jwt.Object, provisioning.Object, assembler, adminSignIn.Object);
     }
 
     private static ApplicationUser MakeUser(string id, string name) => new ApplicationUser { Id = id, UserName = name, Email = name };
@@ -65,11 +68,13 @@ public class AuthFlowServiceTests
         userManagement.Setup(x => x.FindByEmailAsync(user.Email)).ReturnsAsync(user);
         userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
 
-        var svc = CreateService(ad: ad, userManagement: userManagement);
+        var adminSignIn = new Mock<IAdminSignInService>();
+        var svc = CreateService(ad: ad, userManagement: userManagement, adminSignIn: adminSignIn);
         var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
         Assert.True(outcome.SignInAdmin);
         Assert.Equal("/admin", outcome.RedirectUrl);
         Assert.Equal(user.Id, outcome.AdminUserId);
+        adminSignIn.Verify(x => x.SignInAsync(user.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

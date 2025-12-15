@@ -22,6 +22,7 @@ public sealed class AuthFlowService : IAuthFlowService
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IUserProvisioningService _userProvisioningService;
     private readonly UserPermissionsAssembler _permissionsAssembler;
+    private readonly IAdminSignInService _adminSignInService;
 
     public AuthFlowService(
         IActiveDirectoryAuthService adAuth,
@@ -31,7 +32,8 @@ public sealed class AuthFlowService : IAuthFlowService
         IClientService clientService,
         IJwtTokenService jwtTokenService,
         IUserProvisioningService userProvisioningService,
-        UserPermissionsAssembler permissionsAssembler)
+        UserPermissionsAssembler permissionsAssembler,
+        IAdminSignInService adminSignInService)
     {
         _adAuth = adAuth;
         _userManagement = userManagement;
@@ -41,6 +43,7 @@ public sealed class AuthFlowService : IAuthFlowService
         _jwtTokenService = jwtTokenService;
         _userProvisioningService = userProvisioningService;
         _permissionsAssembler = permissionsAssembler;
+        _adminSignInService = adminSignInService;
     }
 
     public async Task<LoginResult> LoginAsync(LoginRequestDto request)
@@ -55,13 +58,13 @@ public sealed class AuthFlowService : IAuthFlowService
 
         if (string.IsNullOrWhiteSpace(dto.UserNameOrEmail) || string.IsNullOrWhiteSpace(dto.Password))
         {
-            return BuildLoginRedirect("invalid_credentials", "Usuario o contraseña requeridos.", dto.ReturnUrl, dto.ClientId);
+            return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contrase\u00f1a requeridos.", dto.ReturnUrl, dto.ClientId));
         }
 
         var adOk = await _adAuth.ValidateCredentialsAsync(dto.UserNameOrEmail, dto.Password);
         if (!adOk)
         {
-            return BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId);
+            return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contrase\u00f1a inv\u00e1lidos.", dto.ReturnUrl, dto.ClientId));
         }
 
         var user = await _userManagement.FindByNameAsync(dto.UserNameOrEmail)
@@ -73,7 +76,7 @@ public sealed class AuthFlowService : IAuthFlowService
         var isAdmin = roles.Contains("Admin") || roles.Contains("Administrador");
         if (isAdmin)
         {
-            return new LoginResult { SignInAdmin = true, AdminUserId = user.Id, RedirectUrl = "/admin" };
+            return await FinalizeResultAsync(new LoginResult { SignInAdmin = true, AdminUserId = user.Id, RedirectUrl = "/admin" });
         }
 
         string clientId;
@@ -85,11 +88,11 @@ public sealed class AuthFlowService : IAuthFlowService
             client = await _clientService.GetAsync(dto.ClientId);
             if (client is null)
             {
-                return BuildLoginRedirect("invalid_client", "Aplicación destino inválida.", dto.ReturnUrl, dto.ClientId);
+                return await FinalizeResultAsync(BuildLoginRedirect("invalid_client", "Aplicaci\u00f3n destino inv\u00e1lida.", dto.ReturnUrl, dto.ClientId));
             }
             if (!_clientService.IsReturnUrlAllowed(client, dto.ReturnUrl))
             {
-                return BuildLoginRedirect("invalid_return_url", "URL de retorno inválida.", dto.ReturnUrl, dto.ClientId);
+                return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "URL de retorno inv\u00e1lida.", dto.ReturnUrl, dto.ClientId));
             }
             clientId = dto.ClientId;
             returnUrl = dto.ReturnUrl;
@@ -99,14 +102,14 @@ public sealed class AuthFlowService : IAuthFlowService
             var routing = await _routingService.ResolveForUserAsync(user.Id);
             if (routing is null)
             {
-                return BuildLoginRedirect("no_route", "No se encontró una aplicación de destino para el usuario.", dto.ReturnUrl, dto.ClientId);
+                return await FinalizeResultAsync(BuildLoginRedirect("no_route", "No se encontr\u00f3 una aplicaci\u00f3n de destino para el usuario.", dto.ReturnUrl, dto.ClientId));
             }
             clientId = routing.Value.ClientId;
             returnUrl = routing.Value.ReturnUrl;
             client = await _clientService.GetAsync(clientId);
             if (client is null || !_clientService.IsReturnUrlAllowed(client, returnUrl))
             {
-                return BuildLoginRedirect("invalid_return_url", "Aplicación o URL de retorno inválida.", dto.ReturnUrl, dto.ClientId);
+                return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "Aplicaci\u00f3n o URL de retorno inv\u00e1lida.", dto.ReturnUrl, dto.ClientId));
             }
         }
 
@@ -116,7 +119,7 @@ public sealed class AuthFlowService : IAuthFlowService
         var token = _jwtTokenService.CreateToken(claimsModel, client!.Audience);
         var redirect = QueryHelpers.AddQueryString(returnUrl, "token", token);
 
-        return new LoginResult { RedirectUrl = redirect, SignInAdmin = false };
+        return await FinalizeResultAsync(new LoginResult { RedirectUrl = redirect, SignInAdmin = false });
     }
 
     private static LoginResult BuildLoginRedirect(string errorCode, string errorMessage, string? returnUrl, string? clientId)
@@ -130,5 +133,15 @@ public sealed class AuthFlowService : IAuthFlowService
         };
         var url = QueryHelpers.AddQueryString("/Account/Login", query!);
         return new LoginResult { RedirectUrl = url, SignInAdmin = false };
+    }
+
+    private async Task<LoginResult> FinalizeResultAsync(LoginResult result)
+    {
+        if (result.SignInAdmin && !string.IsNullOrWhiteSpace(result.AdminUserId))
+        {
+            await _adminSignInService.SignInAsync(result.AdminUserId);
+        }
+
+        return result;
     }
 }
