@@ -1,10 +1,9 @@
 using Auth.Web.Services.Abstractions.Auth;
-using Auth.Web.Application.Dtos;
+using Auth.Web.Contracts.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using Auth.Web.Data.Entities;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.WebUtilities;
 
 namespace Auth.Web.Controllers;
 
@@ -27,76 +26,30 @@ public class ConnectController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromForm] LoginRequestDto request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Login([FromForm] LoginRequestDto dto)
     {
-        var outcome = await _authFlowService.LoginAsync(request, cancellationToken);
+        var result = await _authFlowService.LoginAsync(dto);
 
-        switch (outcome.Type)
+        if (result.SignInAdmin)
         {
-            case LoginOutcomeType.SuccessAdmin:
+            var user = await _userManager.FindByIdAsync(result.AdminUserId!);
+            if (user != null)
             {
-                var user = await _userManager.FindByNameAsync(request.UserNameOrEmail)
-                           ?? await _userManager.FindByEmailAsync(request.UserNameOrEmail);
-                if (user is null)
-                {
-                    return RedirectToLoginWithError("No se encontró el usuario admin.", request.ReturnUrl, request.ClientId);
-                }
                 await _signInManager.SignInAsync(user, isPersistent: false);
-                var redirectUrl = outcome.RedirectUrl ?? "/admin";
-                return Redirect(redirectUrl);
             }
-            case LoginOutcomeType.SuccessExternalApp:
-            {
-                if (string.IsNullOrEmpty(outcome.RedirectUrl))
-                {
-                    return RedirectToLoginWithError("No se pudo determinar la URL de destino.", request.ReturnUrl, request.ClientId);
-                }
-                return Redirect(outcome.RedirectUrl);
-            }
-            case LoginOutcomeType.Failure:
-            default:
-                return RedirectToLoginWithError(outcome.ErrorMessage ?? "Usuario o contraseña inválidos.", request.ReturnUrl, request.ClientId);
         }
+
+        return Redirect(result.RedirectUrl);
     }
 
     [HttpPost("portal-login")]
-    public async Task<IActionResult> PortalLogin([FromForm] LoginRequestDto request, CancellationToken cancellationToken)
-    {
-        var outcome = await _authFlowService.LoginAsync(request, cancellationToken);
-        if (outcome.Type == LoginOutcomeType.SuccessAdmin)
-        {
-            var user = await _userManager.FindByNameAsync(request.UserNameOrEmail)
-                       ?? await _userManager.FindByEmailAsync(request.UserNameOrEmail);
-            if (user is null)
-            {
-                return RedirectToLoginWithError("No se encontró el usuario admin.", request.ReturnUrl, request.ClientId);
-            }
-            await _signInManager.SignInAsync(user, isPersistent: false);
-            return LocalRedirect(outcome.RedirectUrl ?? "/admin");
-        }
-        return RedirectToLoginWithError(outcome.ErrorMessage ?? "Usuario o contraseña inválidos.", request.ReturnUrl, request.ClientId);
-    }
+    public Task<IActionResult> PortalLogin([FromForm] LoginRequestDto dto)
+        => Login(dto);
 
     [HttpGet("logout")]
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
         return Redirect("/Account/Login");
-    }
-
-    [HttpGet("/Account/Logout")]
-    public Task<IActionResult> AccountLogout() => Logout();
-
-    private IActionResult RedirectToLoginWithError(string errorMessage, string? returnUrl, string? clientId)
-    {
-        var queryParams = new Dictionary<string, string?>
-        {
-            ["error"] = errorMessage,
-            ["returnUrl"] = returnUrl ?? string.Empty,
-            ["clientId"] = clientId ?? string.Empty
-        };
-
-        var loginUrl = QueryHelpers.AddQueryString("/Account/Login", queryParams);
-        return Redirect(loginUrl);
     }
 }

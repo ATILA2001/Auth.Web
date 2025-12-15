@@ -1,11 +1,16 @@
 using Auth.Web.Controllers;
 using Auth.Web.Services.Abstractions.Auth;
-using Auth.Web.Application.Dtos;
+using Auth.Web.Contracts.Auth;
+using Auth.Web.Services.Abstractions.Auth.Models;
+using Auth.Web.Services.Abstractions.Clients;
+using Auth.Web.Services.Abstractions.Permissions;
+using Auth.Web.Application.Permissions;
 using Auth.Web.Data.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Xunit;
+using Microsoft.Extensions.Logging;
 
 namespace Auth.Web.Tests;
 
@@ -17,6 +22,8 @@ public class ConnectControllerTests
         var mgr = new Mock<UserManager<ApplicationUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
         mgr.Setup(x => x.FindByNameAsync(user.UserName!)).ReturnsAsync(user);
         mgr.Setup(x => x.FindByEmailAsync(user.Email!)).ReturnsAsync(user);
+        mgr.Setup(x => x.FindByIdAsync(user.Id)).ReturnsAsync(user);
+        mgr.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
         return mgr;
     }
 
@@ -29,17 +36,22 @@ public class ConnectControllerTests
         return sm;
     }
 
+    private static ConnectController CreateController(IAuthFlowService authFlow, ApplicationUser user)
+    {
+        var umMock = CreateUserManagerMock(user);
+        var smMock = CreateSignInManagerMock(umMock.Object);
+        return new ConnectController(authFlow, umMock.Object, smMock.Object);
+    }
+
     [Fact]
     public async Task Login_Admin_Redirects_To_Admin()
     {
         var user = new ApplicationUser { Id = "u1", UserName = "admin@corp", Email = "admin@corp" };
         var authFlow = new Mock<IAuthFlowService>();
-        authFlow.Setup(x => x.LoginAsync(It.IsAny<LoginRequestDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(LoginOutcome.Admin("/admin"));
-        var umMock = CreateUserManagerMock(user);
-        var smMock = CreateSignInManagerMock(umMock.Object);
-        var controller = new ConnectController(authFlow.Object, umMock.Object, smMock.Object);
-        var result = await controller.Login(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" }, CancellationToken.None);
+        authFlow.Setup(x => x.LoginAsync(It.IsAny<LoginRequestDto>()))
+            .ReturnsAsync(new LoginResult { SignInAdmin = true, AdminUserId = user.Id, RedirectUrl = "/admin" });
+        var controller = CreateController(authFlow.Object, user);
+        var result = await controller.Login(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
         var redirect = Assert.IsType<RedirectResult>(result);
         Assert.Equal("/admin", redirect.Url);
     }
@@ -49,12 +61,10 @@ public class ConnectControllerTests
     {
         var user = new ApplicationUser { Id = "u2", UserName = "user@corp", Email = "user@corp" };
         var authFlow = new Mock<IAuthFlowService>();
-        authFlow.Setup(x => x.LoginAsync(It.IsAny<LoginRequestDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(LoginOutcome.ExternalApp("https://app?token=XYZ"));
-        var umMock = CreateUserManagerMock(user);
-        var smMock = CreateSignInManagerMock(umMock.Object);
-        var controller = new ConnectController(authFlow.Object, umMock.Object, smMock.Object);
-        var result = await controller.Login(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" }, CancellationToken.None);
+        authFlow.Setup(x => x.LoginAsync(It.IsAny<LoginRequestDto>()))
+            .ReturnsAsync(new LoginResult { SignInAdmin = false, RedirectUrl = "https://app?token=XYZ" });
+        var controller = CreateController(authFlow.Object, user);
+        var result = await controller.Login(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
         var redirect = Assert.IsType<RedirectResult>(result);
         Assert.Equal("https://app?token=XYZ", redirect.Url);
     }
@@ -64,12 +74,10 @@ public class ConnectControllerTests
     {
         var user = new ApplicationUser { Id = "u3", UserName = "user3@corp", Email = "user3@corp" };
         var authFlow = new Mock<IAuthFlowService>();
-        authFlow.Setup(x => x.LoginAsync(It.IsAny<LoginRequestDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(LoginOutcome.Failure("Credenciales inválidas"));
-        var umMock = CreateUserManagerMock(user);
-        var smMock = CreateSignInManagerMock(umMock.Object);
-        var controller = new ConnectController(authFlow.Object, umMock.Object, smMock.Object);
-        var result = await controller.Login(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "bad" }, CancellationToken.None);
+        authFlow.Setup(x => x.LoginAsync(It.IsAny<LoginRequestDto>()))
+            .ReturnsAsync(new LoginResult { RedirectUrl = "/Account/Login?error=X" });
+        var controller = CreateController(authFlow.Object, user);
+        var result = await controller.Login(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "bad" });
         var redirect = Assert.IsType<RedirectResult>(result);
         Assert.Contains("/Account/Login", redirect.Url);
         Assert.Contains("error=", redirect.Url);
