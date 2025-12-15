@@ -1,12 +1,7 @@
 namespace Auth.Web.Application.Dtos;
 
-public sealed class LoginRequestDto
-{
-    public string UserNameOrEmail { get; init; } = default!;
-    public string Password { get; init; } = default!;
-    public string? ReturnUrl { get; init; }
-    public string? ClientId { get; init; }
-}
+// Legacy file: LoginOutcome and related types will be removed after references are cleared.
+// LoginRequestDto moved to Contracts/Auth/LoginRequestDto.cs
 
 public enum LoginOutcomeType
 {

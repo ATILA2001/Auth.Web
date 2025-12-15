@@ -1,8 +1,9 @@
-using Auth.Web.Application.Dtos;
+using Auth.Web.Contracts.Auth;
+using Auth.Web.Services.Abstractions.Auth.Models;
 
 namespace Auth.Web.Services.Abstractions.Auth;
 
 public interface IAuthFlowService
 {
-    Task<LoginOutcome> LoginAsync(LoginRequestDto request, CancellationToken cancellationToken = default);
+    Task<LoginResult> LoginAsync(LoginRequestDto request);
 }

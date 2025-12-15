@@ -31,6 +31,8 @@ using Auth.Web.Repositories.Abstractions.Routing;
 using Auth.Web.Repositories.Implementations.Routing;
 using Auth.Web.Repositories.Abstractions.Clients;
 using Auth.Web.Repositories.Implementations.Clients;
+using Auth.Web.Contracts.Auth;
+using Auth.Web.Services.Abstractions.Auth.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -1,7 +1,5 @@
 using AuthClaimsModel = Auth.Web.Application.Auth.AuthClaimsModel;
 using Auth.Web.Services.Abstractions.Auth;
-using Auth.Web.Application.Dtos;
-using Auth.Web.Application.Permissions;
 using Auth.Web.Services.Abstractions.Users;
 using Auth.Web.Services.Abstractions.Permissions;
 using Auth.Web.Services.Abstractions.Routing;
@@ -11,6 +9,9 @@ using Auth.Web.Data.Entities;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 using Xunit;
+using Auth.Web.Contracts.Auth;
+using Auth.Web.Services.Abstractions.Auth.Models;
+using Auth.Web.Application.Permissions;
 
 namespace Auth.Web.Tests;
 
@@ -47,9 +48,9 @@ public class AuthFlowServiceTests
         var ad = new Mock<IActiveDirectoryAuthService>();
         ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
         var svc = CreateService(ad: ad);
-        var outcome = await svc.LoginAsync(new Auth.Web.Application.Dtos.LoginRequestDto { UserNameOrEmail = "user", Password = "pwd" });
-        Assert.Equal(Auth.Web.Application.Dtos.LoginOutcomeType.Failure, outcome.Type);
-        Assert.Contains("inválidos", outcome.ErrorMessage);
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = "user", Password = "pwd" });
+        Assert.Equal("/Account/Login", outcome.RedirectUrl[..14]);
+        Assert.False(outcome.SignInAdmin);
     }
 
     [Fact]
@@ -65,9 +66,10 @@ public class AuthFlowServiceTests
         userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
 
         var svc = CreateService(ad: ad, userManagement: userManagement);
-        var outcome = await svc.LoginAsync(new Auth.Web.Application.Dtos.LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
-        Assert.Equal(Auth.Web.Application.Dtos.LoginOutcomeType.SuccessAdmin, outcome.Type);
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
+        Assert.True(outcome.SignInAdmin);
         Assert.Equal("/admin", outcome.RedirectUrl);
+        Assert.Equal(user.Id, outcome.AdminUserId);
     }
 
     [Fact]
@@ -99,9 +101,9 @@ public class AuthFlowServiceTests
         var assembler = new UserPermissionsAssembler();
 
         var svc = CreateService(ad: ad, client: clientSvc, routing: routing, perms: perms, jwt: jwt, userManagement: userManagement, assembler: assembler);
-        var outcome = await svc.LoginAsync(new Auth.Web.Application.Dtos.LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
 
-        Assert.Equal(Auth.Web.Application.Dtos.LoginOutcomeType.SuccessExternalApp, outcome.Type);
+        Assert.False(outcome.SignInAdmin);
         Assert.NotNull(outcome.RedirectUrl);
         Assert.Contains("token=TOKEN_X", outcome.RedirectUrl);
     }
@@ -121,9 +123,9 @@ public class AuthFlowServiceTests
         routing.Setup(x => x.ResolveForUserAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(((string ClientId, string ReturnUrl)?)null);
 
         var svc = CreateService(ad: ad, routing: routing, userManagement: userManagement);
-        var outcome = await svc.LoginAsync(new Auth.Web.Application.Dtos.LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
-        Assert.Equal(Auth.Web.Application.Dtos.LoginOutcomeType.Failure, outcome.Type);
-        Assert.Contains("aplicación de destino", outcome.ErrorMessage);
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
+        Assert.False(outcome.SignInAdmin);
+        Assert.Contains("/Account/Login", outcome.RedirectUrl);
     }
 
     [Fact]
@@ -146,8 +148,12 @@ public class AuthFlowServiceTests
         clientSvc.Setup(x => x.IsReturnUrlAllowed(client, "https://bad/forbidden")).Returns(false);
 
         var svc = CreateService(ad: ad, client: clientSvc, routing: routing, userManagement: userManagement);
-        var outcome = await svc.LoginAsync(new Auth.Web.Application.Dtos.LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
-        Assert.Equal(Auth.Web.Application.Dtos.LoginOutcomeType.Failure, outcome.Type);
-        Assert.Contains("URL de retorno inválida", outcome.ErrorMessage);
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = user.UserName!, Password = "pwd" });
+
+        Assert.StartsWith("/Account/Login?", outcome.RedirectUrl);
+        var uri = new Uri("http://local" + outcome.RedirectUrl);
+        var qs = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        Assert.False(string.IsNullOrWhiteSpace(qs["error"]));
+        Assert.Equal("invalid_return_url", qs["errorCode"]);
     }
 }
