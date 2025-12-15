@@ -22,13 +22,13 @@
                          AlignItems="AlignItems.Center"
                          Class="rz-ml-auto"
                          Gap="0.75rem">
-                <RadzenDropDown TValue="string"
-                                Data="@launchTargets"
-                                TextProperty="Text"
-                                ValueProperty="Value"
-                                @bind-Value="selectedTarget"
+                <RadzenDropDown TValue="int?"
+                                Data="@clients"
+                                TextProperty="ClientId"
+                                ValueProperty="Id"
+                                @bind-Value="selectedClientId"
                                 Placeholder="Aplicativos"
-                                Change="@OnLaunchTargetChanged" />
+                                Change="@OnClientChanged" />
 
                 @if (!string.IsNullOrWhiteSpace(CurrentUserName))
                 {
@@ -69,8 +69,7 @@
     bool sidebarExpanded = true;
 
     private List<Application.Admin.Dtos.ApplicationClientAdminDto> clients = new();
-    private List<(string Text, string Value)> launchTargets = new();
-    private string? selectedTarget;
+    private int? selectedClientId;
     private string? CurrentUserName = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -79,25 +78,18 @@
         CurrentUserName = authState.User.Identity?.Name ?? string.Empty;
 
         clients = (await AdminClientService.GetClientsAsync()).ToList();
-        launchTargets = clients
-            .SelectMany(c => c.AllowedReturnUrls.Select(url => (
-                Text: $"{c.ClientId} — {url}",
-                Value: $"{c.ClientId}|{url}"
-            )))
-            .ToList();
     }
 
-    private void OnLaunchTargetChanged(object? value)
+    private void OnClientChanged(object? value)
     {
-        var val = value as string;
-        if (string.IsNullOrWhiteSpace(val)) return;
-        var parts = val.Split('|', 2);
-        if (parts.Length != 2) return;
-        var clientId = parts[0];
-        var url = parts[1];
-        if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(url)) return;
-        var launchUrl = $"/connect/launch?clientId={Uri.EscapeDataString(clientId)}&returnUrl={Uri.EscapeDataString(url)}";
-        NavigationManager.NavigateTo(launchUrl, forceLoad: true);
+        var id = value as int?;
+        var client = clients.FirstOrDefault(c => c.Id == id);
+        var url = client?.AllowedReturnUrls?.FirstOrDefault();
+
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            NavigationManager.NavigateTo(url!, true);
+        }
     }
 
     private void Logout()
