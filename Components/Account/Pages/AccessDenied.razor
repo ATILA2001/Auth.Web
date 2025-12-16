@@ -25,7 +25,3 @@
                   ButtonStyle="ButtonStyle.Secondary"
                   Click="@(() => NavigationManager.NavigateTo("/Account/Login"))" />
 </RadzenStack>
-
-@code {
-    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
-}

@@ -23,13 +23,3 @@
     <script src="_content/Radzen.Blazor/Radzen.Blazor.js?v=@(typeof(Radzen.Colors).Assembly.GetName().Version)"></script>
 </body>
 </html>
-
-@code {
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
-
-    private IComponentRenderMode? RenderModeForPage =>
-        HttpContext.Request.Path.StartsWithSegments("/Account")
-            ? null
-            : InteractiveServer;
-}

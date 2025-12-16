@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Auth.Web.Migrations
+namespace Auth.Web.Data.Migrations
 {
     public partial class AddAreaRoutes2 : Migration
     {
