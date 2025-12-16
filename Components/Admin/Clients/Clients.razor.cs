@@ -7,98 +7,70 @@ namespace Auth.Web.Components.Admin.Clients;
 
 public partial class Clients : ComponentBase
 {
-    [Inject] private IAdminClientService ClientService { get; set; } = default!;
-    [Inject] private NotificationService NotificationService { get; set; } = default!;
+    [Inject] private IAdminClientService ClientService { get; set; } = null!;
+    [Inject] private NotificationService NotificationService { get; set; } = null!;
 
-    private List<ApplicationClientAdminDto> clients = new();
-    private bool editing;
-    private ApplicationClientAdminDto editModel = new();
-    private string allowedUrlsText = string.Empty;
-    private string? validationError;
+    private ClientsViewModel _vm = null!;
+
+    // Expose VM state with same names for Razor binding compatibility
+    private List<ApplicationClientAdminDto> clients => _vm.Clients;
+    private bool editing => _vm.Editing;
+    private ApplicationClientAdminDto editModel => _vm.EditModel;
+    private string allowedUrlsText
+    {
+        get => _vm.AllowedUrlsText;
+        set => _vm.AllowedUrlsText = value;
+    }
+    private string? validationError => _vm.ValidationError;
+
+    protected override void OnInitialized()
+    {
+        _vm = new ClientsViewModel(ClientService);
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAsync();
+        await _vm.LoadAsync();
     }
 
-    private async Task LoadAsync()
-    {
-        clients = (await ClientService.GetClientsAsync()).ToList();
-    }
+    private void BeginCreate() => _vm.BeginCreate();
 
-    private void BeginCreate()
-    {
-        editModel = new ApplicationClientAdminDto { Id = 0, ClientId = string.Empty, Audience = string.Empty, AllowedReturnUrls = Array.Empty<string>() };
-        allowedUrlsText = string.Empty;
-        validationError = null;
-        editing = true;
-    }
-
-    private void BeginEdit(ApplicationClientAdminDto dto)
-    {
-        editModel = dto;
-        allowedUrlsText = string.Join("\n", dto.AllowedReturnUrls);
-        validationError = null;
-        editing = true;
-    }
+    private void BeginEdit(ApplicationClientAdminDto dto) => _vm.BeginEdit(dto);
 
     private async Task SaveClient()
     {
-        validationError = null;
+        var result = await _vm.SaveAsync();
+        NotifyUser(result);
 
-        if (string.IsNullOrWhiteSpace(editModel.ClientId))
+        if (result.RequiresReload)
         {
-            validationError = "El ClientId no puede estar vacío.";
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(editModel.Audience))
-        {
-            validationError = "El Audience no puede estar vacío.";
-            return;
-        }
-
-        var urls = allowedUrlsText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        
-        try
-        {
-            if (editModel.Id == 0)
-            {
-                var id = await ClientService.CreateClientAsync(editModel.ClientId, editModel.Audience, urls);
-                NotificationService.Notify(NotificationSeverity.Success, "Cliente creado", $"Se creó '{editModel.ClientId}' (Id {id}).");
-            }
-            else
-            {
-                await ClientService.UpdateClientAsync(editModel.Id, editModel.ClientId, editModel.Audience, urls);
-                NotificationService.Notify(NotificationSeverity.Success, "Cliente actualizado", $"Se actualizó '{editModel.ClientId}'.");
-            }
-            editing = false;
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            validationError = ex.Message;
-            NotificationService.Notify(NotificationSeverity.Error, "Error al guardar cliente", ex.Message);
+            await _vm.LoadAsync();
         }
     }
 
     private async Task DeleteClient(int id)
     {
-        try
+        var result = await _vm.DeleteAsync(id);
+        NotifyUser(result);
+
+        if (result.RequiresReload)
         {
-            await ClientService.DeleteClientAsync(id);
-            NotificationService.Notify(NotificationSeverity.Success, "Cliente eliminado", $"Id {id} eliminado.");
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            NotificationService.Notify(NotificationSeverity.Error, "Error al eliminar cliente", ex.Message);
+            await _vm.LoadAsync();
         }
     }
 
-    private void CancelEdit()
+    private void CancelEdit() => _vm.CancelEdit();
+
+    private void NotifyUser(ClientsVmResult result)
     {
-        editing = false;
-        validationError = null;
+        var severity = result.Outcome switch
+        {
+            ClientsVmOutcome.Success => NotificationSeverity.Success,
+            ClientsVmOutcome.ValidationError => NotificationSeverity.Warning,
+            ClientsVmOutcome.Error => NotificationSeverity.Error,
+            _ => NotificationSeverity.Info
+        };
+
+        NotificationService.Notify(severity, result.Title, result.Message);
     }
 }

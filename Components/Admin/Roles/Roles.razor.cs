@@ -7,56 +7,61 @@ namespace Auth.Web.Components.Admin.Roles;
 
 public partial class Roles : ComponentBase
 {
-    [Inject] private IAdminRoleService RoleService { get; set; } = default!;
-    [Inject] private NotificationService Notifications { get; set; } = default!;
+    [Inject] private IAdminRoleService RoleService { get; set; } = null!;
+    [Inject] private NotificationService NotificationService { get; set; } = null!;
 
-    private List<RoleAdminDto> roles = new();
-    private string newRole = string.Empty;
+    private RolesViewModel _vm = null!;
+
+    // Expose VM state with same names for Razor binding compatibility
+    private List<RoleAdminDto> roles => _vm.Roles;
+    private string newRole
+    {
+        get => _vm.NewRoleName;
+        set => _vm.NewRoleName = value;
+    }
+
+    protected override void OnInitialized()
+    {
+        _vm = new RolesViewModel(RoleService);
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        roles = (await RoleService.GetRolesAsync()).ToList();
+        await _vm.LoadAsync();
     }
 
     private async Task CreateRole()
     {
-        if (string.IsNullOrWhiteSpace(newRole))
-        {
-            Notifications.Notify(NotificationSeverity.Warning, "Validación", "El nombre del rol no puede estar vacío.");
-            return;
-        }
+        var result = await _vm.CreateAsync();
+        NotifyUser(result);
 
-        try
+        if (result.RequiresReload)
         {
-            var id = await RoleService.CreateRoleAsync(newRole);
-            if (!string.IsNullOrWhiteSpace(id))
-            {
-                Notifications.Notify(NotificationSeverity.Success, "Rol creado", $"Se creó '{newRole}'.");
-                newRole = string.Empty;
-                roles = (await RoleService.GetRolesAsync()).ToList();
-            }
-            else
-            {
-                Notifications.Notify(NotificationSeverity.Warning, "Sin cambios", "Nombre inválido o duplicado.");
-            }
-        }
-        catch (Exception ex)
-        {
-            Notifications.Notify(NotificationSeverity.Error, "Error al crear rol", ex.Message);
+            await _vm.LoadAsync();
         }
     }
 
     private async Task DeleteRole(string roleId)
     {
-        try
+        var result = await _vm.DeleteAsync(roleId);
+        NotifyUser(result);
+
+        if (result.RequiresReload)
         {
-            await RoleService.DeleteRoleAsync(roleId);
-            Notifications.Notify(NotificationSeverity.Success, "Rol eliminado", $"Id {roleId} eliminado.");
-            roles = (await RoleService.GetRolesAsync()).ToList();
+            await _vm.LoadAsync();
         }
-        catch (Exception ex)
+    }
+
+    private void NotifyUser(RolesVmResult result)
+    {
+        var severity = result.Outcome switch
         {
-            Notifications.Notify(NotificationSeverity.Error, "Error al eliminar rol", ex.Message);
-        }
+            RolesVmOutcome.Success => NotificationSeverity.Success,
+            RolesVmOutcome.ValidationError => NotificationSeverity.Warning,
+            RolesVmOutcome.Error => NotificationSeverity.Error,
+            _ => NotificationSeverity.Info
+        };
+
+        NotificationService.Notify(severity, result.Title, result.Message);
     }
 }

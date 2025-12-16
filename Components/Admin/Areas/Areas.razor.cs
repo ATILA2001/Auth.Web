@@ -8,80 +8,80 @@ namespace Auth.Web.Components.Admin.Areas;
 
 public partial class Areas : ComponentBase
 {
-    [Inject] private IAdminAreaService AdminAreaService { get; set; } = default!;
-    [Inject] private NotificationService NotificationService { get; set; } = default!;
+    [Inject] private IAdminAreaService AdminAreaService { get; set; } = null!;
+    [Inject] private NotificationService NotificationService { get; set; } = null!;
 
-    private List<AreaAdminDto> areas = new();
-    private string newArea = string.Empty;
-    private RadzenDataGrid<AreaAdminDto> grid = default!;
+    private AreasViewModel _vm = null!;
+    private RadzenDataGrid<AreaAdminDto> grid = null!;
+
+    // Expose VM state with same names for Razor binding compatibility
+    private List<AreaAdminDto> areas => _vm.Areas;
+    private string newArea
+    {
+        get => _vm.NewAreaName;
+        set => _vm.NewAreaName = value;
+    }
+
+    protected override void OnInitialized()
+    {
+        _vm = new AreasViewModel(AdminAreaService);
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        areas = (await AdminAreaService.GetAreasAsync()).ToList();
+        await _vm.LoadAsync();
     }
 
     private async Task CreateArea()
     {
-        if (string.IsNullOrWhiteSpace(newArea))
-        {
-            NotificationService.Notify(NotificationSeverity.Warning, "Validación", "El nombre del área no puede estar vacío.");
-            return;
-        }
+        var result = await _vm.CreateAsync();
+        NotifyUser(result);
 
-        try
+        if (result.RequiresReload)
         {
-            var id = await AdminAreaService.CreateAreaAsync(newArea);
-            if (id != 0)
-            {
-                NotificationService.Notify(NotificationSeverity.Success, "Área creada", $"Se creó '{newArea}' correctamente.");
-                newArea = string.Empty;
-                areas = (await AdminAreaService.GetAreasAsync()).ToList();
-                await grid.Reload();
-            }
-            else
-            {
-                NotificationService.Notify(NotificationSeverity.Warning, "Sin cambios", "Nombre inválido o duplicado.");
-            }
-        }
-        catch (Exception ex)
-        {
-            NotificationService.Notify(NotificationSeverity.Error, "Error al crear área", ex.Message);
+            await _vm.LoadAsync();
+            await grid.Reload();
         }
     }
 
     private async Task OnRowUpdate(AreaAdminDto area)
     {
-        if (string.IsNullOrWhiteSpace(area.Name))
+        var result = await _vm.UpdateAsync(area);
+        NotifyUser(result);
+
+        if (result.Outcome == AreasVmOutcome.ValidationError)
         {
-            NotificationService.Notify(NotificationSeverity.Warning, "Validación", "El nombre del área no puede estar vacío.");
             grid.CancelEditRow(area);
-            return;
         }
 
-        try
+        if (result.RequiresReload)
         {
-            await AdminAreaService.UpdateAreaAsync(area.Id, area.Name);
-            NotificationService.Notify(NotificationSeverity.Success, "Área actualizada", $"Se actualizó '{area.Name}'.");
-            areas = (await AdminAreaService.GetAreasAsync()).ToList();
-        }
-        catch (Exception ex)
-        {
-            NotificationService.Notify(NotificationSeverity.Error, "Error al actualizar área", ex.Message);
+            await _vm.LoadAsync();
         }
     }
 
     private async Task DeleteArea(int id)
     {
-        try
+        var result = await _vm.DeleteAsync(id);
+        NotifyUser(result);
+
+        if (result.RequiresReload)
         {
-            await AdminAreaService.DeleteAreaAsync(id);
-            NotificationService.Notify(NotificationSeverity.Success, "Área eliminada", $"Id {id} removido.");
-            areas = (await AdminAreaService.GetAreasAsync()).ToList();
+            await _vm.LoadAsync();
             await grid.Reload();
         }
-        catch (Exception ex)
+    }
+
+    private void NotifyUser(AreasVmResult result)
+    {
+        var severity = result.Outcome switch
         {
-            NotificationService.Notify(NotificationSeverity.Error, "Error al eliminar área", ex.Message);
-        }
+            AreasVmOutcome.Success => NotificationSeverity.Success,
+            AreasVmOutcome.ValidationError => NotificationSeverity.Warning,
+            AreasVmOutcome.Error => NotificationSeverity.Error,
+            _ => NotificationSeverity.Info
+        };
+
+        NotificationService.Notify(severity, result.Title, result.Message);
     }
 }
