@@ -2,6 +2,7 @@ using Auth.Web.Controllers;
 using Auth.Web.Services.Abstractions.Auth;
 using Auth.Web.Contracts.Auth;
 using Auth.Web.Services.Abstractions.Auth.Models;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Xunit;
@@ -11,7 +12,7 @@ namespace Auth.Web.Tests;
 public class ConnectControllerTests
 {
     private static ConnectController CreateController(IAuthFlowService authFlow)
-        => new ConnectController(authFlow);
+        => new ConnectController(authFlow, Mock.Of<IAntiforgery>());
 
     [Fact]
     public async Task Login_Admin_Redirects_To_Admin()

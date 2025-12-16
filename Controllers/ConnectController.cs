@@ -3,6 +3,8 @@ using Auth.Web.Contracts.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Antiforgery;
 
 namespace Auth.Web.Controllers;
 
@@ -11,10 +13,12 @@ namespace Auth.Web.Controllers;
 public class ConnectController : ControllerBase
 {
     private readonly IAuthFlowService _authFlowService;
+    private readonly IAntiforgery _antiforgery;
 
-    public ConnectController(IAuthFlowService authFlowService)
+    public ConnectController(IAuthFlowService authFlowService, IAntiforgery antiforgery)
     {
         _authFlowService = authFlowService;
+        _antiforgery = antiforgery;
     }
 
     [HttpPost("login")]
@@ -29,9 +33,32 @@ public class ConnectController : ControllerBase
         => Login(dto);
 
     [HttpGet("logout")]
-    public async Task<IActionResult> Logout()
+    public IActionResult Logout()
+        => StatusCode(StatusCodes.Status405MethodNotAllowed);
+
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> LogoutPost()
     {
+        if (!await TryValidateAntiforgeryAsync())
+        {
+            return BadRequest();
+        }
+
         await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
         return Redirect("/Account/Login");
+    }
+
+    private async Task<bool> TryValidateAntiforgeryAsync()
+    {
+        try
+        {
+            await _antiforgery.ValidateRequestAsync(HttpContext);
+            return true;
+        }
+        catch (AntiforgeryValidationException)
+        {
+            return false;
+        }
     }
 }

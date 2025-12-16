@@ -1,8 +1,13 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 
+@using Microsoft.AspNetCore.Antiforgery
 @inject NavigationManager NavigationManager
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 @inject Auth.Web.Services.Abstractions.Admin.IAdminClientService AdminClientService
+@inject IAntiforgery Antiforgery
+@inject IHttpContextAccessor HttpContextAccessor
+@inject PersistentComponentState ApplicationState
 
 <RadzenLayout>
     <!-- HEADER -->
@@ -14,8 +19,8 @@
             <!-- Toggle sidebar -->
             <RadzenSidebarToggle Click="@(() => sidebarExpanded = !sidebarExpanded)" />
 
-            <!-- Título -->
-            <RadzenLabel Text="Administración" Class="rz-ml-2" />
+            <!-- Titulo -->
+            <RadzenLabel Text="Administracion" Class="rz-ml-2" />
 
             <!-- Bloque derecho: aplicativos + usuario + logout -->
             <RadzenStack Orientation="Orientation.Horizontal"
@@ -35,10 +40,23 @@
                     <RadzenLabel Text="@CurrentUserName" />
                 }
 
-                <RadzenButton Icon="logout"
-                              Text="Salir"
-                              ButtonStyle="ButtonStyle.Secondary"
-                              Click="@Logout" />
+                @if (_canSubmitLogout && !string.IsNullOrEmpty(_antiforgeryFieldName) && !string.IsNullOrEmpty(_antiforgeryToken))
+                {
+                    <form method="post" action="/connect/logout">
+                        <input type="hidden" name="@_antiforgeryFieldName" value="@_antiforgeryToken" />
+                        <RadzenButton Icon="logout"
+                                      Text="Salir"
+                                      ButtonStyle="ButtonStyle.Secondary"
+                                      ButtonType="ButtonType.Submit" />
+                    </form>
+                }
+                else
+                {
+                    <RadzenButton Icon="logout"
+                                  Text="Salir"
+                                  ButtonStyle="ButtonStyle.Secondary"
+                                  Disabled="true" />
+                }
             </RadzenStack>
         </RadzenStack>
     </RadzenHeader>
@@ -48,7 +66,7 @@
         <RadzenPanelMenu>
             <RadzenPanelMenuItem Text="Inicio" Icon="home" Path="/admin" />
             <RadzenPanelMenuItem Text="Usuarios" Icon="group" Path="/admin/users" />
-            <RadzenPanelMenuItem Text="Áreas" Icon="domain" Path="/admin/areas" />
+            <RadzenPanelMenuItem Text="Areas" Icon="domain" Path="/admin/areas" />
             <RadzenPanelMenuItem Text="Roles" Icon="security" Path="/admin/roles" />
             <RadzenPanelMenuItem Text="Aplicaciones" Icon="dns" Path="/admin/clients" />
             <RadzenPanelMenuItem Text="Rutas" Icon="device_hub" Path="/admin/routes" />
@@ -66,18 +84,83 @@
 </RadzenLayout>
 
 @code {
+    private const string AntiforgeryStateKey = "admin-logout-antiforgery";
+
     bool sidebarExpanded = true;
 
     private List<Application.Admin.Dtos.ApplicationClientAdminDto> clients = new();
     private int? selectedClientId;
     private string? CurrentUserName = string.Empty;
+    private string? _antiforgeryFieldName;
+    private string? _antiforgeryToken;
+    private bool _canSubmitLogout;
+    private PersistingComponentStateSubscription? _subscription;
 
     protected override async Task OnInitializedAsync()
     {
+        _subscription = ApplicationState.RegisterOnPersisting(PersistAntiforgeryTokensAsync);
+
+        if (!TryLoadPersistedTokens())
+        {
+            GenerateTokensFromHttpContext();
+        }
+
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         CurrentUserName = authState.User.Identity?.Name ?? string.Empty;
 
         clients = (await AdminClientService.GetClientsAsync()).ToList();
+    }
+
+    private bool TryLoadPersistedTokens()
+    {
+        if (ApplicationState.TryTakeFromJson<AntiforgeryPayload>(AntiforgeryStateKey, out var payload))
+        {
+            SetAntiforgeryValues(payload.FieldName, payload.Token);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void GenerateTokensFromHttpContext()
+    {
+        var httpContext = HttpContextAccessor.HttpContext;
+        if (httpContext is null)
+        {
+            _canSubmitLogout = false;
+            return;
+        }
+
+        var tokens = Antiforgery.GetAndStoreTokens(httpContext);
+        SetAntiforgeryValues(tokens.FormFieldName, tokens.RequestToken);
+        _canSubmitLogout = true;
+    }
+
+    private Task PersistAntiforgeryTokensAsync()
+    {
+        if (string.IsNullOrEmpty(_antiforgeryFieldName) || string.IsNullOrEmpty(_antiforgeryToken))
+        {
+            GenerateTokensFromHttpContext();
+        }
+
+        if (!string.IsNullOrEmpty(_antiforgeryFieldName) && !string.IsNullOrEmpty(_antiforgeryToken))
+        {
+            ApplicationState.PersistAsJson(AntiforgeryStateKey, new AntiforgeryPayload(_antiforgeryFieldName, _antiforgeryToken));
+            _canSubmitLogout = true;
+        }
+        else
+        {
+            _canSubmitLogout = false;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void SetAntiforgeryValues(string? fieldName, string? token)
+    {
+        _antiforgeryFieldName = fieldName;
+        _antiforgeryToken = token;
+        _canSubmitLogout = !string.IsNullOrEmpty(_antiforgeryFieldName) && !string.IsNullOrEmpty(_antiforgeryToken);
     }
 
     private void OnClientChanged(object? value)
@@ -92,8 +175,8 @@
         }
     }
 
-    private void Logout()
-    {
-        NavigationManager.NavigateTo("/connect/logout", true);
-    }
+    public void Dispose()
+        => _subscription?.Dispose();
+
+    private sealed record AntiforgeryPayload(string FieldName, string Token);
 }
