@@ -13,7 +13,10 @@
         <RadzenCard Class="rz-shadow-3 rz-p-3">
             <div class="rz-mb-3">
                 <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
-                    <RadzenTextBox @bind-Value="search" Placeholder="Buscar" Style="width: 300px" Change="@(args => Filter())" />
+                    <RadzenTextBox @bind-Value="search"
+                                   Placeholder="Buscar"
+                                   Style="width: 300px"
+                                   @oninput="@(args => Filter())" />
                 </RadzenStack>
             </div>
 

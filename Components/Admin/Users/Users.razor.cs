@@ -7,68 +7,71 @@ namespace Auth.Web.Components.Admin.Users;
 
 public partial class Users : ComponentBase
 {
-    [Inject] private IAdminUserService UserService { get; set; } = default!;
-    [Inject] private IAdminRoleService RoleService { get; set; } = default!;
-    [Inject] private IAdminAreaService AreaService { get; set; } = default!;
-    [Inject] private NotificationService Notifications { get; set; } = default!;
+    [Inject] private IAdminUserService UserService { get; set; } = null!;
+    [Inject] private IAdminRoleService RoleService { get; set; } = null!;
+    [Inject] private IAdminAreaService AreaService { get; set; } = null!;
+    [Inject] private NotificationService NotificationService { get; set; } = null!;
 
-    private string search = string.Empty;
-    private List<UserAdminDto> users = new();
-    private List<UserAdminDto> filteredUsers = new();
+    private UsersViewModel _vm = null!;
 
-    private UserAdminDto? SelectedUser;
-    private List<RoleAdminDto> AllRoles = new();
-    private List<AreaAdminDto> AllAreas = new();
-    private List<string> SelectedRoles = new();
-    private List<int> SelectedAreaIds = new();
+    // Expose VM state with same names for Razor binding compatibility
+    private string search
+    {
+        get => _vm.Search;
+        set => _vm.Search = value;
+    }
+    private List<UserAdminDto> filteredUsers => _vm.FilteredUsers;
+    private UserAdminDto? SelectedUser => _vm.SelectedUser;
+    private List<RoleAdminDto> AllRoles => _vm.AllRoles;
+    private List<AreaAdminDto> AllAreas => _vm.AllAreas;
+    private List<string> SelectedRoles
+    {
+        get => _vm.SelectedRoles;
+        set => _vm.SelectedRoles = value;
+    }
+    private List<int> SelectedAreaIds
+    {
+        get => _vm.SelectedAreaIds;
+        set => _vm.SelectedAreaIds = value;
+    }
+
+    protected override void OnInitialized()
+    {
+        _vm = new UsersViewModel(UserService, RoleService, AreaService);
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        await ReloadAsync();
+        await _vm.LoadAsync();
     }
 
-    private async Task ReloadAsync()
-    {
-        users = (await UserService.GetUsersAsync()).ToList();
-        filteredUsers = users;
-        AllRoles = (await RoleService.GetRolesAsync()).ToList();
-        AllAreas = (await AreaService.GetAreasAsync()).ToList();
-        StateHasChanged();
-    }
+    private void Filter() => _vm.Filter();
 
-    private void Filter()
-    {
-        filteredUsers = users
-            .Where(u => string.IsNullOrWhiteSpace(search)
-                || (u.UserName?.Contains(search, StringComparison.OrdinalIgnoreCase) == true)
-                || (u.Email?.Contains(search, StringComparison.OrdinalIgnoreCase) == true))
-            .ToList();
-    }
-
-    private void BeginEdit(UserAdminDto user)
-    {
-        SelectedUser = user;
-        SelectedRoles = user.Roles.ToList();
-        SelectedAreaIds = user.AreaIds.ToList();
-        StateHasChanged();
-    }
+    private void BeginEdit(UserAdminDto user) => _vm.BeginEdit(user);
 
     private async Task SaveUser()
     {
-        if (SelectedUser is null) return;
-        
-        try
+        var result = await _vm.SaveAsync();
+        NotifyUser(result);
+
+        if (result.RequiresReload)
         {
-            await UserService.UpdateUserRolesAndAreasAsync(SelectedUser.Id, SelectedRoles, SelectedAreaIds);
-            Notifications.Notify(NotificationSeverity.Success, "Usuario actualizado", $"Se actualizaron roles/áreas de {SelectedUser.UserName}.");
-            SelectedUser = null;
-            await ReloadAsync();
-        }
-        catch (Exception ex)
-        {
-            Notifications.Notify(NotificationSeverity.Error, "Error al actualizar usuario", ex.Message);
+            await _vm.LoadAsync();
         }
     }
 
-    private void CancelEdit() => SelectedUser = null;
+    private void CancelEdit() => _vm.CancelEdit();
+
+    private void NotifyUser(UsersVmResult result)
+    {
+        var severity = result.Outcome switch
+        {
+            UsersVmOutcome.Success => NotificationSeverity.Success,
+            UsersVmOutcome.ValidationError => NotificationSeverity.Warning,
+            UsersVmOutcome.Error => NotificationSeverity.Error,
+            _ => NotificationSeverity.Info
+        };
+
+        NotificationService.Notify(severity, result.Title, result.Message);
+    }
 }
