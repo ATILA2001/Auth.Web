@@ -7,108 +7,95 @@ namespace Auth.Web.Components.Admin.Routes;
 
 public partial class Routes : ComponentBase
 {
-    [Inject] private IAdminRoutingService AdminRouting { get; set; } = default!;
-    [Inject] private IAdminAreaService AdminAreas { get; set; } = default!;
-    [Inject] private IAdminClientService AdminClients { get; set; } = default!;
-    [Inject] private NotificationService Notifications { get; set; } = default!;
+    [Inject] private IAdminRoutingService AdminRouting { get; set; } = null!;
+    [Inject] private IAdminAreaService AdminAreas { get; set; } = null!;
+    [Inject] private IAdminClientService AdminClients { get; set; } = null!;
+    [Inject] private NotificationService Notifications { get; set; } = null!;
 
-    private List<AreaRouteAdminDto> routes = new();
-    private List<AreaAdminDto> areas = new();
-    private List<ApplicationClientAdminDto> clients = new();
-    private bool editing;
-    private AreaRouteAdminDto editModel = new();
-    private int selectedAreaId;
-    private int selectedClientId;
-    private string editReturnUrl = string.Empty;
-    private int editPriority = 1;
-    private bool editIsActive = true;
-    private string? validationError;
+    private RoutesViewModel _vm = null!;
+
+    private List<AreaRouteAdminDto> routes => _vm.Routes;
+    private List<AreaAdminDto> areas => _vm.Areas;
+    private List<ApplicationClientAdminDto> clients => _vm.Clients;
+    private bool editing => _vm.Editing;
+    private AreaRouteAdminDto editModel => _vm.EditModel;
+    private int selectedAreaId
+    {
+        get => _vm.SelectedAreaId;
+        set => _vm.SelectedAreaId = value;
+    }
+    private int selectedClientId
+    {
+        get => _vm.SelectedClientId;
+        set => _vm.SelectedClientId = value;
+    }
+    private string editReturnUrl
+    {
+        get => _vm.EditReturnUrl;
+        set => _vm.EditReturnUrl = value;
+    }
+    private int editPriority
+    {
+        get => _vm.EditPriority;
+        set => _vm.EditPriority = value;
+    }
+    private bool editIsActive
+    {
+        get => _vm.EditIsActive;
+        set => _vm.EditIsActive = value;
+    }
+    private string? validationError => _vm.ValidationError;
+
+    protected override void OnInitialized()
+    {
+        _vm = new RoutesViewModel(AdminRouting, AdminAreas, AdminClients);
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAsync();
+        await _vm.LoadAsync();
     }
 
-    private async Task LoadAsync()
-    {
-        routes = (await AdminRouting.GetRoutesAsync()).ToList();
-        areas = (await AdminAreas.GetAreasAsync()).ToList();
-        clients = (await AdminClients.GetClientsAsync()).ToList();
-    }
+    private void BeginCreate() => _vm.BeginCreate();
 
-    private void BeginCreate()
-    {
-        editModel = new AreaRouteAdminDto { Id = 0 };
-        selectedAreaId = areas.FirstOrDefault()?.Id ?? 0;
-        selectedClientId = clients.FirstOrDefault()?.Id ?? 0;
-        editReturnUrl = string.Empty;
-        editPriority = 1;
-        editIsActive = true;
-        validationError = null;
-        editing = true;
-    }
-
-    private void BeginEdit(AreaRouteAdminDto dto)
-    {
-        editModel = dto;
-        selectedAreaId = dto.AreaId;
-        selectedClientId = dto.ClientId;
-        editReturnUrl = dto.ReturnUrl;
-        editPriority = dto.Priority;
-        editIsActive = dto.IsActive;
-        validationError = null;
-        editing = true;
-    }
+    private void BeginEdit(AreaRouteAdminDto dto) => _vm.BeginEdit(dto);
 
     private async Task SaveRoute()
     {
-        validationError = null;
-        
-        if (selectedAreaId == 0 || selectedClientId == 0 || string.IsNullOrWhiteSpace(editReturnUrl))
+        var result = await _vm.SaveAsync();
+        NotifyUser(result);
+
+        if (result.RequiresReload)
         {
-            validationError = "Completa todos los campos";
-            return;
-        }
-        
-        try
-        {
-            if (editModel.Id == 0)
-            {
-                var id = await AdminRouting.CreateRouteAsync(selectedAreaId, selectedClientId, editReturnUrl, editPriority, editIsActive);
-                Notifications.Notify(NotificationSeverity.Success, "Ruta creada", $"Id {id} creada.");
-            }
-            else
-            {
-                await AdminRouting.UpdateRouteAsync(editModel.Id, selectedAreaId, selectedClientId, editReturnUrl, editPriority, editIsActive);
-                Notifications.Notify(NotificationSeverity.Success, "Ruta actualizada", $"Id {editModel.Id} actualizada.");
-            }
-            editing = false;
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            validationError = ex.Message;
-            Notifications.Notify(NotificationSeverity.Error, "Error al guardar ruta", ex.Message);
+            await _vm.LoadAsync();
+            StateHasChanged(); 
         }
     }
 
     private async Task DeleteRoute(int id)
     {
-        try
+        var result = await _vm.DeleteAsync(id);
+        NotifyUser(result);
+
+        if (result.RequiresReload)
         {
-            await AdminRouting.DeleteRouteAsync(id);
-            Notifications.Notify(NotificationSeverity.Success, "Ruta eliminada", $"Id {id} eliminada.");
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            Notifications.Notify(NotificationSeverity.Error, "Error al eliminar ruta", ex.Message);
+            await _vm.LoadAsync();
+            StateHasChanged(); 
         }
     }
 
-    private void CancelEdit()
+    private void CancelEdit() => _vm.CancelEdit();
+
+    private void NotifyUser(RoutesVmResult result)
     {
-        editing = false;
-        validationError = null;
+        var severity = result.Outcome switch
+        {
+            RoutesVmOutcome.Success => NotificationSeverity.Success,
+            RoutesVmOutcome.ValidationError => NotificationSeverity.Warning,
+            RoutesVmOutcome.Error => NotificationSeverity.Error,
+            _ => NotificationSeverity.Info
+        };
+
+        Notifications.Notify(severity, result.Title, result.Message);
     }
 }
