@@ -33,7 +33,7 @@ public class ClientAdminServiceTests
 
         Assert.True(id > 0);
         var list = await admin.GetClientsAsync();
-        Assert.Equal(1, list.Count);
+        Assert.Single(list);
         var dto = list.Single();
         Assert.Equal("cli1", dto.ClientId);
         Assert.Contains("https://app/a", dto.AllowedReturnUrls);

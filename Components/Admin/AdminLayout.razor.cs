@@ -54,7 +54,10 @@ public partial class AdminLayout : LayoutComponentBase, IDisposable
 
     private bool TryLoadPersistedTokens()
     {
-        if (ApplicationState.TryTakeFromJson<AntiforgeryPayload>(AntiforgeryStateKey, out var payload))
+        if (ApplicationState.TryTakeFromJson<AntiforgeryPayload>(AntiforgeryStateKey, out var payload)
+            && payload is not null
+            && !string.IsNullOrEmpty(payload.FieldName)
+            && !string.IsNullOrEmpty(payload.Token))
         {
             SetAntiforgeryValues(payload.FieldName, payload.Token);
             return true;

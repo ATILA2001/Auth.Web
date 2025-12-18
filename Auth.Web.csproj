@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-Auth.Web-6d5b0116-9c05-453e-b59c-e6008bfd4f04</UserSecretsId>
+    <!-- Test SDK conflict: disable auto-generated Program to avoid CS7022 -->
+    <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
 
   <ItemGroup>

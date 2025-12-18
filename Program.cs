@@ -78,7 +78,14 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
 // Services
-builder.Services.AddScoped<IActiveDirectoryAuthService, AdAuthService>();
+if (OperatingSystem.IsWindows())
+{
+    builder.Services.AddScoped<IActiveDirectoryAuthService, AdAuthService>();
+}
+else
+{
+    builder.Services.AddScoped<IActiveDirectoryAuthService, NoopAdAuthService>();
+}
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAdminSignInService, AdminSignInService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();

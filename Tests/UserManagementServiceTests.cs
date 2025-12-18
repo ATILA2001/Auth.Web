@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using Auth.Web.Data.Entities;
 using Auth.Web.Services.Implementations.Users;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -13,8 +15,27 @@ public class UserManagementServiceTests
     private static Mock<UserManager<ApplicationUser>> CreateUserManagerMock()
     {
         var store = new Mock<IUserStore<ApplicationUser>>();
-        var mgr = new Mock<UserManager<ApplicationUser>>(store.Object,
-            null, null, null, null, null, null, null, null);
+        var options = new Mock<IOptions<IdentityOptions>>();
+        options.Setup(o => o.Value).Returns(new IdentityOptions());
+        var hasher = new Mock<IPasswordHasher<ApplicationUser>>();
+        var userValidators = new List<IUserValidator<ApplicationUser>>();
+        var passwordValidators = new List<IPasswordValidator<ApplicationUser>>();
+        var normalizer = new Mock<ILookupNormalizer>();
+        var errorDescriber = new IdentityErrorDescriber();
+        var serviceProvider = new Mock<IServiceProvider>();
+        var logger = new Mock<ILogger<UserManager<ApplicationUser>>>();
+
+        var mgr = new Mock<UserManager<ApplicationUser>>(
+            store.Object,
+            options.Object,
+            hasher.Object,
+            userValidators,
+            passwordValidators,
+            normalizer.Object,
+            errorDescriber,
+            serviceProvider.Object,
+            logger.Object);
+
         return mgr;
     }
 

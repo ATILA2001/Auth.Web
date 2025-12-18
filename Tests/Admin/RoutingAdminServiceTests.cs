@@ -53,7 +53,7 @@ public class RoutingAdminServiceTests
         var id = await admin.CreateRouteAsync(area.Id, client.Id, "https://app/x", 1, true);
         Assert.True(id > 0);
         var routes = await admin.GetRoutesAsync();
-        Assert.Equal(1, routes.Count);
+        Assert.Single(routes);
         Assert.Contains(routes, r => r.ReturnUrl == "https://app/x" && r.AreaName == "IT");
     }
 
