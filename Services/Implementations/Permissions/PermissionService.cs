@@ -1,8 +1,8 @@
-using Auth.Web.Domain.Dtos;
+using Auth.Web.Application.Permissions.Dtos;
 using Auth.Web.Data.Entities;
+using Auth.Web.Repositories.Abstractions.Permissions;
 using Auth.Web.Services.Abstractions.Permissions;
 using Microsoft.AspNetCore.Identity;
-using Auth.Web.Repositories.Abstractions.Permissions;
 
 namespace Auth.Web.Services.Implementations.Permissions;
 

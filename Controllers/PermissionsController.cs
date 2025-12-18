@@ -1,4 +1,4 @@
-using Auth.Web.Domain.Dtos;
+using Auth.Web.Application.Permissions.Dtos;
 using Auth.Web.Services.Abstractions.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

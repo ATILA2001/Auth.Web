@@ -1,4 +1,4 @@
-namespace Auth.Web.Domain.Dtos;
+namespace Auth.Web.Application.Permissions.Dtos;
 
 public class PagePermissionDto
 {

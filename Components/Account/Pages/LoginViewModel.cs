@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Auth.Web.Application.Dtos;
+using Auth.Web.Application.Users.Registration;
 using Auth.Web.Services.Abstractions.Users;
 using Microsoft.AspNetCore.WebUtilities;
 

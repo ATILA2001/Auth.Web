@@ -1,18 +1,18 @@
 using System.Threading;
 using AuthClaimsModel = Auth.Web.Application.Auth.AuthClaimsModel;
+using Auth.Web.Application.Permissions;
+using Auth.Web.Application.Permissions.Dtos;
+using Auth.Web.Contracts.Auth;
+using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Auth;
-using Auth.Web.Services.Abstractions.Users;
+using Auth.Web.Services.Abstractions.Auth.Models;
+using Auth.Web.Services.Abstractions.Clients;
 using Auth.Web.Services.Abstractions.Permissions;
 using Auth.Web.Services.Abstractions.Routing;
-using Auth.Web.Services.Abstractions.Clients;
-using Auth.Web.Domain.Dtos;
-using Auth.Web.Data.Entities;
+using Auth.Web.Services.Abstractions.Users;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 using Xunit;
-using Auth.Web.Contracts.Auth;
-using Auth.Web.Services.Abstractions.Auth.Models;
-using Auth.Web.Application.Permissions;
 
 namespace Auth.Web.Tests;
 
@@ -108,7 +108,7 @@ public class AuthFlowServiceTests
         clientSvc.Setup(x => x.IsReturnUrlAllowed(client, "https://app/landing")).Returns(true);
 
         var perms = new Mock<IPermissionService>();
-        perms.Setup(x => x.GetAsync(userName)).ReturnsAsync(new Auth.Web.Domain.Dtos.UserPermissionsDto { Areas = new List<int> { 1 }, Version = 1 });
+        perms.Setup(x => x.GetAsync(userName)).ReturnsAsync(new UserPermissionsDto { Areas = new List<int> { 1 }, Version = 1 });
 
         var jwt = new Mock<IJwtTokenService>();
         jwt.Setup(x => x.CreateToken(It.IsAny<AuthClaimsModel>(), client.Audience)).Returns("TOKEN_X");

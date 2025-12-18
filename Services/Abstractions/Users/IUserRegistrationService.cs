@@ -1,4 +1,4 @@
-using Auth.Web.Application.Dtos;
+using Auth.Web.Application.Users.Registration;
 
 namespace Auth.Web.Services.Abstractions.Users;
 

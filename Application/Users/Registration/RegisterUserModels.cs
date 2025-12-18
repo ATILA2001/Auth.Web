@@ -1,4 +1,4 @@
-namespace Auth.Web.Application.Dtos;
+namespace Auth.Web.Application.Users.Registration;
 
 public sealed class RegisterUserRequest
 {
