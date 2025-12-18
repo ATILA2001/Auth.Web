@@ -1,7 +1,7 @@
 @page "/Account/Login"
 @rendermode InteractiveServer
 
-<PageTitle>Inicio de sesion</PageTitle>
+<PageTitle>Inicio de sesión</PageTitle>
 
 <div class="container-fluid vh-100 d-flex justify-content-center align-items-center">
     <div class="row justify-content-center w-100">
@@ -18,45 +18,46 @@
                                     {
                                         <RadzenAlert Severity="AlertSeverity.Error" Style="width:100%">@ErrorMessage</RadzenAlert>
                                     }
-                                  
-                                    <EditForm Model="Input">
-                                        <DataAnnotationsValidator />
-                                        <ValidationSummary />
-                                        <form method="post" action="/connect/login">
-                                            <RadzenStack Orientation="Orientation.Vertical" Gap="1.25rem">
-                                                <RadzenTextBox Name="UserNameOrEmail"
-                                                               Style="width:100%"
-                                                               Placeholder="Correo electrónico / CUIL"
-                                                               @bind-Value="Input.UserNameOrEmail" />
 
-                                                <RadzenPassword Name="Password"
-                                                                Style="width:100%"
-                                                                Placeholder="Contraseña"
-                                                                @bind-Value="Input.Password" />
+                                    @if (!string.IsNullOrWhiteSpace(SuccessMessage))
+                                    {
+                                        <RadzenAlert Severity="AlertSeverity.Success" Style="width:100%">@SuccessMessage</RadzenAlert>
+                                    }
 
-                                                <input type="hidden" name="ReturnUrl" value="@ReturnUrlFromQuery" />
-                                                <input type="hidden" name="ClientId" value="@ClientIdFromQuery" />
+                                    <form method="post" action="/connect/login">
+                                        <RadzenStack Orientation="Orientation.Vertical" Gap="1.25rem">
+                                            <RadzenTextBox Name="UserNameOrEmail"
+                                                           Style="width:100%"
+                                                           Placeholder="Correo electrónico / CUIL"
+                                                           @bind-Value="loginUser" />
 
-                                                <RadzenButton ButtonType="ButtonType.Submit"
-                                                              Text="Iniciar"
-                                                              ButtonStyle="ButtonStyle.Primary"
-                                                              Size="ButtonSize.Large"
-                                                              class="w-100" />
-                                            </RadzenStack>
-                                        </form>
-                                    </EditForm>
+                                            <RadzenPassword Name="Password"
+                                                            Style="width:100%"
+                                                            Placeholder="Contraseña" />
+
+                                            <input type="hidden" name="ReturnUrl" value="@(ReturnUrlFromQuery ?? string.Empty)" />
+                                            <input type="hidden" name="ClientId" value="@(ClientIdFromQuery ?? string.Empty)" />
+
+                                            <RadzenButton ButtonType="ButtonType.Submit"
+                                                          Text="Iniciar"
+                                                          ButtonStyle="ButtonStyle.Primary"
+                                                          Size="ButtonSize.Large"
+                                                          class="w-100" />
+                                        </RadzenStack>
+                                    </form>
                                 </RadzenStack>
                             </ChildContent>
                         </RadzenTabsItem>
 
                         <RadzenTabsItem Text="Registrarse">
                             <RadzenStack Orientation="Orientation.Vertical" Gap="1.25rem">
-                                <RadzenLabel> Ingrese nombre completo y correo laboral (@@buenosaires).</RadzenLabel>
+                                <RadzenLabel>Ingrese nombre completo y correo laboral (@@buenosaires).</RadzenLabel>
 
                                 @if (!string.IsNullOrWhiteSpace(RegisterMessage))
                                 {
                                     <RadzenAlert Severity="AlertSeverity.Error" Style="width:100%">@RegisterMessage</RadzenAlert>
                                 }
+
                                 <EditForm Model="@RegInput" OnValidSubmit="@RegisterUser">
                                     <DataAnnotationsValidator />
                                     <ValidationSummary />
