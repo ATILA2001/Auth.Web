@@ -17,7 +17,7 @@
 
             <RadzenDataGrid TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Data="@clients" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
                 FilterMode="FilterMode.CheckBoxList" AllowSorting="true" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
-                AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas">
+                AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas" EmptyText="Sin registros">
                 <Columns>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Property="ClientId" Title="ClientId" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Property="Audience" Title="Audience" />
@@ -26,8 +26,8 @@
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Context="c" Width="160px">
                         <Template Context="c">
-                            <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => BeginEdit(c))" />
-                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" class="rz-ml-2" Click="@(() => DeleteClient(c.Id))" />
+                            <RadzenButton Icon="edit" Size="ButtonSize.Small" Title="Editar" AriaLabel="Editar" Click="@(() => BeginEdit(c))" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" class="rz-ml-2" Title="Eliminar" AriaLabel="Eliminar" Click="@(() => DeleteClient(c.Id))" />
                         </Template>
                     </RadzenDataGridColumn>
                 </Columns>
@@ -39,16 +39,24 @@
                     <RadzenCard>
                         <RadzenFieldset Text="@(editModel.Id == 0 ? "Crear cliente" : $"Editar cliente {editModel.ClientId}")">
                             <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
-                                <RadzenTextBox @bind-Value="editModel.ClientId" Placeholder="ClientId" />
-                                <RadzenTextBox @bind-Value="editModel.Audience" Placeholder="Audience" />
-                                <RadzenLabel Text="Allowed Return Urls (una por línea)" />
-                                <RadzenTextArea @bind-Value="allowedUrlsText" Rows="5" />
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                    <RadzenLabel Text="ClientId" />
+                                    <RadzenTextBox @bind-Value="clientForm.ClientId" Placeholder="ClientId" />
+                                </RadzenStack>
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                    <RadzenLabel Text="Audience" />
+                                    <RadzenTextBox @bind-Value="clientForm.Audience" Placeholder="Audience" />
+                                </RadzenStack>
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                    <RadzenLabel Text="Allowed Return Urls (una por línea)" />
+                                    <RadzenTextArea @bind-Value="clientForm.AllowedUrlsText" Rows="5" />
+                                </RadzenStack>
                                 @if (!string.IsNullOrWhiteSpace(validationError))
                                 {
                                     <RadzenAlert Severity="AlertSeverity.Error">@validationError</RadzenAlert>
                                 }
                                 <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
-                                    <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" Click="@(() => SaveClient())" />
+                                    <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button" Click="@OnSubmitClient" />
                                     <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@(() => CancelEdit())" />
                                 </RadzenStack>
                             </RadzenStack>

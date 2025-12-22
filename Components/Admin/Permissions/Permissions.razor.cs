@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
 using Radzen.Blazor;
+using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Web.Components.Admin.Permissions;
 
@@ -17,6 +19,7 @@ public partial class Permissions : ComponentBase
 
     private PermissionsViewModel _vm = null!;
     private RadzenDataGrid<RolePagePermissionAdminDto> grid = null!;
+    private PermissionsFormModel permissionForm = new();
 
     // Expose VM state for Razor binding
     private List<RolePagePermissionAdminDto> permissions => _vm.Permissions;
@@ -52,9 +55,14 @@ public partial class Permissions : ComponentBase
     protected override async Task OnInitializedAsync()
     {
         await _vm.LoadAsync();
+        SyncFormFromVm();
     }
 
-    private void BeginCreate() => _vm.BeginCreate();
+    private void BeginCreate()
+    {
+        _vm.BeginCreate();
+        SyncFormFromVm();
+    }
 
     private async Task SavePermission()
     {
@@ -66,6 +74,14 @@ public partial class Permissions : ComponentBase
             await _vm.LoadPermissionsAsync();
             await grid.Reload();
         }
+    }
+
+    private async Task OnSubmitPermission()
+    {
+        _vm.SelectedRoleId = permissionForm.RoleId;
+        _vm.SelectedPageId = permissionForm.PageId;
+        _vm.SelectedActionId = permissionForm.ActionId;
+        await SavePermission();
     }
 
     private async Task DeletePermission(int id)
@@ -86,7 +102,20 @@ public partial class Permissions : ComponentBase
         }
     }
 
-    private void CancelEdit() => _vm.CancelEdit();
+    private void CancelEdit()
+    {
+        _vm.CancelEdit();
+    }
+
+    private void SyncFormFromVm()
+    {
+        permissionForm = new PermissionsFormModel
+        {
+            RoleId = _vm.SelectedRoleId,
+            PageId = _vm.SelectedPageId,
+            ActionId = _vm.SelectedActionId
+        };
+    }
 
     private void NotifyUser(PermissionsVmResult result)
     {
@@ -100,4 +129,18 @@ public partial class Permissions : ComponentBase
 
         NotificationService.Notify(severity, result.Title, result.Message);
     }
+}
+
+public sealed class PermissionsFormModel
+{
+    [Required(ErrorMessage = "Rol requerido")]
+    public string RoleId { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Página requerida")]
+    [Range(1, int.MaxValue, ErrorMessage = "Página requerida")]
+    public int PageId { get; set; }
+
+    [Required(ErrorMessage = "Acción requerida")]
+    [Range(1, int.MaxValue, ErrorMessage = "Acción requerida")]
+    public int ActionId { get; set; }
 }

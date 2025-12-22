@@ -22,7 +22,7 @@
 
             <RadzenDataGrid TItem="Application.Admin.Dtos.UserAdminDto" Data="@filteredUsers" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
                 FilterMode="FilterMode.CheckBoxList" AllowSorting="true" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
-                AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas">
+                AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas" EmptyText="Sin registros">
                 <Columns>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="UserName" Title="Usuario" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="Email" Title="Correo" />
@@ -44,18 +44,24 @@
             {
                 <div class="rz-mt-3">
                     <RadzenCard>
-                        <RadzenFieldset Text="@($"Editar usuario {SelectedUser.UserName}")">
-                            <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
-                                <RadzenLabel Text="Roles" />
-                                <RadzenDropDown Multiple="true" Data="@AllRoles" TextProperty="Name" ValueProperty="Name" @bind-Value="SelectedRoles" />
-                                <RadzenLabel Text="Áreas" />
-                                <RadzenDropDown Multiple="true" Data="@AllAreas" TextProperty="Name" ValueProperty="Id" @bind-Value="SelectedAreaIds" />
-                                <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
-                                    <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" Click="@(args => SaveUser())" />
-                                    <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@(args => CancelEdit())" />
+                        <RadzenTemplateForm TItem="UserEditFormModel" Data="@userForm">
+                            <RadzenFieldset Text="@($"Editar usuario {SelectedUser.UserName}")">
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+                                    <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                        <RadzenLabel Text="Roles" Component="rolesDrop" />
+                                        <RadzenDropDown Name="rolesDrop" Multiple="true" Data="@AllRoles" TextProperty="Name" ValueProperty="Name" @bind-Value="userForm.Roles" />
+                                    </RadzenStack>
+                                    <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                        <RadzenLabel Text="Áreas" Component="areasDrop" />
+                                        <RadzenDropDown Name="areasDrop" Multiple="true" Data="@AllAreas" TextProperty="Name" ValueProperty="Id" @bind-Value="userForm.AreaIds" />
+                                    </RadzenStack>
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+                                        <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button" Click="@OnSubmitUser" />
+                                        <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@(args => CancelEdit())" />
+                                    </RadzenStack>
                                 </RadzenStack>
-                            </RadzenStack>
-                        </RadzenFieldset>
+                            </RadzenFieldset>
+                        </RadzenTemplateForm>
                     </RadzenCard>
                 </div>
             }

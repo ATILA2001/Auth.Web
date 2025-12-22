@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
+using Radzen.Blazor;
+using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Web.Components.Admin.Users;
 
@@ -13,6 +16,7 @@ public partial class Users : ComponentBase
     [Inject] private NotificationService NotificationService { get; set; } = null!;
 
     private UsersViewModel _vm = null!;
+    private UserEditFormModel userForm = new();
 
     // Expose VM state with same names for Razor binding compatibility
     private string search
@@ -47,7 +51,18 @@ public partial class Users : ComponentBase
 
     private void Filter() => _vm.Filter();
 
-    private void BeginEdit(UserAdminDto user) => _vm.BeginEdit(user);
+    private void BeginEdit(UserAdminDto user)
+    {
+        _vm.BeginEdit(user);
+        SyncFormFromVm();
+    }
+
+    private async Task OnSubmitUser()
+    {
+        SelectedRoles = userForm.Roles;
+        SelectedAreaIds = userForm.AreaIds;
+        await SaveUser();
+    }
 
     private async Task SaveUser()
     {
@@ -60,7 +75,19 @@ public partial class Users : ComponentBase
         }
     }
 
-    private void CancelEdit() => _vm.CancelEdit();
+    private void CancelEdit()
+    {
+        _vm.CancelEdit();
+    }
+
+    private void SyncFormFromVm()
+    {
+        userForm = new UserEditFormModel
+        {
+            Roles = SelectedRoles.ToList(),
+            AreaIds = SelectedAreaIds.ToList()
+        };
+    }
 
     private void NotifyUser(UsersVmResult result)
     {
@@ -74,4 +101,10 @@ public partial class Users : ComponentBase
 
         NotificationService.Notify(severity, result.Title, result.Message);
     }
+}
+
+public sealed class UserEditFormModel
+{
+    public List<string> Roles { get; set; } = new();
+    public List<int> AreaIds { get; set; } = new();
 }

@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
 using Radzen.Blazor;
+using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Web.Components.Admin.Pages;
 
@@ -14,6 +16,7 @@ public partial class Pages : ComponentBase
 
     private PagesViewModel _vm = null!;
     private RadzenDataGrid<PageAdminDto> grid = null!;
+    private PageFormModel pageForm = new();
 
     private List<PageAdminDto> pages => _vm.Pages;
     private bool editing => _vm.Editing;
@@ -40,9 +43,28 @@ public partial class Pages : ComponentBase
         await _vm.LoadAsync();
     }
 
-    private void BeginCreate() => _vm.BeginCreate();
+    private void BeginCreate()
+    {
+        _vm.BeginCreate();
+        pageForm = new PageFormModel();
+    }
 
-    private void BeginEdit(PageAdminDto dto) => _vm.BeginEdit(dto);
+    private void BeginEdit(PageAdminDto dto)
+    {
+        _vm.BeginEdit(dto);
+        pageForm = new PageFormModel
+        {
+            Name = editName,
+            Url = editUrl
+        };
+    }
+
+    private async Task OnSubmitPage()
+    {
+        editName = pageForm.Name;
+        editUrl = pageForm.Url;
+        await SavePage();
+    }
 
     private async Task SavePage()
     {
@@ -88,4 +110,13 @@ public partial class Pages : ComponentBase
 
         NotificationService.Notify(severity, result.Title, result.Message);
     }
+}
+
+public sealed class PageFormModel
+{
+    [Required(ErrorMessage = "Nombre requerido")]
+    public string Name { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "URL requerida")]
+    public string Url { get; set; } = string.Empty;
 }

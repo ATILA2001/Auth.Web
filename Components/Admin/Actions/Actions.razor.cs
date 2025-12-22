@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
 using Radzen.Blazor;
+using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Web.Components.Admin.Actions;
 
@@ -14,6 +16,7 @@ public partial class Actions : ComponentBase
 
     private ActionsViewModel _vm = null!;
     private RadzenDataGrid<ActionPermissionAdminDto> grid = null!;
+    private ActionFormModel actionForm = new();
 
     private List<ActionPermissionAdminDto> actions => _vm.Actions;
     private string newAction
@@ -90,4 +93,17 @@ public partial class Actions : ComponentBase
 
         NotificationService.Notify(severity, result.Title, result.Message);
     }
+
+    private async Task OnSubmitAction()
+    {
+        newAction = actionForm.Name;
+        await CreateAction();
+        actionForm = new ActionFormModel();
+    }
+}
+
+public sealed class ActionFormModel
+{
+    [Required(ErrorMessage = "Nombre requerido")]
+    public string Name { get; set; } = string.Empty;
 }

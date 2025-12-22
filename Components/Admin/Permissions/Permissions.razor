@@ -16,49 +16,49 @@
             @if (editing)
             {
                 <div class="rz-mb-3 rz-p-3" style="background: var(--rz-base-100); border-radius: var(--rz-border-radius);">
-                    <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
-                        <RadzenLabel Text="Asignar nuevo permiso" Style="font-weight: bold;" />
+                    <RadzenTemplateForm TItem="PermissionsFormModel" Data="@permissionForm">
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+                            <RadzenLabel Text="Asignar nuevo permiso" Style="font-weight: bold;" />
 
-                        @if (!string.IsNullOrWhiteSpace(validationError))
-                        {
-                            <RadzenAlert Severity="AlertSeverity.Warning" Style="width:100%">@validationError</RadzenAlert>
-                        }
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                    <RadzenLabel Text="Rol" Component="roleDrop" />
+                                    <RadzenDropDown Name="roleDrop" TValue="string"
+                                                    Data="@roles"
+                                                    TextProperty="Name"
+                                                    ValueProperty="Id"
+                                                    @bind-Value="permissionForm.RoleId"
+                                                    Style="width: 180px" />
+                                    <RadzenRequiredValidator Component="roleDrop" Text="Requerido" />
+                                </RadzenStack>
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                    <RadzenLabel Text="Página" Component="pageDrop" />
+                                    <RadzenDropDown Name="pageDrop" TValue="int"
+                                                    Data="@pages"
+                                                    TextProperty="Name"
+                                                    ValueProperty="Id"
+                                                    @bind-Value="permissionForm.PageId"
+                                                    Style="width: 180px" />
+                                    <RadzenRequiredValidator Component="pageDrop" Text="Requerido" />
+                                </RadzenStack>
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                    <RadzenLabel Text="Acción" Component="actionDrop" />
+                                    <RadzenDropDown Name="actionDrop" TValue="int"
+                                                    Data="@actions"
+                                                    TextProperty="Name"
+                                                    ValueProperty="Id"
+                                                    @bind-Value="permissionForm.ActionId"
+                                                    Style="width: 180px" />
+                                    <RadzenRequiredValidator Component="actionDrop" Text="Requerido" />
+                                </RadzenStack>
+                            </RadzenStack>
 
-                        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
-                            <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                <RadzenLabel Text="Rol" />
-                                <RadzenDropDown TValue="string" 
-                                                Data="@roles" 
-                                                TextProperty="Name" 
-                                                ValueProperty="Id" 
-                                                @bind-Value="selectedRoleId" 
-                                                Style="width: 180px" />
-                            </RadzenStack>
-                            <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                <RadzenLabel Text="Página" />
-                                <RadzenDropDown TValue="int" 
-                                                Data="@pages" 
-                                                TextProperty="Name" 
-                                                ValueProperty="Id" 
-                                                @bind-Value="selectedPageId" 
-                                                Style="width: 180px" />
-                            </RadzenStack>
-                            <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                <RadzenLabel Text="Acción" />
-                                <RadzenDropDown TValue="int" 
-                                                Data="@actions" 
-                                                TextProperty="Name" 
-                                                ValueProperty="Id" 
-                                                @bind-Value="selectedActionId" 
-                                                Style="width: 180px" />
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                                <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button" Click="@OnSubmitPermission" />
+                                <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@CancelEdit" />
                             </RadzenStack>
                         </RadzenStack>
-
-                        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
-                            <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" Click="@SavePermission" />
-                            <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@CancelEdit" />
-                        </RadzenStack>
-                    </RadzenStack>
+                    </RadzenTemplateForm>
                 </div>
             }
             else
@@ -71,7 +71,7 @@
             @* Grid de permisos *@
             <RadzenDataGrid TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Data="@permissions" @ref="grid" AllowPaging="true" PageSize="15" AllowSorting="true" AllowFiltering="true" AllowColumnResize="true"
                 FilterMode="FilterMode.CheckBoxList" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
-                AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas">
+                AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas" EmptyText="Sin registros">
                 <Columns>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="RoleName" Title="Rol" Width="150px" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="PageName" Title="Página" />
@@ -79,7 +79,7 @@
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="ActionName" Title="Acción" Width="120px" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Context="p" Width="80px">
                         <Template Context="p">
-                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(args => DeletePermission(p.Id))" Disabled="@editing" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeletePermission(p.Id))" Disabled="@editing" />
                         </Template>
                     </RadzenDataGridColumn>
                 </Columns>

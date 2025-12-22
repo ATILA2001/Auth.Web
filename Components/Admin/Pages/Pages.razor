@@ -15,22 +15,29 @@
             @if (editing)
             {
                 <div class="rz-mb-3">
-                    <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
-                        <RadzenLabel Text="@(editModel.Id == 0 ? "Nueva Página" : "Editar Página")" Style="font-weight: bold;" />
+                    <RadzenTemplateForm TItem="PageFormModel" Data="@pageForm">
 
-                        @if (!string.IsNullOrWhiteSpace(validationError))
-                        {
-                            <RadzenAlert Severity="AlertSeverity.Warning" Style="width:100%">@validationError</RadzenAlert>
-                        }
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+                            <RadzenLabel Text="@(editModel.Id == 0 ? "Nueva Página" : "Editar Página")" Style="font-weight: bold;" />
 
-                        <RadzenTextBox @bind-Value="editName" Placeholder="Nombre" Style="width: 100%" />
-                        <RadzenTextBox @bind-Value="editUrl" Placeholder="URL (ej: /admin/users)" Style="width: 100%" />
+                            <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                <RadzenLabel Text="Nombre" Component="pageNameInput" />
+                                <RadzenTextBox Name="pageNameInput" @bind-Value="pageForm.Name" Placeholder="Nombre" Style="width: 100%" />
+                                <RadzenRequiredValidator Component="pageNameInput" Text="Requerido" />
+                            </RadzenStack>
 
-                        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
-                            <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" Click="@SavePage" />
-                            <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@CancelEdit" />
+                            <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                <RadzenLabel Text="URL" Component="pageUrlInput" />
+                                <RadzenTextBox Name="pageUrlInput" @bind-Value="pageForm.Url" Placeholder="URL (ej: /admin/users)" Style="width: 100%" />
+                                <RadzenRequiredValidator Component="pageUrlInput" Text="Requerido" />
+                            </RadzenStack>
+
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                                <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button" Click="@OnSubmitPage" />
+                                <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@CancelEdit" />
+                            </RadzenStack>
                         </RadzenStack>
-                    </RadzenStack>
+                    </RadzenTemplateForm>
                 </div>
             }
             else
@@ -42,15 +49,15 @@
 
             <RadzenDataGrid TItem="Application.Admin.Dtos.PageAdminDto" Data="@pages" @ref="grid" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
                 FilterMode="FilterMode.CheckBoxList" AllowSorting="true" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
-                AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas">
+                AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas" EmptyText="Sin registros">
                 <Columns>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.PageAdminDto" Property="Name" Title="Nombre" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.PageAdminDto" Property="Url" Title="URL" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.PageAdminDto" Property="PermissionCount" Title="Permisos" Width="100px" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.PageAdminDto" Context="p" Width="160px">
                         <Template Context="p">
-                            <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(args => BeginEdit(p))" Disabled="@editing" />
-                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" class="rz-ml-2" Click="@(args => DeletePage(p.Id))" Disabled="@editing" />
+                            <RadzenButton Icon="edit" Size="ButtonSize.Small" Title="Editar" AriaLabel="Editar" Click="@(args => BeginEdit(p))" Disabled="@editing" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" class="rz-ml-2" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeletePage(p.Id))" Disabled="@editing" />
                         </Template>
                     </RadzenDataGridColumn>
                 </Columns>
