@@ -7,25 +7,32 @@ namespace Auth.Web.Repositories.Implementations.Admin;
 
 public sealed class RoleAdminRepository : IRoleAdminRepository
 {
-    private readonly AuthDbContext _db;
+    private readonly IDbContextFactory<AuthDbContext> _dbFactory;
 
-    public RoleAdminRepository(AuthDbContext db)
+    public RoleAdminRepository(IDbContextFactory<AuthDbContext> dbFactory)
     {
-        _db = db;
+        _dbFactory = dbFactory;
     }
 
-    public Task<List<IdentityRole>> GetRolesAsync(CancellationToken ct = default)
-        => _db.Roles.AsNoTracking().OrderBy(r => r.Name).ToListAsync(ct);
+    public async Task<List<IdentityRole>> GetRolesAsync(CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        return await db.Roles.AsNoTracking().OrderBy(r => r.Name).ToListAsync(ct);
+    }
 
     public async Task<IReadOnlyDictionary<string, int>> GetRoleUserCountsAsync(CancellationToken ct = default)
     {
-        var counts = await _db.UserRoles.AsNoTracking()
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var counts = await db.UserRoles.AsNoTracking()
             .GroupBy(ur => ur.RoleId)
             .Select(g => new { g.Key, Count = g.Count() })
             .ToListAsync(ct);
         return counts.ToDictionary(x => x.Key, x => x.Count);
     }
 
-    public Task<int> GetRoleUserCountAsync(string roleId, CancellationToken ct = default)
-        => _db.UserRoles.CountAsync(ur => ur.RoleId == roleId, ct);
+    public async Task<int> GetRoleUserCountAsync(string roleId, CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        return await db.UserRoles.CountAsync(ur => ur.RoleId == roleId, ct);
+    }
 }

@@ -23,6 +23,7 @@ public class ClientAdminServiceTests
         var root = new InMemoryDatabaseRoot();
         var services = new ServiceCollection();
         services.AddDbContext<AuthDbContext>(opts => opts.UseInMemoryDatabase(dbName, root));
+        services.AddDbContextFactory<AuthDbContext>(opts => opts.UseInMemoryDatabase(dbName, root));
         services.AddScoped<IClientService>(_ => clientSvcMock.Object);
         services.AddScoped<IClientAdminRepository, ClientAdminRepository>();
         services.AddScoped<IAdminClientService, ClientAdminService>();
@@ -46,6 +47,7 @@ public class ClientAdminServiceTests
         var root = new InMemoryDatabaseRoot();
         var services = new ServiceCollection();
         services.AddDbContext<AuthDbContext>(opts => opts.UseInMemoryDatabase(dbName, root));
+        services.AddDbContextFactory<AuthDbContext>(opts => opts.UseInMemoryDatabase(dbName, root));
         services.AddScoped<IClientService>(_ => new Mock<IClientService>().Object);
         services.AddScoped<IClientAdminRepository, ClientAdminRepository>();
         services.AddScoped<IAdminClientService, ClientAdminService>();

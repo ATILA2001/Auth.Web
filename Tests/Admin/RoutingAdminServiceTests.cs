@@ -25,6 +25,7 @@ public class RoutingAdminServiceTests
         var root = new InMemoryDatabaseRoot();
         var services = new ServiceCollection();
         services.AddDbContext<AuthDbContext>(opts => opts.UseInMemoryDatabase(dbName, root));
+        services.AddDbContextFactory<AuthDbContext>(opts => opts.UseInMemoryDatabase(dbName, root));
         services.AddScoped<IClientService>(_ => clientSvc.Object);
         services.AddScoped<IClientAdminRepository, ClientAdminRepository>();
         services.AddScoped<IAreaAdminRepository, AreaAdminRepository>();
@@ -65,6 +66,7 @@ public class RoutingAdminServiceTests
         var root = new InMemoryDatabaseRoot();
         var services = new ServiceCollection();
         services.AddDbContext<AuthDbContext>(opts => opts.UseInMemoryDatabase(dbName, root));
+        services.AddDbContextFactory<AuthDbContext>(opts => opts.UseInMemoryDatabase(dbName, root));
         services.AddScoped<IClientService>(_ => clientSvc.Object);
         services.AddScoped<IClientAdminRepository, ClientAdminRepository>();
         services.AddScoped<IAreaAdminRepository, AreaAdminRepository>();

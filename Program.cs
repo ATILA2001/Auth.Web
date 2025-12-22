@@ -49,6 +49,7 @@ builder.Services.Configure<FeatureOptions>(builder.Configuration.GetSection("Fea
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
+builder.Services.AddDbContextFactory<AuthDbContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddDbContext<AuthDbContext>(options => options.UseSqlServer(connectionString));
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>

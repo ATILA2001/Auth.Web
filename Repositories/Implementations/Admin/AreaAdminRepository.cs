@@ -7,54 +7,67 @@ namespace Auth.Web.Repositories.Implementations.Admin;
 
 public sealed class AreaAdminRepository : IAreaAdminRepository
 {
-    private readonly AuthDbContext _db;
+    private readonly IDbContextFactory<AuthDbContext> _dbFactory;
 
-    public AreaAdminRepository(AuthDbContext db)
+    public AreaAdminRepository(IDbContextFactory<AuthDbContext> dbFactory)
     {
-        _db = db;
+        _dbFactory = dbFactory;
     }
 
-    public Task<List<Area>> GetAreasAsync(CancellationToken ct = default)
-        => _db.Areas.AsNoTracking().OrderBy(a => a.Name).ToListAsync(ct);
+    public async Task<List<Area>> GetAreasAsync(CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        return await db.Areas.AsNoTracking().OrderBy(a => a.Name).ToListAsync(ct);
+    }
 
-    public Task<Area?> GetByIdAsync(int id, CancellationToken ct = default)
-        => _db.Areas.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id, ct);
+    public async Task<Area?> GetByIdAsync(int id, CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        return await db.Areas.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id, ct);
+    }
 
     public async Task<Area> CreateAsync(string name, CancellationToken ct = default)
     {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
         var area = new Area { Name = name.Trim() };
-        _db.Areas.Add(area);
-        await _db.SaveChangesAsync(ct);
+        db.Areas.Add(area);
+        await db.SaveChangesAsync(ct);
         return area;
     }
 
     public async Task<bool> UpdateNameAsync(int id, string name, CancellationToken ct = default)
     {
-        var area = await _db.Areas.FindAsync(new object[] { id }, ct);
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var area = await db.Areas.FindAsync(new object[] { id }, ct);
         if (area is null) return false;
         area.Name = name.Trim();
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
         return true;
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var area = await _db.Areas.FindAsync(new object[] { id }, ct);
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var area = await db.Areas.FindAsync(new object[] { id }, ct);
         if (area is null) return false;
-        _db.Areas.Remove(area);
-        await _db.SaveChangesAsync(ct);
+        db.Areas.Remove(area);
+        await db.SaveChangesAsync(ct);
         return true;
     }
 
     public async Task<IReadOnlyDictionary<int, int>> GetAreaUserCountsAsync(CancellationToken ct = default)
     {
-        var counts = await _db.UserAreas.AsNoTracking()
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var counts = await db.UserAreas.AsNoTracking()
             .GroupBy(ua => ua.AreaId)
             .Select(g => new { g.Key, Count = g.Count() })
             .ToListAsync(ct);
         return counts.ToDictionary(x => x.Key, x => x.Count);
     }
 
-    public Task<int> GetAreaUserCountAsync(int areaId, CancellationToken ct = default)
-        => _db.UserAreas.CountAsync(ua => ua.AreaId == areaId, ct);
+    public async Task<int> GetAreaUserCountAsync(int areaId, CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        return await db.UserAreas.CountAsync(ua => ua.AreaId == areaId, ct);
+    }
 }

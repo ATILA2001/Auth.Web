@@ -8,24 +8,31 @@ namespace Auth.Web.Repositories.Implementations.Admin;
 
 public sealed class ClientAdminRepository : IClientAdminRepository
 {
-    private readonly AuthDbContext _db;
+    private readonly IDbContextFactory<AuthDbContext> _dbFactory;
 
-    public ClientAdminRepository(AuthDbContext db)
+    public ClientAdminRepository(IDbContextFactory<AuthDbContext> dbFactory)
     {
-        _db = db;
+        _dbFactory = dbFactory;
     }
 
     public async Task<IReadOnlyCollection<ApplicationClient>> GetClientsAsync(CancellationToken ct = default)
-        => await _db.ApplicationClients.AsNoTracking().OrderBy(c => c.ClientId).ToListAsync(ct);
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        return await db.ApplicationClients.AsNoTracking().OrderBy(c => c.ClientId).ToListAsync(ct);
+    }
 
-    public Task<ApplicationClient?> GetClientAsync(int id, CancellationToken ct = default)
-        => _db.ApplicationClients.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
+    public async Task<ApplicationClient?> GetClientAsync(int id, CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        return await db.ApplicationClients.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
+    }
 
     public async Task<int> CreateClientAsync(string clientId, string audience, IEnumerable<string> allowedUrls, CancellationToken ct = default)
     {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
         clientId = clientId.Trim();
         audience = audience.Trim();
-        if (await _db.ApplicationClients.AnyAsync(c => c.ClientId == clientId, ct))
+        if (await db.ApplicationClients.AnyAsync(c => c.ClientId == clientId, ct))
             throw new InvalidOperationException("ClientId duplicado.");
         var list = NormalizeUrls(allowedUrls);
         var entity = new ApplicationClient
@@ -34,31 +41,33 @@ public sealed class ClientAdminRepository : IClientAdminRepository
             Audience = audience,
             AllowedReturnUrlsJson = JsonSerializer.Serialize(list)
         };
-        _db.ApplicationClients.Add(entity);
-        await _db.SaveChangesAsync(ct);
+        db.ApplicationClients.Add(entity);
+        await db.SaveChangesAsync(ct);
         return entity.Id;
     }
 
     public async Task UpdateClientAsync(int id, string clientId, string audience, IEnumerable<string> allowedUrls, CancellationToken ct = default)
     {
-        var entity = await _db.ApplicationClients.FindAsync(new object[] { id }, ct) ?? throw new KeyNotFoundException("Cliente no encontrado.");
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var entity = await db.ApplicationClients.FindAsync(new object[] { id }, ct) ?? throw new KeyNotFoundException("Cliente no encontrado.");
         clientId = clientId.Trim();
         audience = audience.Trim();
-        if (entity.ClientId != clientId && await _db.ApplicationClients.AnyAsync(c => c.ClientId == clientId, ct))
+        if (entity.ClientId != clientId && await db.ApplicationClients.AnyAsync(c => c.ClientId == clientId, ct))
             throw new InvalidOperationException("ClientId duplicado.");
         var list = NormalizeUrls(allowedUrls);
         entity.ClientId = clientId;
         entity.Audience = audience;
         entity.AllowedReturnUrlsJson = JsonSerializer.Serialize(list);
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task DeleteClientAsync(int id, CancellationToken ct = default)
     {
-        var entity = await _db.ApplicationClients.FindAsync(new object[] { id }, ct);
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var entity = await db.ApplicationClients.FindAsync(new object[] { id }, ct);
         if (entity is null) return;
-        _db.ApplicationClients.Remove(entity);
-        await _db.SaveChangesAsync(ct);
+        db.ApplicationClients.Remove(entity);
+        await db.SaveChangesAsync(ct);
     }
 
     private static List<string> NormalizeUrls(IEnumerable<string> urls)

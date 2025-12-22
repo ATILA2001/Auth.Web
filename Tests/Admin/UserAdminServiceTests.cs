@@ -5,8 +5,8 @@ using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Repositories.Abstractions.Admin;
 using Auth.Web.Repositories.Implementations.Admin;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Moq;
 
@@ -14,12 +14,20 @@ namespace Auth.Web.Tests.Admin;
 
 public class UserAdminServiceTests
 {
-    private static AuthDbContext CreateDb()
+    private static IDbContextFactory<AuthDbContext> CreateFactory()
     {
         var opts = new DbContextOptionsBuilder<AuthDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        return new AuthDbContext(opts);
+        return new TestDbFactory(opts);
+    }
+
+    private sealed class TestDbFactory : IDbContextFactory<AuthDbContext>
+    {
+        private readonly DbContextOptions<AuthDbContext> _options;
+        public TestDbFactory(DbContextOptions<AuthDbContext> options) => _options = options;
+        public AuthDbContext CreateDbContext() => new(_options);
+        public ValueTask<AuthDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) => new(new AuthDbContext(_options));
     }
 
     private static Mock<UserManager<ApplicationUser>> CreateUserManagerMock()
@@ -31,63 +39,78 @@ public class UserAdminServiceTests
     [Fact]
     public async Task GetUsersAsync_Returns_Roles_And_Areas()
     {
-        using var db = CreateDb();
-        var user = new ApplicationUser { Id = "u1", UserName = "user1", Email = "user1@test" };
-        db.Users.Add(user);
-        var role = new IdentityRole("Admin") { Id = "r1" };
-        db.Roles.Add(role);
-        await db.SaveChangesAsync();
-        db.UserRoles.Add(new IdentityUserRole<string> { RoleId = role.Id, UserId = user.Id });
-        var area = new Area { Name = "IT" };
-        db.Areas.Add(area);
-        await db.SaveChangesAsync();
-        db.UserAreas.Add(new UserArea { UserId = user.Id, AreaId = area.Id });
-        await db.SaveChangesAsync();
+        var factory = CreateFactory();
+        int areaId;
+        await using (var seed = factory.CreateDbContext())
+        {
+            var user = new ApplicationUser { Id = "u1", UserName = "user1", Email = "user1@test" };
+            seed.Users.Add(user);
+            var role = new IdentityRole("Admin") { Id = "r1" };
+            seed.Roles.Add(role);
+            await seed.SaveChangesAsync();
+            seed.UserRoles.Add(new IdentityUserRole<string> { RoleId = role.Id, UserId = user.Id });
+            var area = new Area { Name = "IT" };
+            seed.Areas.Add(area);
+            await seed.SaveChangesAsync();
+            areaId = area.Id;
+            seed.UserAreas.Add(new UserArea { UserId = user.Id, AreaId = areaId });
+            await seed.SaveChangesAsync();
+        }
 
         var umMock = CreateUserManagerMock();
-        umMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
-        umMock.Setup(m => m.FindByIdAsync(user.Id)).ReturnsAsync(user);
+        var userRef = new ApplicationUser { Id = "u1", UserName = "user1", Email = "user1@test" };
+        umMock.Setup(m => m.GetRolesAsync(It.Is<ApplicationUser>(u => u.Id == "u1"))).ReturnsAsync(new List<string> { "Admin" });
+        umMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(userRef);
 
-        IUserAdminRepository repo = new UserAdminRepository(db);
+        IUserAdminRepository repo = new UserAdminRepository(factory);
         IAdminUserService svc = new UserAdminService(repo, umMock.Object);
         var users = await svc.GetUsersAsync();
         var dto = users.Single();
         Assert.Contains("Admin", dto.Roles);
         Assert.Contains("IT", dto.Areas);
-        Assert.Contains(area.Id, dto.AreaIds);
+        Assert.Contains(areaId, dto.AreaIds);
     }
 
     [Fact]
     public async Task UpdateUserRolesAndAreasAsync_Updates_Roles_And_Areas()
     {
-        using var db = CreateDb();
-        var user = new ApplicationUser { Id = "user-1", UserName = "user1", Email = "user1@test" };
-        db.Users.Add(user);
-        var area1 = new Area { Name = "Area1" };
-        var area2 = new Area { Name = "Area2" };
-        db.Areas.AddRange(area1, area2);
-        await db.SaveChangesAsync();
-        db.UserAreas.Add(new UserArea { UserId = user.Id, AreaId = area1.Id });
-        await db.SaveChangesAsync();
+        var factory = CreateFactory();
+        int area1Id;
+        int area2Id;
+        await using (var seed = factory.CreateDbContext())
+        {
+            var user = new ApplicationUser { Id = "user-1", UserName = "user1", Email = "user1@test" };
+            seed.Users.Add(user);
+            var area1 = new Area { Name = "Area1" };
+            var area2 = new Area { Name = "Area2" };
+            seed.Areas.AddRange(area1, area2);
+            await seed.SaveChangesAsync();
+            area1Id = area1.Id;
+            area2Id = area2.Id;
+            seed.UserAreas.Add(new UserArea { UserId = user.Id, AreaId = area1Id });
+            await seed.SaveChangesAsync();
+        }
 
         var umMock = CreateUserManagerMock();
-        umMock.Setup(m => m.FindByIdAsync(user.Id)).ReturnsAsync(user);
-        umMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string> { "RoleA" });
-        umMock.Setup(m => m.AddToRolesAsync(user, It.Is<IEnumerable<string>> (r => r.Single() == "RoleB")))
+        var userRef = new ApplicationUser { Id = "user-1", UserName = "user1", Email = "user1@test" };
+        umMock.Setup(m => m.FindByIdAsync("user-1")).ReturnsAsync(userRef);
+        umMock.Setup(m => m.GetRolesAsync(It.Is<ApplicationUser>(u => u.Id == "user-1"))).ReturnsAsync(new List<string> { "RoleA" });
+        umMock.Setup(m => m.AddToRolesAsync(It.Is<ApplicationUser>(u => u.Id == "user-1"), It.Is<IEnumerable<string>>(r => r.Single() == "RoleB")))
             .ReturnsAsync(IdentityResult.Success);
-        umMock.Setup(m => m.RemoveFromRolesAsync(user, It.Is<IEnumerable<string>> (r => r.Single() == "RoleA")))
+        umMock.Setup(m => m.RemoveFromRolesAsync(It.Is<ApplicationUser>(u => u.Id == "user-1"), It.Is<IEnumerable<string>>(r => r.Single() == "RoleA")))
             .ReturnsAsync(IdentityResult.Success);
 
-        IUserAdminRepository repo = new UserAdminRepository(db);
+        IUserAdminRepository repo = new UserAdminRepository(factory);
         IAdminUserService svc = new UserAdminService(repo, umMock.Object);
-        await svc.UpdateUserRolesAndAreasAsync(user.Id, new[] { "RoleB" }, new[] { area2.Id });
+        await svc.UpdateUserRolesAndAreasAsync("user-1", new[] { "RoleB" }, new[] { area2Id });
 
-        umMock.Verify(m => m.AddToRolesAsync(user, It.Is<IEnumerable<string>> (r => r.Single() == "RoleB")), Times.Once);
-        umMock.Verify(m => m.RemoveFromRolesAsync(user, It.Is<IEnumerable<string>> (r => r.Single() == "RoleA")), Times.Once);
+        umMock.Verify(m => m.AddToRolesAsync(It.Is<ApplicationUser>(u => u.Id == "user-1"), It.Is<IEnumerable<string>>(r => r.Single() == "RoleB")), Times.Once);
+        umMock.Verify(m => m.RemoveFromRolesAsync(It.Is<ApplicationUser>(u => u.Id == "user-1"), It.Is<IEnumerable<string>>(r => r.Single() == "RoleA")), Times.Once);
 
-        var userAreas = await db.UserAreas.Where(ua => ua.UserId == user.Id).ToListAsync();
+        await using var verify = factory.CreateDbContext();
+        var userAreas = await verify.UserAreas.Where(ua => ua.UserId == "user-1").ToListAsync();
         Assert.Single(userAreas);
-        Assert.Equal(area2.Id, userAreas.Single().AreaId);
-        Assert.DoesNotContain(userAreas, ua => ua.AreaId == area1.Id);
+        Assert.Equal(area2Id, userAreas.Single().AreaId);
+        Assert.DoesNotContain(userAreas, ua => ua.AreaId == area1Id);
     }
 }
