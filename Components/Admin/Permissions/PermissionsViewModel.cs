@@ -62,10 +62,6 @@ public sealed class PermissionsViewModel
     public int SelectedActionId { get; set; }
     public string? ValidationError { get; private set; }
 
-    // Filtros
-    public string? FilterRoleId { get; set; }
-    public int? FilterPageId { get; set; }
-
     public async Task LoadAsync()
     {
         Roles = (await _roleService.GetRolesAsync()).ToList();
@@ -90,24 +86,13 @@ public sealed class PermissionsViewModel
 
     public async Task LoadPermissionsAsync()
     {
-        if (!string.IsNullOrEmpty(FilterRoleId))
-        {
-            Permissions = (await _permissionService.GetPermissionsByRoleAsync(FilterRoleId)).ToList();
-        }
-        else if (FilterPageId.HasValue && FilterPageId.Value > 0)
-        {
-            Permissions = (await _permissionService.GetPermissionsByPageAsync(FilterPageId.Value)).ToList();
-        }
-        else
-        {
-            Permissions = (await _permissionService.GetPermissionsAsync()).ToList();
-        }
+        Permissions = (await _permissionService.GetPermissionsAsync()).ToList();
     }
 
     public void BeginCreate()
     {
-        SelectedRoleId = FilterRoleId ?? Roles.FirstOrDefault()?.Id ?? string.Empty;
-        SelectedPageId = FilterPageId ?? Pages.FirstOrDefault()?.Id ?? 0;
+        SelectedRoleId = Roles.FirstOrDefault()?.Id ?? string.Empty;
+        SelectedPageId = Pages.FirstOrDefault()?.Id ?? 0;
         SelectedActionId = Actions.FirstOrDefault()?.Id ?? 0;
         ValidationError = null;
         Editing = true;
@@ -172,17 +157,5 @@ public sealed class PermissionsViewModel
     {
         Editing = false;
         ValidationError = null;
-    }
-
-    public async Task ApplyFilterAsync()
-    {
-        await LoadPermissionsAsync();
-    }
-
-    public async Task ClearFilterAsync()
-    {
-        FilterRoleId = null;
-        FilterPageId = null;
-        await LoadPermissionsAsync();
     }
 }

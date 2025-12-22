@@ -14,7 +14,7 @@
             <div class="rz-mb-3">
                 <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
                     <RadzenTextBox @bind-Value="newArea" Placeholder="Nueva área" Style="width: 300px" />
-                    <RadzenButton Text="Crear" ButtonStyle="ButtonStyle.Primary" Disabled="@string.IsNullOrWhiteSpace(newArea)" Click="@(args => CreateArea())" />
+                    <RadzenButton Text="Agregar" Icon="add" ButtonStyle="ButtonStyle.Primary" Disabled="@string.IsNullOrWhiteSpace(newArea)" Click="@(args => CreateArea())" />
                 </RadzenStack>
             </div>
 

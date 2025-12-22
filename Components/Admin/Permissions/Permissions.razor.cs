@@ -44,18 +44,6 @@ public partial class Permissions : ComponentBase
         set => _vm.SelectedActionId = value;
     }
 
-    private string? filterRoleId
-    {
-        get => _vm.FilterRoleId;
-        set => _vm.FilterRoleId = value;
-    }
-
-    private int? filterPageId
-    {
-        get => _vm.FilterPageId;
-        set => _vm.FilterPageId = value;
-    }
-
     protected override void OnInitialized()
     {
         _vm = new PermissionsViewModel(PermissionService, RoleService, PageService, ActionService);
@@ -99,18 +87,6 @@ public partial class Permissions : ComponentBase
     }
 
     private void CancelEdit() => _vm.CancelEdit();
-
-    private async Task ApplyFilter()
-    {
-        await _vm.ApplyFilterAsync();
-        await grid.Reload();
-    }
-
-    private async Task ClearFilter()
-    {
-        await _vm.ClearFilterAsync();
-        await grid.Reload();
-    }
 
     private void NotifyUser(PermissionsVmResult result)
     {

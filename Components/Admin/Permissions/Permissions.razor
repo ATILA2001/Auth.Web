@@ -12,36 +12,6 @@
     <RadzenColumn Size="12" SizeMd="10" SizeLg="10" OffsetMd="1" OffsetLg="1">
         <RadzenCard Class="rz-shadow-3 rz-p-3">
 
-            @* Filtros *@
-            <div class="rz-mb-3">
-                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.End" Gap="1rem" Wrap="FlexWrap.Wrap">
-                    <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                        <RadzenLabel Text="Filtrar por Rol" />
-                        <RadzenDropDown TValue="string" 
-                                        Data="@roles" 
-                                        TextProperty="Name" 
-                                        ValueProperty="Id" 
-                                        @bind-Value="filterRoleId" 
-                                        Placeholder="Todos los roles"
-                                        AllowClear="true"
-                                        Style="width: 200px" />
-                    </RadzenStack>
-                    <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                        <RadzenLabel Text="Filtrar por Página" />
-                        <RadzenDropDown TValue="int?" 
-                                        Data="@pages" 
-                                        TextProperty="Name" 
-                                        ValueProperty="Id" 
-                                        @bind-Value="filterPageId" 
-                                        Placeholder="Todas las páginas"
-                                        AllowClear="true"
-                                        Style="width: 200px" />
-                    </RadzenStack>
-                    <RadzenButton Text="Filtrar" Icon="filter_alt" Click="@ApplyFilter" />
-                    <RadzenButton Text="Limpiar" Icon="clear" ButtonStyle="ButtonStyle.Light" Click="@ClearFilter" />
-                </RadzenStack>
-            </div>
-
             @* Formulario de creación *@
             @if (editing)
             {
@@ -94,7 +64,7 @@
             else
             {
                 <div class="rz-mb-3">
-                    <RadzenButton Text="Asignar Permiso" ButtonStyle="ButtonStyle.Primary" Click="@BeginCreate" />
+                    <RadzenButton Text="Agregar" Icon="add" ButtonStyle="ButtonStyle.Primary" Click="@BeginCreate" />
                 </div>
             }
 

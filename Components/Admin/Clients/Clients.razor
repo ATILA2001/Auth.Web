@@ -12,7 +12,7 @@
     <RadzenColumn Size="12" SizeMd="10" SizeLg="10" OffsetMd="1" OffsetLg="1">
         <RadzenCard Class="rz-shadow-3 rz-p-3">
             <div class="rz-mb-3">
-                <RadzenButton Text="Nuevo" Icon="add" ButtonStyle="ButtonStyle.Primary" Click="@(() => BeginCreate())" />
+                <RadzenButton Text="Agregar" Icon="add" ButtonStyle="ButtonStyle.Primary" Click="@(() => BeginCreate())" />
             </div>
 
             <RadzenDataGrid TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Data="@clients" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
