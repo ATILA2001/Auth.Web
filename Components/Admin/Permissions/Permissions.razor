@@ -99,7 +99,9 @@
             }
 
             @* Grid de permisos *@
-            <RadzenDataGrid TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Data="@permissions" @ref="grid" AllowPaging="true" PageSize="15" AllowSorting="true">
+            <RadzenDataGrid TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Data="@permissions" @ref="grid" AllowPaging="true" PageSize="15" AllowSorting="true" AllowFiltering="true" AllowColumnResize="true"
+                FilterMode="FilterMode.CheckBoxList" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
+                AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas">
                 <Columns>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="RoleName" Title="Rol" Width="150px" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="PageName" Title="Página" />

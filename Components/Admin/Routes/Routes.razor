@@ -15,7 +15,9 @@
                 <RadzenButton Text="Nueva" Icon="add" ButtonStyle="ButtonStyle.Primary" Click="@(() => BeginCreate())" />
             </div>
 
-            <RadzenDataGrid TItem="Application.Admin.Dtos.AreaRouteAdminDto" Data="@routes" AllowPaging="true" PageSize="10">
+            <RadzenDataGrid TItem="Application.Admin.Dtos.AreaRouteAdminDto" Data="@routes" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
+                FilterMode="FilterMode.CheckBoxList" AllowSorting="true" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
+                AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas">
                 <Columns>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Property="AreaName" Title="Área" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Property="ApplicationName" Title="Cliente" />

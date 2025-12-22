@@ -18,7 +18,9 @@
                 </RadzenStack>
             </div>
 
-            <RadzenDataGrid TItem="Application.Admin.Dtos.ActionPermissionAdminDto" Data="@actions" @ref="grid" EditMode="DataGridEditMode.Single" AllowPaging="true" PageSize="10" RowUpdate="@OnRowUpdate">
+            <RadzenDataGrid TItem="Application.Admin.Dtos.ActionPermissionAdminDto" Data="@actions" @ref="grid" EditMode="DataGridEditMode.Single" AllowPaging="true" PageSize="10" RowUpdate="@OnRowUpdate" AllowFiltering="true" AllowColumnResize="true"
+    FilterMode="FilterMode.CheckBoxList" AllowSorting="true" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
+    AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas">
                 <Columns>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.ActionPermissionAdminDto" Property="Name" Title="Nombre">
                         <EditTemplate Context="a">

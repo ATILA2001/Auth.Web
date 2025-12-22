@@ -40,7 +40,9 @@
                 </div>
             }
 
-            <RadzenDataGrid TItem="Application.Admin.Dtos.PageAdminDto" Data="@pages" @ref="grid" AllowPaging="true" PageSize="10">
+            <RadzenDataGrid TItem="Application.Admin.Dtos.PageAdminDto" Data="@pages" @ref="grid" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
+                FilterMode="FilterMode.CheckBoxList" AllowSorting="true" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
+                AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas">
                 <Columns>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.PageAdminDto" Property="Name" Title="Nombre" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.PageAdminDto" Property="Url" Title="URL" />
