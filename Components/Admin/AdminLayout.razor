@@ -56,14 +56,20 @@
     <!-- SIDEBAR -->
     <RadzenSidebar @bind-Expanded="@sidebarExpanded">
         <RadzenPanelMenu>
-            <RadzenPanelMenuItem Text="Inicio" Icon="home" Path="/admin" />
             <RadzenPanelMenuItem Text="Usuarios" Icon="group" Path="/admin/users" />
-            <RadzenPanelMenuItem Text="Areas" Icon="domain" Path="/admin/areas" />
-            <RadzenPanelMenuItem Text="Roles" Icon="security" Path="/admin/roles" />
-            <RadzenPanelMenuItem Text="Aplicaciones" Icon="dns" Path="/admin/clients" />
-            <RadzenPanelMenuItem Text="Rutas" Icon="device_hub" Path="/admin/routes" />
+            <RadzenPanelMenuItem Text="Roles" Icon="admin_panel_settings" Path="/admin/roles" />
+            <RadzenPanelMenuItem Text="Áreas" Icon="domain" Path="/admin/areas" />
+            <RadzenPanelMenuItem Text="Clientes" Icon="apps" Path="/admin/clients" />
+            <RadzenPanelMenuItem Text="Rutas" Icon="alt_route" Path="/admin/routes" />
+            <RadzenPanelMenuItem Text="Páginas" Icon="pageview" Path="/admin/pages" />
+            <RadzenPanelMenuItem Text="Acciones" Icon="touch_app" Path="/admin/actions" />
+            <RadzenPanelMenuItem Text="Permisos" Icon="security" Path="/admin/permissions" />
         </RadzenPanelMenu>
     </RadzenSidebar>
+
+    <!-- DIALOG & NOTIFICATIONS HOSTS -->
+    <RadzenDialog />
+    <RadzenNotification />
 
     <!-- BODY -->
     <RadzenBody>
@@ -71,6 +77,5 @@
             @Body
         </div>
     </RadzenBody>
-
 
 </RadzenLayout>
