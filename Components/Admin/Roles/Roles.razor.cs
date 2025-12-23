@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
@@ -16,13 +15,15 @@ public partial class Roles : ComponentBase
     private RolesViewModel _vm = null!;
     private RoleFormModel roleForm = new();
 
-    // Expose VM state with same names for Razor binding compatibility
     private List<RoleAdminDto> roles => _vm.Roles;
-    private string newRole
+    private RoleAdminDto editModel => _vm.EditModel;
+    private bool editing => _vm.Editing;
+    private string editName
     {
-        get => _vm.NewRoleName;
-        set => _vm.NewRoleName = value;
+        get => _vm.EditName;
+        set => _vm.EditName = value;
     }
+    private string? validationError => _vm.ValidationError;
 
     protected override void OnInitialized()
     {
@@ -34,21 +35,33 @@ public partial class Roles : ComponentBase
         await _vm.LoadAsync();
     }
 
-    private async Task OnSubmitRole()
+    private void BeginCreate()
     {
-        newRole = roleForm.Name;
-        await CreateRole();
+        _vm.BeginCreate();
         roleForm = new RoleFormModel();
     }
 
-    private async Task CreateRole()
+    private void BeginEdit(RoleAdminDto dto)
     {
-        var result = await _vm.CreateAsync();
+        _vm.BeginEdit(dto);
+        roleForm = new RoleFormModel { Name = editName };
+    }
+
+    private async Task OnSubmitRole()
+    {
+        editName = roleForm.Name;
+        var result = await _vm.SaveAsync();
         NotifyUser(result);
 
         if (result.RequiresReload)
         {
             await _vm.LoadAsync();
+        }
+
+        if (result.Outcome != RolesVmOutcome.ValidationError)
+        {
+            _vm.CancelEdit();
+            roleForm = new RoleFormModel();
         }
     }
 
@@ -67,6 +80,12 @@ public partial class Roles : ComponentBase
         {
             await _vm.LoadAsync();
         }
+    }
+
+    private void CancelEdit()
+    {
+        _vm.CancelEdit();
+        roleForm = new RoleFormModel();
     }
 
     private void NotifyUser(RolesVmResult result)

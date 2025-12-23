@@ -38,58 +38,75 @@ public sealed class AreasViewModel
     }
 
     public List<AreaAdminDto> Areas { get; private set; } = new();
-    public string NewAreaName { get; set; } = string.Empty;
+    public AreaAdminDto EditModel { get; private set; } = new() { Id = 0, Name = string.Empty, UserCount = 0 };
+    public string EditName { get; set; } = string.Empty;
+    public bool Editing { get; private set; }
+    public string? ValidationError { get; private set; }
 
     public async Task LoadAsync()
     {
         Areas = (await _areaService.GetAreasAsync()).ToList();
     }
 
-    public async Task<AreasVmResult> CreateAsync()
+    public void BeginCreate()
     {
-        var name = NewAreaName?.Trim() ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return AreasVmResult.ValidationFailed("Validación", "El nombre del área no puede estar vacío.");
-        }
-
-        try
-        {
-            var id = await _areaService.CreateAreaAsync(name);
-            if (id != 0)
-            {
-                NewAreaName = string.Empty;
-                return AreasVmResult.Success("Área creada", $"Se creó '{name}' correctamente.");
-            }
-            else
-            {
-                return AreasVmResult.ValidationFailed("Sin cambios", "Nombre inválido o duplicado.");
-            }
-        }
-        catch (Exception ex)
-        {
-            return AreasVmResult.Failed("Error al crear área", ex.Message);
-        }
+        EditModel = new AreaAdminDto { Id = 0, Name = string.Empty, UserCount = 0 };
+        EditName = string.Empty;
+        ValidationError = null;
+        Editing = true;
     }
 
-    public async Task<AreasVmResult> UpdateAsync(AreaAdminDto area)
+    public void BeginEdit(AreaAdminDto dto)
     {
-        var name = area.Name?.Trim() ?? string.Empty;
+        ArgumentNullException.ThrowIfNull(dto);
+        EditModel = new AreaAdminDto { Id = dto.Id, Name = dto.Name, UserCount = dto.UserCount };
+        EditName = dto.Name ?? string.Empty;
+        ValidationError = null;
+        Editing = true;
+    }
+
+    public async Task<AreasVmResult> SaveAsync()
+    {
+        ValidationError = null;
+        var name = (EditName ?? string.Empty).Trim();
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            return AreasVmResult.ValidationFailed("Validación", "El nombre del área no puede estar vacío.");
+            ValidationError = "El nombre del área no puede estar vacío.";
+            return AreasVmResult.ValidationFailed("Validación", ValidationError);
+        }
+
+        var duplicate = Areas.Any(a => a.Id != EditModel.Id && string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (duplicate)
+        {
+            ValidationError = "Ya existe un área con ese nombre.";
+            return AreasVmResult.ValidationFailed("Validación", ValidationError);
         }
 
         try
         {
-            await _areaService.UpdateAreaAsync(area.Id, name);
+            if (EditModel.Id == 0)
+            {
+                var id = await _areaService.CreateAreaAsync(name);
+                if (id != 0)
+                {
+                    Editing = false;
+                    ValidationError = null;
+                    return AreasVmResult.Success("Área creada", $"Se creó '{name}'.");
+                }
+                ValidationError = "Nombre inválido o duplicado.";
+                return AreasVmResult.ValidationFailed("Sin cambios", ValidationError);
+            }
+
+            await _areaService.UpdateAreaAsync(EditModel.Id, name);
+            Editing = false;
+            ValidationError = null;
             return AreasVmResult.Success("Área actualizada", $"Se actualizó '{name}'.");
         }
         catch (Exception ex)
         {
-            return AreasVmResult.Failed("Error al actualizar área", ex.Message);
+            ValidationError = ex.Message;
+            return AreasVmResult.Failed("Error al guardar área", ex.Message);
         }
     }
 
@@ -104,5 +121,13 @@ public sealed class AreasViewModel
         {
             return AreasVmResult.Failed("Error al eliminar área", ex.Message);
         }
+    }
+
+    public void CancelEdit()
+    {
+        Editing = false;
+        ValidationError = null;
+        EditName = string.Empty;
+        EditModel = new AreaAdminDto { Id = 0, Name = string.Empty, UserCount = 0 };
     }
 }

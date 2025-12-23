@@ -38,38 +38,70 @@ public sealed class RolesViewModel
     }
 
     public List<RoleAdminDto> Roles { get; private set; } = new();
-    public string NewRoleName { get; set; } = string.Empty;
+    public RoleAdminDto EditModel { get; private set; } = new() { Id = string.Empty, Name = string.Empty, UserCount = 0 };
+    public string EditName { get; set; } = string.Empty;
+    public bool Editing { get; internal set; }
+    public string? ValidationError { get; private set; }
 
     public async Task LoadAsync()
     {
         Roles = (await _roleService.GetRolesAsync()).ToList();
     }
 
-    public async Task<RolesVmResult> CreateAsync()
+    public void BeginCreate()
     {
-        var name = NewRoleName?.Trim() ?? string.Empty;
+        EditModel = new RoleAdminDto { Id = string.Empty, Name = string.Empty, UserCount = 0 };
+        EditName = string.Empty;
+        ValidationError = null;
+        Editing = true;
+    }
+
+    public void BeginEdit(RoleAdminDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        EditModel = new RoleAdminDto { Id = dto.Id, Name = dto.Name, UserCount = dto.UserCount };
+        EditName = dto.Name ?? string.Empty;
+        ValidationError = null;
+        Editing = true;
+    }
+
+    public async Task<RolesVmResult> SaveAsync()
+    {
+        ValidationError = null;
+        var name = (EditName ?? string.Empty).Trim();
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            return RolesVmResult.ValidationFailed("Validación", "El nombre del rol no puede estar vacío.");
+            ValidationError = "El nombre del rol no puede estar vacío.";
+            return RolesVmResult.ValidationFailed("Validación", ValidationError);
+        }
+
+        var duplicate = Roles.Any(r => r.Id != EditModel.Id && string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (duplicate)
+        {
+            ValidationError = "Ya existe un rol con ese nombre.";
+            return RolesVmResult.ValidationFailed("Validación", ValidationError);
         }
 
         try
         {
-            var id = await _roleService.CreateRoleAsync(name);
-            if (!string.IsNullOrWhiteSpace(id))
+            if (string.IsNullOrWhiteSpace(EditModel.Id))
             {
-                NewRoleName = string.Empty;
+                var id = await _roleService.CreateRoleAsync(name);
+                Editing = false;
+                ValidationError = null;
                 return RolesVmResult.Success("Rol creado", $"Se creó '{name}'.");
             }
-            else
-            {
-                return RolesVmResult.ValidationFailed("Sin cambios", "Nombre inválido o duplicado.");
-            }
+
+            await _roleService.RenameRoleAsync(EditModel.Id, name);
+            Editing = false;
+            ValidationError = null;
+            return RolesVmResult.Success("Rol actualizado", $"Se actualizó '{name}'.");
         }
         catch (Exception ex)
         {
-            return RolesVmResult.Failed("Error al crear rol", ex.Message);
+            ValidationError = ex.Message;
+            return RolesVmResult.Failed("Error al guardar rol", ex.Message);
         }
     }
 
@@ -84,5 +116,13 @@ public sealed class RolesViewModel
         {
             return RolesVmResult.Failed("Error al eliminar rol", ex.Message);
         }
+    }
+
+    public void CancelEdit()
+    {
+        Editing = false;
+        ValidationError = null;
+        EditName = string.Empty;
+        EditModel = new RoleAdminDto { Id = string.Empty, Name = string.Empty, UserCount = 0 };
     }
 }

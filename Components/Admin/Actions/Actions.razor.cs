@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
-using Radzen.Blazor;
 using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Web.Components.Admin.Actions;
@@ -15,15 +13,17 @@ public partial class Actions : ComponentBase
     [Inject] private DialogService DialogService { get; set; } = null!;
 
     private ActionsViewModel _vm = null!;
-    private RadzenDataGrid<ActionPermissionAdminDto> grid = null!;
     private ActionFormModel actionForm = new();
 
     private List<ActionPermissionAdminDto> actions => _vm.Actions;
-    private string newAction
+    private ActionPermissionAdminDto editModel => _vm.EditModel;
+    private bool editing => _vm.Editing;
+    private string editName
     {
-        get => _vm.NewActionName;
-        set => _vm.NewActionName = value;
+        get => _vm.EditName;
+        set => _vm.EditName = value;
     }
+    private string? validationError => _vm.ValidationError;
 
     protected override void OnInitialized()
     {
@@ -35,31 +35,33 @@ public partial class Actions : ComponentBase
         await _vm.LoadAsync();
     }
 
-    private async Task CreateAction()
+    private void BeginCreate()
     {
-        var result = await _vm.CreateAsync();
-        NotifyUser(result);
-
-        if (result.RequiresReload)
-        {
-            await _vm.LoadAsync();
-            await grid.Reload();
-        }
+        _vm.BeginCreate();
+        actionForm = new ActionFormModel();
     }
 
-    private async Task OnRowUpdate(ActionPermissionAdminDto action)
+    private void BeginEdit(ActionPermissionAdminDto action)
     {
-        var result = await _vm.UpdateAsync(action);
-        NotifyUser(result);
+        _vm.BeginEdit(action);
+        actionForm = new ActionFormModel { Name = editName };
+    }
 
-        if (result.Outcome == ActionsVmOutcome.ValidationError)
-        {
-            grid.CancelEditRow(action);
-        }
+    private async Task OnSubmitAction()
+    {
+        editName = actionForm.Name;
+        var result = await _vm.SaveAsync();
+        NotifyUser(result);
 
         if (result.RequiresReload)
         {
             await _vm.LoadAsync();
+        }
+
+        if (result.Outcome != ActionsVmOutcome.ValidationError)
+        {
+            _vm.CancelEdit();
+            actionForm = new ActionFormModel();
         }
     }
 
@@ -77,8 +79,13 @@ public partial class Actions : ComponentBase
         if (result.RequiresReload)
         {
             await _vm.LoadAsync();
-            await grid.Reload();
         }
+    }
+
+    private void CancelEdit()
+    {
+        _vm.CancelEdit();
+        actionForm = new ActionFormModel();
     }
 
     private void NotifyUser(ActionsVmResult result)
@@ -92,13 +99,6 @@ public partial class Actions : ComponentBase
         };
 
         NotificationService.Notify(severity, result.Title, result.Message);
-    }
-
-    private async Task OnSubmitAction()
-    {
-        newAction = actionForm.Name;
-        await CreateAction();
-        actionForm = new ActionFormModel();
     }
 }
 

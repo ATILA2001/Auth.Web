@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
@@ -81,7 +80,20 @@ public partial class Permissions : ComponentBase
         _vm.SelectedRoleId = permissionForm.RoleId;
         _vm.SelectedPageId = permissionForm.PageId;
         _vm.SelectedActionId = permissionForm.ActionId;
-        await SavePermission();
+        var result = await _vm.SaveAsync();
+        NotifyUser(result);
+
+        if (result.RequiresReload)
+        {
+            await _vm.LoadPermissionsAsync();
+            await grid.Reload();
+        }
+
+        if (result.Outcome != PermissionsVmOutcome.ValidationError)
+        {
+            _vm.CancelEdit();
+            permissionForm = new PermissionsFormModel();
+        }
     }
 
     private async Task DeletePermission(int id)

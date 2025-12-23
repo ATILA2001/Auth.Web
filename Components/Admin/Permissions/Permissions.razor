@@ -11,79 +11,77 @@
 <RadzenRow>
     <RadzenColumn Size="12" SizeMd="10" SizeLg="10" OffsetMd="1" OffsetLg="1">
         <RadzenCard Class="rz-shadow-3 rz-p-3">
+            <div class="rz-mb-3" style="display:flex; justify-content:flex-end; gap:0.5rem;">
+                <RadzenButton Text="Nuevo" Icon="add" ButtonStyle="ButtonStyle.Primary" Click="@BeginCreate" />
+            </div>
 
-            @* Formulario de creación *@
             @if (editing)
             {
-                <div class="rz-mb-3 rz-p-3" style="background: var(--rz-base-100); border-radius: var(--rz-border-radius);">
-                    <RadzenTemplateForm TItem="PermissionsFormModel" Data="@permissionForm">
-                        <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
-                            <RadzenLabel Text="Asignar nuevo permiso" Style="font-weight: bold;" />
+                <div class="rz-mt-3">
+                    <RadzenCard>
+                        <RadzenFieldset Text="Asignar nuevo permiso">
+                            <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+                                    <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                        <RadzenLabel Text="Rol" />
+                                        <RadzenDropDown TValue="string"
+                                                        Data="@roles"
+                                                        TextProperty="Name"
+                                                        ValueProperty="Id"
+                                                        @bind-Value="permissionForm.RoleId"
+                                                        Style="width: 180px" />
+                                    </RadzenStack>
+                                    <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                        <RadzenLabel Text="Página" />
+                                        <RadzenDropDown TValue="int"
+                                                        Data="@pages"
+                                                        TextProperty="Name"
+                                                        ValueProperty="Id"
+                                                        @bind-Value="permissionForm.PageId"
+                                                        Style="width: 180px" />
+                                    </RadzenStack>
+                                    <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                        <RadzenLabel Text="Acción" />
+                                        <RadzenDropDown TValue="int"
+                                                        Data="@actions"
+                                                        TextProperty="Name"
+                                                        ValueProperty="Id"
+                                                        @bind-Value="permissionForm.ActionId"
+                                                        Style="width: 180px" />
+                                    </RadzenStack>
+                                </RadzenStack>
 
-                            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
-                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                    <RadzenLabel Text="Rol" Component="roleDrop" />
-                                    <RadzenDropDown Name="roleDrop" TValue="string"
-                                                    Data="@roles"
-                                                    TextProperty="Name"
-                                                    ValueProperty="Id"
-                                                    @bind-Value="permissionForm.RoleId"
-                                                    Style="width: 180px" />
-                                    <RadzenRequiredValidator Component="roleDrop" Text="Requerido" />
-                                </RadzenStack>
-                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                    <RadzenLabel Text="Página" Component="pageDrop" />
-                                    <RadzenDropDown Name="pageDrop" TValue="int"
-                                                    Data="@pages"
-                                                    TextProperty="Name"
-                                                    ValueProperty="Id"
-                                                    @bind-Value="permissionForm.PageId"
-                                                    Style="width: 180px" />
-                                    <RadzenRequiredValidator Component="pageDrop" Text="Requerido" />
-                                </RadzenStack>
-                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                    <RadzenLabel Text="Acción" Component="actionDrop" />
-                                    <RadzenDropDown Name="actionDrop" TValue="int"
-                                                    Data="@actions"
-                                                    TextProperty="Name"
-                                                    ValueProperty="Id"
-                                                    @bind-Value="permissionForm.ActionId"
-                                                    Style="width: 180px" />
-                                    <RadzenRequiredValidator Component="actionDrop" Text="Requerido" />
+                                @if (!string.IsNullOrWhiteSpace(validationError))
+                                {
+                                    <RadzenAlert Severity="AlertSeverity.Warning">@validationError</RadzenAlert>
+                                }
+
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                                    <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button" Click="@OnSubmitPermission" />
+                                    <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button" Click="@CancelEdit" />
                                 </RadzenStack>
                             </RadzenStack>
-
-                            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
-                                <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button" Click="@OnSubmitPermission" />
-                                <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@CancelEdit" />
-                            </RadzenStack>
-                        </RadzenStack>
-                    </RadzenTemplateForm>
+                        </RadzenFieldset>
+                    </RadzenCard>
                 </div>
             }
-            else
-            {
-                <div class="rz-mb-3">
-                    <RadzenButton Text="Agregar" Icon="add" ButtonStyle="ButtonStyle.Primary" Click="@BeginCreate" />
-                </div>
-            }
-
-            @* Grid de permisos *@
             <RadzenDataGrid TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Data="@permissions" @ref="grid" AllowPaging="true" PageSize="15" AllowSorting="true" AllowFiltering="true" AllowColumnResize="true"
-                FilterMode="FilterMode.CheckBoxList" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
-                AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas" EmptyText="Sin registros">
+                            FilterMode="FilterMode.CheckBoxList" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
+                            AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas" EmptyText="No hay registros para mostrar.">
                 <Columns>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="RoleName" Title="Rol" Width="150px" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="PageName" Title="Página" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="PageUrl" Title="URL" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="ActionName" Title="Acción" Width="120px" />
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Context="p" Width="80px">
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Context="p" Width="120px">
                         <Template Context="p">
                             <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeletePermission(p.Id))" Disabled="@editing" />
                         </Template>
                     </RadzenDataGridColumn>
                 </Columns>
             </RadzenDataGrid>
+
+            
         </RadzenCard>
     </RadzenColumn>
 </RadzenRow>

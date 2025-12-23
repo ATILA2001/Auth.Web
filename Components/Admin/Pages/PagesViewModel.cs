@@ -130,5 +130,8 @@ public sealed class PagesViewModel
     {
         Editing = false;
         ValidationError = null;
+        EditName = string.Empty;
+        EditUrl = string.Empty;
+        EditModel = new PageAdminDto { Id = 0 };
     }
 }

@@ -38,68 +38,76 @@ public sealed class ActionsViewModel
     }
 
     public List<ActionPermissionAdminDto> Actions { get; private set; } = new();
-    public string NewActionName { get; set; } = string.Empty;
+    public ActionPermissionAdminDto EditModel { get; private set; } = new() { Id = 0, Name = string.Empty, UsageCount = 0 };
+    public string EditName { get; set; } = string.Empty;
+    public bool Editing { get; private set; }
+    public string? ValidationError { get; private set; }
 
     public async Task LoadAsync()
     {
         Actions = (await _actionService.GetActionsAsync()).ToList();
     }
 
-    public async Task<ActionsVmResult> CreateAsync()
+    public void BeginCreate()
     {
-        var name = NewActionName?.Trim() ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return ActionsVmResult.ValidationFailed("Validación", "El nombre de la acción no puede estar vacío.");
-        }
-
-        if (Actions.Any(a => string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase)))
-        {
-            return ActionsVmResult.ValidationFailed("Validación", "Ya existe una acción con ese nombre.");
-        }
-
-        try
-        {
-            var id = await _actionService.CreateActionAsync(name);
-            if (id != 0)
-            {
-                NewActionName = string.Empty;
-                return ActionsVmResult.Success("Acción creada", $"Se creó '{name}' correctamente.");
-            }
-            else
-            {
-                return ActionsVmResult.ValidationFailed("Sin cambios", "Nombre inválido o duplicado.");
-            }
-        }
-        catch (Exception ex)
-        {
-            return ActionsVmResult.Failed("Error al crear acción", ex.Message);
-        }
+        EditModel = new ActionPermissionAdminDto { Id = 0, Name = string.Empty, UsageCount = 0 };
+        EditName = string.Empty;
+        ValidationError = null;
+        Editing = true;
     }
 
-    public async Task<ActionsVmResult> UpdateAsync(ActionPermissionAdminDto action)
+    public void BeginEdit(ActionPermissionAdminDto dto)
     {
-        var name = action.Name?.Trim() ?? string.Empty;
+        ArgumentNullException.ThrowIfNull(dto);
+        EditModel = new ActionPermissionAdminDto { Id = dto.Id, Name = dto.Name, UsageCount = dto.UsageCount };
+        EditName = dto.Name ?? string.Empty;
+        ValidationError = null;
+        Editing = true;
+    }
+
+    public async Task<ActionsVmResult> SaveAsync()
+    {
+        ValidationError = null;
+        var name = (EditName ?? string.Empty).Trim();
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            return ActionsVmResult.ValidationFailed("Validación", "El nombre de la acción no puede estar vacío.");
+            ValidationError = "El nombre de la acción no puede estar vacío.";
+            return ActionsVmResult.ValidationFailed("Validación", ValidationError);
         }
 
-        if (Actions.Any(a => a.Id != action.Id && string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase)))
+        var duplicate = Actions.Any(a => a.Id != EditModel.Id && string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (duplicate)
         {
-            return ActionsVmResult.ValidationFailed("Validación", "Ya existe una acción con ese nombre.");
+            ValidationError = "Ya existe una acción con ese nombre.";
+            return ActionsVmResult.ValidationFailed("Validación", ValidationError);
         }
 
         try
         {
-            await _actionService.UpdateActionAsync(action.Id, name);
+            if (EditModel.Id == 0)
+            {
+                var id = await _actionService.CreateActionAsync(name);
+                if (id != 0)
+                {
+                    Editing = false;
+                    ValidationError = null;
+                    return ActionsVmResult.Success("Acción creada", $"Se creó '{name}' correctamente.");
+                }
+
+                ValidationError = "Nombre inválido o duplicado.";
+                return ActionsVmResult.ValidationFailed("Sin cambios", ValidationError);
+            }
+
+            await _actionService.UpdateActionAsync(EditModel.Id, name);
+            Editing = false;
+            ValidationError = null;
             return ActionsVmResult.Success("Acción actualizada", $"Se actualizó '{name}'.");
         }
         catch (Exception ex)
         {
-            return ActionsVmResult.Failed("Error al actualizar acción", ex.Message);
+            ValidationError = ex.Message;
+            return ActionsVmResult.Failed("Error al guardar acción", ex.Message);
         }
     }
 
@@ -114,5 +122,13 @@ public sealed class ActionsViewModel
         {
             return ActionsVmResult.Failed("Error al eliminar acción", ex.Message);
         }
+    }
+
+    public void CancelEdit()
+    {
+        Editing = false;
+        ValidationError = null;
+        EditName = string.Empty;
+        EditModel = new ActionPermissionAdminDto { Id = 0, Name = string.Empty, UsageCount = 0 };
     }
 }

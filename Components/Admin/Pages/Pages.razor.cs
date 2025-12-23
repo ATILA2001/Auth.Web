@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
@@ -63,11 +62,6 @@ public partial class Pages : ComponentBase
     {
         editName = pageForm.Name;
         editUrl = pageForm.Url;
-        await SavePage();
-    }
-
-    private async Task SavePage()
-    {
         var result = await _vm.SaveAsync();
         NotifyUser(result);
 
@@ -75,6 +69,12 @@ public partial class Pages : ComponentBase
         {
             await _vm.LoadAsync();
             await grid.Reload();
+        }
+
+        if (result.Outcome != PagesVmOutcome.ValidationError)
+        {
+            _vm.CancelEdit();
+            pageForm = new PageFormModel();
         }
     }
 

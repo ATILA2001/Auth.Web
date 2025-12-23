@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
-using Radzen.Blazor;
 using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Web.Components.Admin.Areas;
@@ -15,16 +13,17 @@ public partial class Areas : ComponentBase
     [Inject] private DialogService DialogService { get; set; } = null!;
 
     private AreasViewModel _vm = null!;
-    private RadzenDataGrid<AreaAdminDto> grid = null!;
     private AreaFormModel areaForm = new();
 
-    // Expose VM state with same names for Razor binding compatibility
     private List<AreaAdminDto> areas => _vm.Areas;
-    private string newArea
+    private AreaAdminDto editModel => _vm.EditModel;
+    private bool editing => _vm.Editing;
+    private string editName
     {
-        get => _vm.NewAreaName;
-        set => _vm.NewAreaName = value;
+        get => _vm.EditName;
+        set => _vm.EditName = value;
     }
+    private string? validationError => _vm.ValidationError;
 
     protected override void OnInitialized()
     {
@@ -36,31 +35,33 @@ public partial class Areas : ComponentBase
         await _vm.LoadAsync();
     }
 
-    private async Task CreateArea()
+    private void BeginCreate()
     {
-        var result = await _vm.CreateAsync();
-        NotifyUser(result);
-
-        if (result.RequiresReload)
-        {
-            await _vm.LoadAsync();
-            await grid.Reload();
-        }
+        _vm.BeginCreate();
+        areaForm = new AreaFormModel();
     }
 
-    private async Task OnRowUpdate(AreaAdminDto area)
+    private void BeginEdit(AreaAdminDto dto)
     {
-        var result = await _vm.UpdateAsync(area);
-        NotifyUser(result);
+        _vm.BeginEdit(dto);
+        areaForm = new AreaFormModel { Name = editName };
+    }
 
-        if (result.Outcome == AreasVmOutcome.ValidationError)
-        {
-            grid.CancelEditRow(area);
-        }
+    private async Task OnSubmitArea()
+    {
+        editName = areaForm.Name;
+        var result = await _vm.SaveAsync();
+        NotifyUser(result);
 
         if (result.RequiresReload)
         {
             await _vm.LoadAsync();
+        }
+
+        if (result.Outcome != AreasVmOutcome.ValidationError)
+        {
+            _vm.CancelEdit();
+            areaForm = new AreaFormModel();
         }
     }
 
@@ -78,8 +79,13 @@ public partial class Areas : ComponentBase
         if (result.RequiresReload)
         {
             await _vm.LoadAsync();
-            await grid.Reload();
         }
+    }
+
+    private void CancelEdit()
+    {
+        _vm.CancelEdit();
+        areaForm = new AreaFormModel();
     }
 
     private void NotifyUser(AreasVmResult result)
@@ -93,13 +99,6 @@ public partial class Areas : ComponentBase
         };
 
         NotificationService.Notify(severity, result.Title, result.Message);
-    }
-
-    private async Task OnSubmitArea()
-    {
-        newArea = areaForm.Name;
-        await CreateArea();
-        areaForm = new AreaFormModel();
     }
 }
 

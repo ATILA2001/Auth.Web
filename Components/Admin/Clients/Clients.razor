@@ -11,13 +11,13 @@
 <RadzenRow>
     <RadzenColumn Size="12" SizeMd="10" SizeLg="10" OffsetMd="1" OffsetLg="1">
         <RadzenCard Class="rz-shadow-3 rz-p-3">
-            <div class="rz-mb-3">
-                <RadzenButton Text="Agregar" Icon="add" ButtonStyle="ButtonStyle.Primary" Click="@(() => BeginCreate())" />
+            <div class="rz-mb-3" style="display:flex; justify-content:flex-end; gap:0.5rem;">
+                <RadzenButton Text="Nuevo" Icon="add" ButtonStyle="ButtonStyle.Primary" Click="@(() => BeginCreate())" />
             </div>
 
             <RadzenDataGrid TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Data="@clients" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
-                FilterMode="FilterMode.CheckBoxList" AllowSorting="true" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
-                AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas" EmptyText="Sin registros">
+                FilterMode="FilterMode.CheckBoxList" AllowSorting="true" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
+                AllowColumnPicking="false" EmptyText="No hay registros para mostrar.">
                 <Columns>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Property="ClientId" Title="ClientId" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Property="Audience" Title="Audience" />
@@ -26,7 +26,7 @@
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Context="c" Width="160px">
                         <Template Context="c">
-                            <RadzenButton Icon="edit" Size="ButtonSize.Small" Title="Editar" AriaLabel="Editar" Click="@(() => BeginEdit(c))" />
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Title="Editar" AriaLabel="Editar" Click="@(() => BeginEdit(c))" />
                             <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" class="rz-ml-2" Title="Eliminar" AriaLabel="Eliminar" Click="@(() => DeleteClient(c.Id))" />
                         </Template>
                     </RadzenDataGridColumn>
@@ -53,11 +53,11 @@
                                 </RadzenStack>
                                 @if (!string.IsNullOrWhiteSpace(validationError))
                                 {
-                                    <RadzenAlert Severity="AlertSeverity.Error">@validationError</RadzenAlert>
+                                    <RadzenAlert Severity="AlertSeverity.Warning">@validationError</RadzenAlert>
                                 }
                                 <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
                                     <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button" Click="@OnSubmitClient" />
-                                    <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@(() => CancelEdit())" />
+                                    <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button" Click="@(() => CancelEdit())" />
                                 </RadzenStack>
                             </RadzenStack>
                         </RadzenFieldset>
