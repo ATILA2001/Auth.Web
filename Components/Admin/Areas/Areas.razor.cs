@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
-using System.ComponentModel.DataAnnotations;
+using Radzen.Blazor;
 
 namespace Auth.Web.Components.Admin.Areas;
 
@@ -13,17 +13,15 @@ public partial class Areas : ComponentBase
     [Inject] private DialogService DialogService { get; set; } = null!;
 
     private AreasViewModel _vm = null!;
-    private AreaFormModel areaForm = new();
+    private RadzenDataGrid<AreaAdminDto> grid = null!;
+    private readonly Dictionary<AreaAdminDto, string> _nameBuffer = new();
 
     private List<AreaAdminDto> areas => _vm.Areas;
-    private AreaAdminDto editModel => _vm.EditModel;
-    private bool editing => _vm.Editing;
     private string editName
     {
         get => _vm.EditName;
         set => _vm.EditName = value;
     }
-    private string? validationError => _vm.ValidationError;
 
     protected override void OnInitialized()
     {
@@ -35,33 +33,65 @@ public partial class Areas : ComponentBase
         await _vm.LoadAsync();
     }
 
-    private void BeginCreate()
+    private string GetNameBuffer(AreaAdminDto area)
+    {
+        if (!_nameBuffer.TryGetValue(area, out var value))
+        {
+            value = area.Name;
+            _nameBuffer[area] = value;
+        }
+        return value;
+    }
+
+    private void SetNameBuffer(AreaAdminDto area, string value)
+    {
+        _nameBuffer[area] = value;
+    }
+
+    private async Task BeginCreate()
     {
         _vm.BeginCreate();
-        areaForm = new AreaFormModel();
+        var newArea = new AreaAdminDto { Id = 0, Name = string.Empty, UserCount = 0 };
+        areas.Insert(0, newArea);
+        await grid.InsertRow(newArea);
     }
 
-    private void BeginEdit(AreaAdminDto dto)
+    private async Task OnRowCreate(AreaAdminDto area)
     {
-        _vm.BeginEdit(dto);
-        areaForm = new AreaFormModel { Name = editName };
-    }
-
-    private async Task OnSubmitArea()
-    {
-        editName = areaForm.Name;
+        _vm.BeginCreate();
+        editName = GetNameBuffer(area);
         var result = await _vm.SaveAsync();
         NotifyUser(result);
 
         if (result.RequiresReload)
         {
             await _vm.LoadAsync();
+            await grid.Reload();
         }
 
-        if (result.Outcome != AreasVmOutcome.ValidationError)
+        if (result.Outcome == AreasVmOutcome.ValidationError)
         {
-            _vm.CancelEdit();
-            areaForm = new AreaFormModel();
+            areas.Remove(area);
+            await grid.Reload();
+        }
+    }
+
+    private async Task EditRow(AreaAdminDto area)
+    {
+        await grid.EditRow(area);
+    }
+
+    private async Task OnRowUpdate(AreaAdminDto area)
+    {
+        _vm.BeginEdit(area);
+        editName = GetNameBuffer(area);
+        var result = await _vm.SaveAsync();
+        NotifyUser(result);
+
+        if (result.RequiresReload)
+        {
+            await _vm.LoadAsync();
+            await grid.Reload();
         }
     }
 
@@ -79,13 +109,23 @@ public partial class Areas : ComponentBase
         if (result.RequiresReload)
         {
             await _vm.LoadAsync();
+            await grid.Reload();
         }
     }
 
-    private void CancelEdit()
+    private void CancelEditRow(AreaAdminDto area)
     {
-        _vm.CancelEdit();
-        areaForm = new AreaFormModel();
+        grid.CancelEditRow(area);
+        _nameBuffer.Remove(area);
+        if (area.Id == 0)
+        {
+            areas.Remove(area);
+        }
+    }
+
+    private void ClearFilters()
+    {
+        grid.Reset(true);
     }
 
     private void NotifyUser(AreasVmResult result)
@@ -100,10 +140,4 @@ public partial class Areas : ComponentBase
 
         NotificationService.Notify(severity, result.Title, result.Message);
     }
-}
-
-public sealed class AreaFormModel
-{
-    [Required(ErrorMessage = "Nombre requerido")]
-    public string Name { get; set; } = string.Empty;
 }

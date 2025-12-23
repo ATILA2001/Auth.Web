@@ -3,7 +3,6 @@ using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
 using Radzen.Blazor;
-using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Web.Components.Admin.Pages;
 
@@ -15,11 +14,8 @@ public partial class Pages : ComponentBase
 
     private PagesViewModel _vm = null!;
     private RadzenDataGrid<PageAdminDto> grid = null!;
-    private PageFormModel pageForm = new();
 
     private List<PageAdminDto> pages => _vm.Pages;
-    private bool editing => _vm.Editing;
-    private PageAdminDto editModel => _vm.EditModel;
     private string editName
     {
         get => _vm.EditName;
@@ -30,7 +26,6 @@ public partial class Pages : ComponentBase
         get => _vm.EditUrl;
         set => _vm.EditUrl = value;
     }
-    private string? validationError => _vm.ValidationError;
 
     protected override void OnInitialized()
     {
@@ -42,26 +37,19 @@ public partial class Pages : ComponentBase
         await _vm.LoadAsync();
     }
 
-    private void BeginCreate()
+    private async Task BeginCreate()
     {
         _vm.BeginCreate();
-        pageForm = new PageFormModel();
+        var newPage = new PageAdminDto { Id = 0, Name = string.Empty, Url = string.Empty, PermissionCount = 0 };
+        pages.Insert(0, newPage);
+        await grid.InsertRow(newPage);
     }
 
-    private void BeginEdit(PageAdminDto dto)
+    private async Task OnRowCreate(PageAdminDto page)
     {
-        _vm.BeginEdit(dto);
-        pageForm = new PageFormModel
-        {
-            Name = editName,
-            Url = editUrl
-        };
-    }
-
-    private async Task OnSubmitPage()
-    {
-        editName = pageForm.Name;
-        editUrl = pageForm.Url;
+        _vm.BeginCreate();
+        editName = page.Name;
+        editUrl = page.Url;
         var result = await _vm.SaveAsync();
         NotifyUser(result);
 
@@ -71,10 +59,30 @@ public partial class Pages : ComponentBase
             await grid.Reload();
         }
 
-        if (result.Outcome != PagesVmOutcome.ValidationError)
+        if (result.Outcome == PagesVmOutcome.ValidationError)
         {
-            _vm.CancelEdit();
-            pageForm = new PageFormModel();
+            pages.Remove(page);
+            await grid.Reload();
+        }
+    }
+
+    private async Task EditRow(PageAdminDto page)
+    {
+        await grid.EditRow(page);
+    }
+
+    private async Task OnRowUpdate(PageAdminDto page)
+    {
+        _vm.BeginEdit(page);
+        editName = page.Name;
+        editUrl = page.Url;
+        var result = await _vm.SaveAsync();
+        NotifyUser(result);
+
+        if (result.RequiresReload)
+        {
+            await _vm.LoadAsync();
+            await grid.Reload();
         }
     }
 
@@ -96,7 +104,19 @@ public partial class Pages : ComponentBase
         }
     }
 
-    private void CancelEdit() => _vm.CancelEdit();
+    private void CancelEditRow(PageAdminDto page)
+    {
+        grid.CancelEditRow(page);
+        if (page.Id == 0)
+        {
+            pages.Remove(page);
+        }
+    }
+
+    private void ClearFilters()
+    {
+        grid.Reset(true);
+    }
 
     private void NotifyUser(PagesVmResult result)
     {
@@ -110,13 +130,4 @@ public partial class Pages : ComponentBase
 
         NotificationService.Notify(severity, result.Title, result.Message);
     }
-}
-
-public sealed class PageFormModel
-{
-    [Required(ErrorMessage = "Nombre requerido")]
-    public string Name { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "URL requerida")]
-    public string Url { get; set; } = string.Empty;
 }

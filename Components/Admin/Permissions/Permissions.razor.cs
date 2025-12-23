@@ -18,14 +18,12 @@ public partial class Permissions : ComponentBase
 
     private PermissionsViewModel _vm = null!;
     private RadzenDataGrid<RolePagePermissionAdminDto> grid = null!;
-    private PermissionsFormModel permissionForm = new();
 
     // Expose VM state for Razor binding
     private List<RolePagePermissionAdminDto> permissions => _vm.Permissions;
     private List<RoleAdminDto> roles => _vm.Roles;
     private List<PageAdminDto> pages => _vm.Pages;
     private List<ActionPermissionAdminDto> actions => _vm.Actions;
-    private bool editing => _vm.Editing;
     private string? validationError => _vm.ValidationError;
 
     private string selectedRoleId
@@ -54,17 +52,33 @@ public partial class Permissions : ComponentBase
     protected override async Task OnInitializedAsync()
     {
         await _vm.LoadAsync();
-        SyncFormFromVm();
     }
 
-    private void BeginCreate()
+    private async Task BeginCreate()
     {
         _vm.BeginCreate();
-        SyncFormFromVm();
+
+        var newPermission = new RolePagePermissionAdminDto
+        {
+            RoleId = selectedRoleId,
+            RoleName = roles.FirstOrDefault(r => r.Id == selectedRoleId)?.Name ?? string.Empty,
+            PageId = selectedPageId,
+            PageName = pages.FirstOrDefault(p => p.Id == selectedPageId)?.Name ?? string.Empty,
+            PageUrl = pages.FirstOrDefault(p => p.Id == selectedPageId)?.Url ?? string.Empty,
+            ActionPermissionId = selectedActionId,
+            ActionName = actions.FirstOrDefault(a => a.Id == selectedActionId)?.Name ?? string.Empty
+        };
+
+        permissions.Insert(0, newPermission);
+        await grid.InsertRow(newPermission);
     }
 
-    private async Task SavePermission()
+    private async Task OnRowCreate(RolePagePermissionAdminDto permission)
     {
+        _vm.SelectedRoleId = permission.RoleId;
+        _vm.SelectedPageId = permission.PageId;
+        _vm.SelectedActionId = permission.ActionPermissionId;
+
         var result = await _vm.SaveAsync();
         NotifyUser(result);
 
@@ -73,13 +87,38 @@ public partial class Permissions : ComponentBase
             await _vm.LoadPermissionsAsync();
             await grid.Reload();
         }
+
+        if (result.Outcome == PermissionsVmOutcome.ValidationError)
+        {
+            permissions.Remove(permission);
+            await grid.Reload();
+        }
     }
 
-    private async Task OnSubmitPermission()
+    private async Task EditRow(RolePagePermissionAdminDto permission)
     {
-        _vm.SelectedRoleId = permissionForm.RoleId;
-        _vm.SelectedPageId = permissionForm.PageId;
-        _vm.SelectedActionId = permissionForm.ActionId;
+        await grid.EditRow(permission);
+    }
+
+    private async Task OnRowUpdate(RolePagePermissionAdminDto permission)
+    {
+        // Si es edición de existente, eliminamos el permiso anterior antes de crear el nuevo
+        if (permission.Id != 0)
+        {
+            var deleteResult = await _vm.DeleteAsync(permission.Id);
+            if (deleteResult.Outcome == PermissionsVmOutcome.Error)
+            {
+                NotifyUser(deleteResult);
+                await _vm.LoadPermissionsAsync();
+                await grid.Reload();
+                return;
+            }
+        }
+
+        _vm.SelectedRoleId = permission.RoleId;
+        _vm.SelectedPageId = permission.PageId;
+        _vm.SelectedActionId = permission.ActionPermissionId;
+
         var result = await _vm.SaveAsync();
         NotifyUser(result);
 
@@ -89,11 +128,31 @@ public partial class Permissions : ComponentBase
             await grid.Reload();
         }
 
-        if (result.Outcome != PermissionsVmOutcome.ValidationError)
+        if (result.Outcome == PermissionsVmOutcome.ValidationError && permission.Id == 0)
         {
-            _vm.CancelEdit();
-            permissionForm = new PermissionsFormModel();
+            permissions.Remove(permission);
+            await grid.Reload();
         }
+    }
+
+    private void OnRoleChanged(RolePagePermissionAdminDto permission, string? roleId)
+    {
+        permission.RoleId = roleId ?? string.Empty;
+        permission.RoleName = roles.FirstOrDefault(r => r.Id == permission.RoleId)?.Name ?? string.Empty;
+    }
+
+    private void OnPageChanged(RolePagePermissionAdminDto permission, int pageId)
+    {
+        permission.PageId = pageId;
+        var page = pages.FirstOrDefault(p => p.Id == pageId);
+        permission.PageName = page?.Name ?? string.Empty;
+        permission.PageUrl = page?.Url ?? string.Empty;
+    }
+
+    private void OnActionChanged(RolePagePermissionAdminDto permission, int actionId)
+    {
+        permission.ActionPermissionId = actionId;
+        permission.ActionName = actions.FirstOrDefault(a => a.Id == actionId)?.Name ?? string.Empty;
     }
 
     private async Task DeletePermission(int id)
@@ -114,19 +173,13 @@ public partial class Permissions : ComponentBase
         }
     }
 
-    private void CancelEdit()
+    private void CancelEditRow(RolePagePermissionAdminDto permission)
     {
-        _vm.CancelEdit();
-    }
-
-    private void SyncFormFromVm()
-    {
-        permissionForm = new PermissionsFormModel
+        grid.CancelEditRow(permission);
+        if (permission.Id == 0)
         {
-            RoleId = _vm.SelectedRoleId,
-            PageId = _vm.SelectedPageId,
-            ActionId = _vm.SelectedActionId
-        };
+            permissions.Remove(permission);
+        }
     }
 
     private void NotifyUser(PermissionsVmResult result)
@@ -141,18 +194,9 @@ public partial class Permissions : ComponentBase
 
         NotificationService.Notify(severity, result.Title, result.Message);
     }
-}
 
-public sealed class PermissionsFormModel
-{
-    [Required(ErrorMessage = "Rol requerido")]
-    public string RoleId { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "Página requerida")]
-    [Range(1, int.MaxValue, ErrorMessage = "Página requerida")]
-    public int PageId { get; set; }
-
-    [Required(ErrorMessage = "Acción requerida")]
-    [Range(1, int.MaxValue, ErrorMessage = "Acción requerida")]
-    public int ActionId { get; set; }
+    private void ClearFilters()
+    {
+        grid.Reset(true);
+    }
 }

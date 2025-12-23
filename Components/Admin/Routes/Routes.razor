@@ -11,67 +11,70 @@
 <RadzenRow>
     <RadzenColumn Size="12" SizeMd="10" SizeLg="10" OffsetMd="1" OffsetLg="1">
         <RadzenCard Class="rz-shadow-3 rz-p-3">
-            <div class="rz-mb-3" style="display:flex; justify-content:flex-end; gap:0.5rem;">
-                <RadzenButton Text="Nuevo" Icon="add" ButtonStyle="ButtonStyle.Primary" Click="@(() => BeginCreate())" />
-            </div>
-
-            <RadzenDataGrid TItem="Application.Admin.Dtos.AreaRouteAdminDto" Data="@routes" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
-                FilterMode="FilterMode.CheckBoxList" AllowSorting="true" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
-                AllowColumnPicking="false" EmptyText="No hay registros para mostrar.">
+            <RadzenDataGrid TItem="Application.Admin.Dtos.AreaRouteAdminDto" Data="@routes" @ref="grid" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
+                            AllowSorting="true" EditMode="DataGridEditMode.Single" RowCreate="@OnRowCreate" RowUpdate="@OnRowUpdate"
+                            FilterMode="FilterMode.CheckBoxList" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
+                            AllowColumnPicking="false" EmptyText="No hay registros para mostrar.">
+                <HeaderTemplate>
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                            <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="add_circle" Text="Agregar" Click="@BeginCreate" />
+                        </RadzenStack>
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                            <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" />
+                        </RadzenStack>
+                    </RadzenStack>
+                </HeaderTemplate>
                 <Columns>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Property="AreaName" Title="Área" />
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Property="ApplicationName" Title="Cliente" />
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Property="ReturnUrl" Title="ReturnUrl" />
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Property="Priority" Title="Prioridad" />
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Property="IsActive" Title="Activo" />
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Context="r" Width="180px">
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Property="AreaName" Title="Área">
+                        <EditTemplate Context="r">
+                            <RadzenDropDown TValue="int"
+                                            Data="@areas"
+                                            TextProperty="Name"
+                                            ValueProperty="Id"
+                                            Value="@GetAreaBuffer(r)"
+                                            ValueChanged="@(v => SetAreaBuffer(r, v))"
+                                            Style="width: 200px" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Property="ApplicationName" Title="Aplicación">
+                        <EditTemplate Context="r">
+                            <RadzenDropDown TValue="int"
+                                            Data="@clients"
+                                            TextProperty="Audience"
+                                            ValueProperty="Id"
+                                            Value="@GetClientBuffer(r)"
+                                            ValueChanged="@(v => SetClientBuffer(r, v))"
+                                            Style="width: 220px" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Property="ReturnUrl" Title="ReturnUrl">
+                        <EditTemplate Context="r">
+                            <RadzenTextBox Value="@GetReturnUrlBuffer(r)" ValueChanged="@(v => SetReturnUrlBuffer(r, v))" Style="width: 260px" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Property="Priority" Title="Prioridad" Width="120px">
+                        <EditTemplate Context="r">
+                            <RadzenNumeric TValue="int" Value="@GetPriorityBuffer(r)" ValueChanged="@(v => SetPriorityBuffer(r, v))" Style="width: 140px" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Property="IsActive" Title="Activo" Width="100px">
+                        <EditTemplate Context="r">
+                            <RadzenCheckBox TValue="bool" Value="@GetActiveBuffer(r)" ValueChanged="@(v => SetActiveBuffer(r, v))" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Context="r" Width="220px">
                         <Template Context="r">
-                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Title="Editar" AriaLabel="Editar" Click="@(() => BeginEdit(r))" />
-                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" class="rz-ml-2" Title="Eliminar" AriaLabel="Eliminar" Click="@(() => DeleteRoute(r.Id))" />
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(r))" class="rz-mr-2" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeleteRoute(r.Id))" />
                         </Template>
+                        <EditTemplate Context="r">
+                            <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Title="Guardar" AriaLabel="Guardar" Click="@(args => grid.UpdateRow(r))" />
+                            <RadzenButton Icon="cancel" Size="ButtonSize.Small" class="rz-ml-2" Title="Cancelar" AriaLabel="Cancelar" Click="@(args => CancelEditRow(r))" />
+                        </EditTemplate>
                     </RadzenDataGridColumn>
                 </Columns>
             </RadzenDataGrid>
-
-            @if (editing)
-            {
-                <div class="rz-mt-3">
-                    <RadzenCard>
-                        <RadzenFieldset Text="@(editModel.Id == 0 ? "Crear ruta" : $"Editar ruta {editModel.Id}")">
-                            <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
-                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                    <RadzenLabel Text="Área" />
-                                    <RadzenDropDown Data="@areas" TextProperty="Name" ValueProperty="Id" @bind-Value="routeForm.AreaId" Placeholder="Área" Style="width: 100%" />
-                                </RadzenStack>
-                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                    <RadzenLabel Text="Cliente" />
-                                    <RadzenDropDown Data="@clients" TextProperty="ClientId" ValueProperty="Id" @bind-Value="routeForm.ClientId" Placeholder="Cliente" Style="width: 100%" />
-                                </RadzenStack>
-                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                    <RadzenLabel Text="ReturnUrl" />
-                                    <RadzenTextBox @bind-Value="routeForm.ReturnUrl" Placeholder="ReturnUrl" Style="width: 100%" />
-                                </RadzenStack>
-                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                    <RadzenLabel Text="Prioridad" />
-                                    <RadzenNumeric @bind-Value="routeForm.Priority" Placeholder="Prioridad" Min="1" Style="width: 180px" />
-                                </RadzenStack>
-                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                                    <RadzenCheckBox @bind-Value="routeForm.IsActive" />
-                                    <RadzenLabel Text="Activo" />
-                                </RadzenStack>
-                                @if (!string.IsNullOrWhiteSpace(validationError))
-                                {
-                                    <RadzenAlert Severity="AlertSeverity.Warning">@validationError</RadzenAlert>
-                                }
-                                <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
-                                    <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button" Click="@OnSubmitRoute" />
-                                    <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button" Click="@(() => CancelEdit())" />
-                                </RadzenStack>
-                            </RadzenStack>
-                        </RadzenFieldset>
-                    </RadzenCard>
-                </div>
-            }
         </RadzenCard>
     </RadzenColumn>
 </RadzenRow>

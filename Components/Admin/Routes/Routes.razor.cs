@@ -3,95 +3,164 @@ using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
 using Radzen.Blazor;
-using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Web.Components.Admin.Routes;
 
 public partial class Routes : ComponentBase
 {
-    [Inject] private IAdminRoutingService AdminRouting { get; set; } = null!;
-    [Inject] private IAdminAreaService AdminAreas { get; set; } = null!;
-    [Inject] private IAdminClientService AdminClients { get; set; } = null!;
-    [Inject] private NotificationService Notifications { get; set; } = null!;
+    [Inject] private IAdminRoutingService RoutingService { get; set; } = null!;
+    [Inject] private IAdminAreaService AreaService { get; set; } = null!;
+    [Inject] private IAdminClientService ClientService { get; set; } = null!;
+    [Inject] private NotificationService NotificationService { get; set; } = null!;
     [Inject] private DialogService DialogService { get; set; } = null!;
 
     private RoutesViewModel _vm = null!;
-    private RoutesFormModel routeForm = new();
+    private RadzenDataGrid<AreaRouteAdminDto> grid = null!;
+
+    private readonly Dictionary<AreaRouteAdminDto, int> _areaBuffer = new();
+    private readonly Dictionary<AreaRouteAdminDto, int> _clientBuffer = new();
+    private readonly Dictionary<AreaRouteAdminDto, string> _urlBuffer = new();
+    private readonly Dictionary<AreaRouteAdminDto, int> _priorityBuffer = new();
+    private readonly Dictionary<AreaRouteAdminDto, bool> _activeBuffer = new();
 
     private List<AreaRouteAdminDto> routes => _vm.Routes;
     private List<AreaAdminDto> areas => _vm.Areas;
     private List<ApplicationClientAdminDto> clients => _vm.Clients;
-    private bool editing => _vm.Editing;
-    private AreaRouteAdminDto editModel => _vm.EditModel;
-    private int selectedAreaId
-    {
-        get => _vm.SelectedAreaId;
-        set => _vm.SelectedAreaId = value;
-    }
-    private int selectedClientId
-    {
-        get => _vm.SelectedClientId;
-        set => _vm.SelectedClientId = value;
-    }
-    private string editReturnUrl
-    {
-        get => _vm.EditReturnUrl;
-        set => _vm.EditReturnUrl = value;
-    }
-    private int editPriority
-    {
-        get => _vm.EditPriority;
-        set => _vm.EditPriority = value;
-    }
-    private bool editIsActive
-    {
-        get => _vm.EditIsActive;
-        set => _vm.EditIsActive = value;
-    }
-    private string? validationError => _vm.ValidationError;
 
     protected override void OnInitialized()
     {
-        _vm = new RoutesViewModel(AdminRouting, AdminAreas, AdminClients);
+        _vm = new RoutesViewModel(RoutingService, AreaService, ClientService);
     }
 
     protected override async Task OnInitializedAsync()
     {
         await _vm.LoadAsync();
-        SyncFormFromVm();
     }
 
-    private void BeginCreate()
+    private int GetAreaBuffer(AreaRouteAdminDto route)
+    {
+        if (!_areaBuffer.TryGetValue(route, out var value))
+        {
+            value = route.AreaId;
+            _areaBuffer[route] = value;
+        }
+        return value;
+    }
+
+    private void SetAreaBuffer(AreaRouteAdminDto route, int value) => _areaBuffer[route] = value;
+
+    private int GetClientBuffer(AreaRouteAdminDto route)
+    {
+        if (!_clientBuffer.TryGetValue(route, out var value))
+        {
+            value = route.ClientId;
+            _clientBuffer[route] = value;
+        }
+        return value;
+    }
+
+    private void SetClientBuffer(AreaRouteAdminDto route, int value) => _clientBuffer[route] = value;
+
+    private string GetReturnUrlBuffer(AreaRouteAdminDto route)
+    {
+        if (!_urlBuffer.TryGetValue(route, out var value))
+        {
+            value = route.ReturnUrl;
+            _urlBuffer[route] = value;
+        }
+        return value;
+    }
+
+    private void SetReturnUrlBuffer(AreaRouteAdminDto route, string value) => _urlBuffer[route] = value;
+
+    private int GetPriorityBuffer(AreaRouteAdminDto route)
+    {
+        if (!_priorityBuffer.TryGetValue(route, out var value))
+        {
+            value = route.Priority;
+            _priorityBuffer[route] = value;
+        }
+        return value;
+    }
+
+    private void SetPriorityBuffer(AreaRouteAdminDto route, int value) => _priorityBuffer[route] = value;
+
+    private bool GetActiveBuffer(AreaRouteAdminDto route)
+    {
+        if (!_activeBuffer.TryGetValue(route, out var value))
+        {
+            value = route.IsActive;
+            _activeBuffer[route] = value;
+        }
+        return value;
+    }
+
+    private void SetActiveBuffer(AreaRouteAdminDto route, bool value) => _activeBuffer[route] = value;
+
+    private async Task BeginCreate()
     {
         _vm.BeginCreate();
-        SyncFormFromVm();
+        var newRoute = new AreaRouteAdminDto
+        {
+            Id = 0,
+            AreaId = areas.FirstOrDefault()?.Id ?? 0,
+            ClientId = clients.FirstOrDefault()?.Id ?? 0,
+            ReturnUrl = string.Empty,
+            Priority = 1,
+            IsActive = true,
+            AreaName = areas.FirstOrDefault(a => a.Id == _vm.SelectedAreaId)?.Name,
+            ApplicationName = clients.FirstOrDefault(c => c.Id == _vm.SelectedClientId)?.Audience
+        };
+        routes.Insert(0, newRoute);
+        await grid.InsertRow(newRoute);
     }
 
-    private void BeginEdit(AreaRouteAdminDto dto)
+    private async Task OnRowCreate(AreaRouteAdminDto route)
     {
-        _vm.BeginEdit(dto);
-        SyncFormFromVm();
-    }
+        _vm.BeginCreate();
+        _vm.SelectedAreaId = GetAreaBuffer(route);
+        _vm.SelectedClientId = GetClientBuffer(route);
+        _vm.EditReturnUrl = GetReturnUrlBuffer(route);
+        _vm.EditPriority = GetPriorityBuffer(route);
+        _vm.EditIsActive = GetActiveBuffer(route);
 
-    private async Task OnSubmitRoute()
-    {
-        _vm.SelectedAreaId = routeForm.AreaId;
-        _vm.SelectedClientId = routeForm.ClientId;
-        _vm.EditReturnUrl = routeForm.ReturnUrl;
-        _vm.EditPriority = routeForm.Priority;
-        _vm.EditIsActive = routeForm.IsActive;
-        await SaveRoute();
-    }
-
-    private async Task SaveRoute()
-    {
         var result = await _vm.SaveAsync();
         NotifyUser(result);
 
         if (result.RequiresReload)
         {
             await _vm.LoadAsync();
-            StateHasChanged(); 
+            await grid.Reload();
+        }
+
+        if (result.Outcome == RoutesVmOutcome.ValidationError)
+        {
+            routes.Remove(route);
+            await grid.Reload();
+        }
+    }
+
+    private async Task EditRow(AreaRouteAdminDto route)
+    {
+        await grid.EditRow(route);
+    }
+
+    private async Task OnRowUpdate(AreaRouteAdminDto route)
+    {
+        _vm.BeginEdit(route);
+        _vm.SelectedAreaId = GetAreaBuffer(route);
+        _vm.SelectedClientId = GetClientBuffer(route);
+        _vm.EditReturnUrl = GetReturnUrlBuffer(route);
+        _vm.EditPriority = GetPriorityBuffer(route);
+        _vm.EditIsActive = GetActiveBuffer(route);
+
+        var result = await _vm.SaveAsync();
+        NotifyUser(result);
+
+        if (result.RequiresReload)
+        {
+            await _vm.LoadAsync();
+            await grid.Reload();
         }
     }
 
@@ -109,11 +178,28 @@ public partial class Routes : ComponentBase
         if (result.RequiresReload)
         {
             await _vm.LoadAsync();
-            StateHasChanged(); 
+            await grid.Reload();
         }
     }
 
-    private void CancelEdit() => _vm.CancelEdit();
+    private void CancelEditRow(AreaRouteAdminDto route)
+    {
+        grid.CancelEditRow(route);
+        _areaBuffer.Remove(route);
+        _clientBuffer.Remove(route);
+        _urlBuffer.Remove(route);
+        _priorityBuffer.Remove(route);
+        _activeBuffer.Remove(route);
+        if (route.Id == 0)
+        {
+            routes.Remove(route);
+        }
+    }
+
+    private void ClearFilters()
+    {
+        grid.Reset(true);
+    }
 
     private void NotifyUser(RoutesVmResult result)
     {
@@ -125,38 +211,6 @@ public partial class Routes : ComponentBase
             _ => NotificationSeverity.Info
         };
 
-        Notifications.Notify(severity, result.Title, result.Message);
+        NotificationService.Notify(severity, result.Title, result.Message);
     }
-
-    private void SyncFormFromVm()
-    {
-        routeForm = new RoutesFormModel
-        {
-            AreaId = _vm.SelectedAreaId,
-            ClientId = _vm.SelectedClientId,
-            ReturnUrl = _vm.EditReturnUrl,
-            Priority = _vm.EditPriority,
-            IsActive = _vm.EditIsActive
-        };
-    }
-}
-
-public sealed class RoutesFormModel
-{
-    [Required(ErrorMessage = "Área requerida")]
-    [Range(1, int.MaxValue, ErrorMessage = "Área requerida")]
-    public int AreaId { get; set; }
-
-    [Required(ErrorMessage = "Cliente requerido")]
-    [Range(1, int.MaxValue, ErrorMessage = "Cliente requerido")]
-    public int ClientId { get; set; }
-
-    [Required(ErrorMessage = "ReturnUrl requerida")]
-    public string ReturnUrl { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "Prioridad requerida")]
-    [Range(1, int.MaxValue, ErrorMessage = "Prioridad requerida")]
-    public int Priority { get; set; } = 1;
-
-    public bool IsActive { get; set; } = true;
 }

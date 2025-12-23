@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
+using Radzen.Blazor;
 using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Web.Components.Admin.Roles;
@@ -13,17 +14,32 @@ public partial class Roles : ComponentBase
     [Inject] private DialogService DialogService { get; set; } = null!;
 
     private RolesViewModel _vm = null!;
-    private RoleFormModel roleForm = new();
+    private RadzenDataGrid<RoleAdminDto> grid = null!;
 
     private List<RoleAdminDto> roles => _vm.Roles;
     private RoleAdminDto editModel => _vm.EditModel;
-    private bool editing => _vm.Editing;
     private string editName
     {
         get => _vm.EditName;
         set => _vm.EditName = value;
     }
-    private string? validationError => _vm.ValidationError;
+
+    private readonly Dictionary<RoleAdminDto, string> _nameBuffer = new();
+
+    private string GetNameBuffer(RoleAdminDto role)
+    {
+        if (!_nameBuffer.TryGetValue(role, out var value))
+        {
+            value = role.Name;
+            _nameBuffer[role] = value;
+        }
+        return value;
+    }
+
+    private void SetNameBuffer(RoleAdminDto role, string value)
+    {
+        _nameBuffer[role] = value;
+    }
 
     protected override void OnInitialized()
     {
@@ -35,33 +51,50 @@ public partial class Roles : ComponentBase
         await _vm.LoadAsync();
     }
 
-    private void BeginCreate()
+    private async Task BeginCreate()
     {
         _vm.BeginCreate();
-        roleForm = new RoleFormModel();
+        var newRole = new RoleAdminDto { Id = string.Empty, Name = string.Empty, UserCount = 0 };
+        roles.Insert(0, newRole);
+        await grid.InsertRow(newRole);
     }
 
-    private void BeginEdit(RoleAdminDto dto)
+    private async Task OnRowCreate(RoleAdminDto role)
     {
-        _vm.BeginEdit(dto);
-        roleForm = new RoleFormModel { Name = editName };
-    }
-
-    private async Task OnSubmitRole()
-    {
-        editName = roleForm.Name;
+        _vm.BeginCreate();
+        editName = GetNameBuffer(role);
         var result = await _vm.SaveAsync();
         NotifyUser(result);
 
         if (result.RequiresReload)
         {
             await _vm.LoadAsync();
+            await grid.Reload();
         }
 
-        if (result.Outcome != RolesVmOutcome.ValidationError)
+        if (result.Outcome == RolesVmOutcome.ValidationError)
         {
-            _vm.CancelEdit();
-            roleForm = new RoleFormModel();
+            roles.Remove(role);
+            await grid.Reload();
+        }
+    }
+
+    private async Task EditRow(RoleAdminDto role)
+    {
+        await grid.EditRow(role);
+    }
+
+    private async Task OnRowUpdate(RoleAdminDto role)
+    {
+        _vm.BeginEdit(role);
+        editName = GetNameBuffer(role);
+        var result = await _vm.SaveAsync();
+        NotifyUser(result);
+
+        if (result.RequiresReload)
+        {
+            await _vm.LoadAsync();
+            await grid.Reload();
         }
     }
 
@@ -79,13 +112,23 @@ public partial class Roles : ComponentBase
         if (result.RequiresReload)
         {
             await _vm.LoadAsync();
+            await grid.Reload();
         }
     }
 
-    private void CancelEdit()
+    private void CancelEditRow(RoleAdminDto role)
     {
-        _vm.CancelEdit();
-        roleForm = new RoleFormModel();
+        grid.CancelEditRow(role);
+        _nameBuffer.Remove(role);
+        if (string.IsNullOrWhiteSpace(role.Id))
+        {
+            roles.Remove(role);
+        }
+    }
+
+    private void ClearFilters()
+    {
+        grid.Reset(true);
     }
 
     private void NotifyUser(RolesVmResult result)

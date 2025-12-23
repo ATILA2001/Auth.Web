@@ -1,10 +1,8 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
 using Radzen.Blazor;
-using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Web.Components.Admin.Clients;
 
@@ -15,18 +13,15 @@ public partial class Clients : ComponentBase
     [Inject] private DialogService DialogService { get; set; } = null!;
 
     private ClientsViewModel _vm = null!;
-    private ClientFormModel clientForm = new();
+    private RadzenDataGrid<ApplicationClientAdminDto> grid = null!;
+    private readonly Dictionary<ApplicationClientAdminDto, string> _urlsBuffer = new();
 
-    // Expose VM state with same names for Razor binding compatibility
     private List<ApplicationClientAdminDto> clients => _vm.Clients;
-    private bool editing => _vm.Editing;
-    private ApplicationClientAdminDto editModel => _vm.EditModel;
     private string allowedUrlsText
     {
         get => _vm.AllowedUrlsText;
         set => _vm.AllowedUrlsText = value;
     }
-    private string? validationError => _vm.ValidationError;
 
     protected override void OnInitialized()
     {
@@ -38,60 +33,78 @@ public partial class Clients : ComponentBase
         await _vm.LoadAsync();
     }
 
-    private void BeginCreate()
+    private string GetUrlsBuffer(ApplicationClientAdminDto client)
+    {
+        if (!_urlsBuffer.TryGetValue(client, out var value))
+        {
+            value = string.Join("\n", client.AllowedReturnUrls);
+            _urlsBuffer[client] = value;
+        }
+        return value;
+    }
+
+    private void SetUrlsBuffer(ApplicationClientAdminDto client, string value)
+    {
+        _urlsBuffer[client] = value;
+    }
+
+    private async Task BeginCreate()
     {
         _vm.BeginCreate();
-        SyncFormFromVm();
+        var newClient = new ApplicationClientAdminDto
+        {
+            Id = 0,
+            ClientId = string.Empty,
+            Audience = string.Empty,
+            AllowedReturnUrls = Array.Empty<string>()
+        };
+        clients.Insert(0, newClient);
+        await grid.InsertRow(newClient);
     }
 
-    private void BeginEdit(ApplicationClientAdminDto dto)
+    private async Task OnRowCreate(ApplicationClientAdminDto client)
     {
-        _vm.BeginEdit(dto);
-        SyncFormFromVm();
-    }
+        _vm.BeginCreate();
+        _vm.EditModel.ClientId = client.ClientId;
+        _vm.EditModel.Audience = client.Audience;
+        allowedUrlsText = GetUrlsBuffer(client);
 
-    private async Task OnSubmitClient()
-    {
-        _vm.EditModel.ClientId = clientForm.ClientId;
-        _vm.EditModel.Audience = clientForm.Audience;
-        allowedUrlsText = clientForm.AllowedUrlsText;
-        await SaveClient();
-    }
-
-    private async Task SaveClient()
-    {
         var result = await _vm.SaveAsync();
         NotifyUser(result);
 
         if (result.RequiresReload)
         {
             await _vm.LoadAsync();
+            await grid.Reload();
+        }
+
+        if (result.Outcome == ClientsVmOutcome.ValidationError)
+        {
+            clients.Remove(client);
+            await grid.Reload();
         }
     }
 
-    private void CancelEdit() => _vm.CancelEdit();
-
-    private void SyncFormFromVm()
+    private async Task EditRow(ApplicationClientAdminDto client)
     {
-        clientForm = new ClientFormModel
-        {
-            ClientId = _vm.EditModel.ClientId ?? string.Empty,
-            Audience = _vm.EditModel.Audience ?? string.Empty,
-            AllowedUrlsText = allowedUrlsText
-        };
+        await grid.EditRow(client);
     }
 
-    private void NotifyUser(ClientsVmResult result)
+    private async Task OnRowUpdate(ApplicationClientAdminDto client)
     {
-        var severity = result.Outcome switch
-        {
-            ClientsVmOutcome.Success => NotificationSeverity.Success,
-            ClientsVmOutcome.ValidationError => NotificationSeverity.Warning,
-            ClientsVmOutcome.Error => NotificationSeverity.Error,
-            _ => NotificationSeverity.Info
-        };
+        _vm.BeginEdit(client);
+        _vm.EditModel.ClientId = client.ClientId;
+        _vm.EditModel.Audience = client.Audience;
+        allowedUrlsText = GetUrlsBuffer(client);
 
-        NotificationService.Notify(severity, result.Title, result.Message);
+        var result = await _vm.SaveAsync();
+        NotifyUser(result);
+
+        if (result.RequiresReload)
+        {
+            await _vm.LoadAsync();
+            await grid.Reload();
+        }
     }
 
     private async Task DeleteClient(int id)
@@ -108,17 +121,35 @@ public partial class Clients : ComponentBase
         if (result.RequiresReload)
         {
             await _vm.LoadAsync();
+            await grid.Reload();
         }
     }
-}
 
-public sealed class ClientFormModel
-{
-    [Required(ErrorMessage = "ClientId requerido")]
-    public string ClientId { get; set; } = string.Empty;
+    private void CancelEditRow(ApplicationClientAdminDto client)
+    {
+        grid.CancelEditRow(client);
+        _urlsBuffer.Remove(client);
+        if (client.Id == 0)
+        {
+            clients.Remove(client);
+        }
+    }
 
-    [Required(ErrorMessage = "Audience requerido")]
-    public string Audience { get; set; } = string.Empty;
+    private void ClearFilters()
+    {
+        grid.Reset(true);
+    }
 
-    public string AllowedUrlsText { get; set; } = string.Empty;
+    private void NotifyUser(ClientsVmResult result)
+    {
+        var severity = result.Outcome switch
+        {
+            ClientsVmOutcome.Success => NotificationSeverity.Success,
+            ClientsVmOutcome.ValidationError => NotificationSeverity.Warning,
+            ClientsVmOutcome.Error => NotificationSeverity.Error,
+            _ => NotificationSeverity.Info
+        };
+
+        NotificationService.Notify(severity, result.Title, result.Message);
+    }
 }

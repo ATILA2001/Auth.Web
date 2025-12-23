@@ -1,10 +1,8 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
 using Radzen.Blazor;
-using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Web.Components.Admin.Users;
 
@@ -16,28 +14,19 @@ public partial class Users : ComponentBase
     [Inject] private NotificationService NotificationService { get; set; } = null!;
 
     private UsersViewModel _vm = null!;
-    private UserEditFormModel userForm = new();
+    private RadzenDataGrid<UserAdminDto> grid = null!;
 
-    // Expose VM state with same names for Razor binding compatibility
+    private readonly Dictionary<UserAdminDto, List<string>> _rolesBuffer = new();
+    private readonly Dictionary<UserAdminDto, List<int>> _areasBuffer = new();
+
     private string search
     {
         get => _vm.Search;
         set => _vm.Search = value;
     }
     private List<UserAdminDto> filteredUsers => _vm.FilteredUsers;
-    private UserAdminDto? SelectedUser => _vm.SelectedUser;
     private List<RoleAdminDto> AllRoles => _vm.AllRoles;
     private List<AreaAdminDto> AllAreas => _vm.AllAreas;
-    private List<string> SelectedRoles
-    {
-        get => _vm.SelectedRoles;
-        set => _vm.SelectedRoles = value;
-    }
-    private List<int> SelectedAreaIds
-    {
-        get => _vm.SelectedAreaIds;
-        set => _vm.SelectedAreaIds = value;
-    }
 
     protected override void OnInitialized()
     {
@@ -49,44 +38,70 @@ public partial class Users : ComponentBase
         await _vm.LoadAsync();
     }
 
-    private void Filter() => _vm.Filter();
+    private IEnumerable<string> GetRolesBuffer(UserAdminDto user)
+    {
+        if (!_rolesBuffer.TryGetValue(user, out var value))
+        {
+            value = (user.Roles ?? Array.Empty<string>()).ToList();
+            _rolesBuffer[user] = value;
+        }
+        return value;
+    }
 
-    private void BeginEdit(UserAdminDto user)
+    private void SetRolesBuffer(UserAdminDto user, List<string> roles)
+    {
+        _rolesBuffer[user] = roles;
+    }
+
+    private IEnumerable<int> GetAreasBuffer(UserAdminDto user)
+    {
+        if (!_areasBuffer.TryGetValue(user, out var value))
+        {
+            value = (user.AreaIds ?? Array.Empty<int>()).ToList();
+            _areasBuffer[user] = value;
+        }
+        return value;
+    }
+
+    private void SetAreasBuffer(UserAdminDto user, List<int> areas)
+    {
+        _areasBuffer[user] = areas;
+    }
+
+    private async Task EditRow(UserAdminDto user)
     {
         _vm.BeginEdit(user);
-        SyncFormFromVm();
+        await grid.EditRow(user);
     }
 
-    private async Task OnSubmitUser()
+    private async Task OnRowUpdate(UserAdminDto user)
     {
-        SelectedRoles = userForm.Roles;
-        SelectedAreaIds = userForm.AreaIds;
-        await SaveUser();
-    }
+        _vm.BeginEdit(user);
+        _vm.SelectedRoles = _rolesBuffer.TryGetValue(user, out var roles) ? roles : new List<string>();
+        _vm.SelectedAreaIds = _areasBuffer.TryGetValue(user, out var areas) ? areas : new List<int>();
 
-    private async Task SaveUser()
-    {
         var result = await _vm.SaveAsync();
         NotifyUser(result);
 
         if (result.RequiresReload)
         {
             await _vm.LoadAsync();
+            await grid.Reload();
         }
     }
 
-    private void CancelEdit()
+    private void CancelEditRow(UserAdminDto user)
     {
-        _vm.CancelEdit();
+        grid.CancelEditRow(user);
+        _rolesBuffer.Remove(user);
+        _areasBuffer.Remove(user);
     }
 
-    private void SyncFormFromVm()
+    private void Filter() => _vm.Filter();
+
+    private void ClearFilters()
     {
-        userForm = new UserEditFormModel
-        {
-            Roles = SelectedRoles.ToList(),
-            AreaIds = SelectedAreaIds.ToList()
-        };
+        grid.Reset(true);
     }
 
     private void NotifyUser(UsersVmResult result)
@@ -101,10 +116,4 @@ public partial class Users : ComponentBase
 
         NotificationService.Notify(severity, result.Title, result.Message);
     }
-}
-
-public sealed class UserEditFormModel
-{
-    public List<string> Roles { get; set; } = new();
-    public List<int> AreaIds { get; set; } = new();
 }

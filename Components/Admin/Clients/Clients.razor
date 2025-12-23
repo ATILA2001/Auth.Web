@@ -11,59 +11,49 @@
 <RadzenRow>
     <RadzenColumn Size="12" SizeMd="10" SizeLg="10" OffsetMd="1" OffsetLg="1">
         <RadzenCard Class="rz-shadow-3 rz-p-3">
-            <div class="rz-mb-3" style="display:flex; justify-content:flex-end; gap:0.5rem;">
-                <RadzenButton Text="Nuevo" Icon="add" ButtonStyle="ButtonStyle.Primary" Click="@(() => BeginCreate())" />
-            </div>
-
-            <RadzenDataGrid TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Data="@clients" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
-                FilterMode="FilterMode.CheckBoxList" AllowSorting="true" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
-                AllowColumnPicking="false" EmptyText="No hay registros para mostrar.">
+            <RadzenDataGrid TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Data="@clients" @ref="grid" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
+                            AllowSorting="true" EditMode="DataGridEditMode.Single" RowCreate="@OnRowCreate" RowUpdate="@OnRowUpdate"
+                            FilterMode="FilterMode.CheckBoxList" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
+                            AllowColumnPicking="false" EmptyText="No hay registros para mostrar.">
+                <HeaderTemplate>
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                            <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="add_circle" Text="Agregar" Click="@BeginCreate" />
+                        </RadzenStack>
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                            <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" />
+                        </RadzenStack>
+                    </RadzenStack>
+                </HeaderTemplate>
                 <Columns>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Property="ClientId" Title="ClientId" />
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Property="Audience" Title="Audience" />
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Property="ClientId" Title="ClientId">
+                        <EditTemplate Context="c">
+                            <RadzenTextBox @bind-Value="c.ClientId" Style="width: 200px" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Property="Audience" Title="Audience">
+                        <EditTemplate Context="c">
+                            <RadzenTextBox @bind-Value="c.Audience" Style="width: 200px" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Title="ReturnUrls">
                         <Template Context="c">@string.Join("; ", c.AllowedReturnUrls)</Template>
+                        <EditTemplate Context="c">
+                            <RadzenTextArea Value="@GetUrlsBuffer(c)" ValueChanged="@(v => SetUrlsBuffer(c, v))" Rows="4" Style="width: 280px" />
+                        </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Context="c" Width="160px">
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.ApplicationClientAdminDto" Context="c" >
                         <Template Context="c">
-                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Title="Editar" AriaLabel="Editar" Click="@(() => BeginEdit(c))" />
-                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" class="rz-ml-2" Title="Eliminar" AriaLabel="Eliminar" Click="@(() => DeleteClient(c.Id))" />
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(c))" class="rz-mr-2" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeleteClient(c.Id))" />
                         </Template>
+                        <EditTemplate Context="c">
+                            <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Title="Guardar" AriaLabel="Guardar" Click="@(args => grid.UpdateRow(c))" />
+                            <RadzenButton Icon="cancel" Size="ButtonSize.Small" class="rz-ml-2" Title="Cancelar" AriaLabel="Cancelar" Click="@(args => CancelEditRow(c))" />
+                        </EditTemplate>
                     </RadzenDataGridColumn>
                 </Columns>
             </RadzenDataGrid>
-
-            @if (editing)
-            {
-                <div class="rz-mt-3">
-                    <RadzenCard>
-                        <RadzenFieldset Text="@(editModel.Id == 0 ? "Crear cliente" : $"Editar cliente {editModel.ClientId}")">
-                            <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
-                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                    <RadzenLabel Text="ClientId" />
-                                    <RadzenTextBox @bind-Value="clientForm.ClientId" Placeholder="ClientId" />
-                                </RadzenStack>
-                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                    <RadzenLabel Text="Audience" />
-                                    <RadzenTextBox @bind-Value="clientForm.Audience" Placeholder="Audience" />
-                                </RadzenStack>
-                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                    <RadzenLabel Text="Allowed Return Urls (una por línea)" />
-                                    <RadzenTextArea @bind-Value="clientForm.AllowedUrlsText" Rows="5" />
-                                </RadzenStack>
-                                @if (!string.IsNullOrWhiteSpace(validationError))
-                                {
-                                    <RadzenAlert Severity="AlertSeverity.Warning">@validationError</RadzenAlert>
-                                }
-                                <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
-                                    <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button" Click="@OnSubmitClient" />
-                                    <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button" Click="@(() => CancelEdit())" />
-                                </RadzenStack>
-                            </RadzenStack>
-                        </RadzenFieldset>
-                    </RadzenCard>
-                </div>
-            }
         </RadzenCard>
     </RadzenColumn>
 </RadzenRow>
