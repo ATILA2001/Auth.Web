@@ -21,7 +21,7 @@
                             <RadzenTextBox @bind-Value="search" Placeholder="Buscar" Style="width: 260px" @oninput="@(args => Filter())" />
                         </RadzenStack>
                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                            <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" />
+                            <RadzenButton ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button" Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" />
                         </RadzenStack>
                     </RadzenStack>
                 </HeaderTemplate>
@@ -56,11 +56,11 @@
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Context="u" Width="200px">
                         <Template Context="u">
-                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(u))" />
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(u))" />
                         </Template>
                         <EditTemplate Context="u">
-                            <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Title="Guardar" AriaLabel="Guardar" Click="@(args => grid.UpdateRow(u))" />
-                            <RadzenButton Icon="cancel" Size="ButtonSize.Small" class="rz-ml-2" Title="Cancelar" AriaLabel="Cancelar" Click="@(args => CancelEditRow(u))" />
+                            <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Primary" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Guardar" AriaLabel="Guardar" Click="@(args => grid.UpdateRow(u))" />
+                            <RadzenButton Icon="cancel" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" class="rz-ml-2" Title="Cancelar" AriaLabel="Cancelar" Click="@(args => CancelEditRow(u))" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
                 </Columns>

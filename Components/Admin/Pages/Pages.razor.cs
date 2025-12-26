@@ -34,7 +34,14 @@ public partial class Pages : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        await _vm.LoadAsync();
+        try
+        {
+            await _vm.LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar las páginas.", ex.Message);
+        }
     }
 
     private async Task BeginCreate()

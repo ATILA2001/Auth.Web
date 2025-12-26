@@ -51,7 +51,14 @@ public partial class Permissions : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        await _vm.LoadAsync();
+        try
+        {
+            await _vm.LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar los permisos.", ex.Message);
+        }
     }
 
     private async Task BeginCreate()

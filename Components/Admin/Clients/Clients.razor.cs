@@ -30,7 +30,14 @@ public partial class Clients : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        await _vm.LoadAsync();
+        try
+        {
+            await _vm.LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar los clientes.", ex.Message);
+        }
     }
 
     private string GetUrlsBuffer(ApplicationClientAdminDto client)

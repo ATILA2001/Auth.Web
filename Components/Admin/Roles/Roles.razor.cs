@@ -48,7 +48,14 @@ public partial class Roles : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        await _vm.LoadAsync();
+        try
+        {
+            await _vm.LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar los roles.", ex.Message);
+        }
     }
 
     private async Task BeginCreate()

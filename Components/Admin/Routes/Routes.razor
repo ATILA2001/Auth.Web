@@ -18,10 +18,10 @@
                 <HeaderTemplate>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                            <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="add_circle" Text="Agregar" Click="@BeginCreate" />
+                            <RadzenButton ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button" Icon="add_circle" Text="Agregar" Click="@BeginCreate" />
                         </RadzenStack>
                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                            <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" />
+                            <RadzenButton ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button" Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" />
                         </RadzenStack>
                     </RadzenStack>
                 </HeaderTemplate>
@@ -65,12 +65,12 @@
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.AreaRouteAdminDto" Context="r" Width="220px">
                         <Template Context="r">
-                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(r))" class="rz-mr-2" />
-                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeleteRoute(r.Id))" />
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(r))" class="rz-mr-2" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeleteRoute(r.Id))" />
                         </Template>
                         <EditTemplate Context="r">
-                            <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Title="Guardar" AriaLabel="Guardar" Click="@(args => grid.UpdateRow(r))" />
-                            <RadzenButton Icon="cancel" Size="ButtonSize.Small" class="rz-ml-2" Title="Cancelar" AriaLabel="Cancelar" Click="@(args => CancelEditRow(r))" />
+                            <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Primary" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Guardar" AriaLabel="Guardar" Click="@(args => grid.UpdateRow(r))" />
+                            <RadzenButton Icon="cancel" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" class="rz-ml-2" Title="Cancelar" AriaLabel="Cancelar" Click="@(args => CancelEditRow(r))" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
                 </Columns>

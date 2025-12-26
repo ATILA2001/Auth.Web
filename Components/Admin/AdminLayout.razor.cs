@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Auth.Web.Application.Admin.Dtos;
+using Radzen;
 
 namespace Auth.Web.Components.Admin;
 
@@ -37,19 +38,29 @@ public partial class AdminLayout : LayoutComponentBase, IDisposable
     [Inject]
     private PersistentComponentState ApplicationState { get; set; } = default!;
 
+    [Inject]
+    private NotificationService NotificationService { get; set; } = default!;
+
     protected override async Task OnInitializedAsync()
     {
-        _subscription = ApplicationState.RegisterOnPersisting(PersistAntiforgeryTokensAsync);
-
-        if (!TryLoadPersistedTokens())
+        try
         {
-            GenerateTokensFromHttpContext();
+            _subscription = ApplicationState.RegisterOnPersisting(PersistAntiforgeryTokensAsync);
+
+            if (!TryLoadPersistedTokens())
+            {
+                GenerateTokensFromHttpContext();
+            }
+
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            CurrentUserName = authState.User.Identity?.Name ?? string.Empty;
+
+            clients = (await AdminClientService.GetClientsAsync()).ToList();
         }
-
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        CurrentUserName = authState.User.Identity?.Name ?? string.Empty;
-
-        clients = (await AdminClientService.GetClientsAsync()).ToList();
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "No se pudo cargar la información inicial.", ex.Message);
+        }
     }
 
     private bool TryLoadPersistedTokens()
