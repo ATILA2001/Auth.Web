@@ -28,6 +28,9 @@ public partial class Users : ComponentBase
     private List<RoleAdminDto> AllRoles => _vm.AllRoles;
     private List<AreaAdminDto> AllAreas => _vm.AllAreas;
 
+    private bool IsLoading { get; set; }
+    private bool IsSaving { get; set; }
+
     protected override void OnInitialized()
     {
         _vm = new UsersViewModel(UserService, RoleService, AreaService);
@@ -35,13 +38,35 @@ public partial class Users : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadAsync(reloadGrid: false);
+    }
+
+    private async Task LoadAsync(bool reloadGrid)
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        IsLoading = true;
         try
         {
             await _vm.LoadAsync();
+            _rolesBuffer.Clear();
+            _areasBuffer.Clear();
+            if (reloadGrid && grid is not null)
+            {
+                await grid.Reload();
+            }
         }
         catch (Exception ex)
         {
             NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar los usuarios.", ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -77,37 +102,72 @@ public partial class Users : ComponentBase
 
     private async Task EditRow(UserAdminDto user)
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         _vm.BeginEdit(user);
         await grid.EditRow(user);
     }
 
     private async Task OnRowUpdate(UserAdminDto user)
     {
-        _vm.BeginEdit(user);
-        _vm.SelectedRoles = _rolesBuffer.TryGetValue(user, out var roles) ? roles : new List<string>();
-        _vm.SelectedAreaIds = _areasBuffer.TryGetValue(user, out var areas) ? areas : new List<int>();
-
-        var result = await _vm.SaveAsync();
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        if (IsSaving)
         {
-            await _vm.LoadAsync();
-            await grid.Reload();
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            _vm.BeginEdit(user);
+            _vm.SelectedRoles = _rolesBuffer.TryGetValue(user, out var roles) ? roles : new List<string>();
+            _vm.SelectedAreaIds = _areasBuffer.TryGetValue(user, out var areas) ? areas : new List<int>();
+
+            var result = await _vm.SaveAsync();
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private void CancelEditRow(UserAdminDto user)
     {
+        if (IsSaving)
+        {
+            return;
+        }
+
         grid.CancelEditRow(user);
         _rolesBuffer.Remove(user);
         _areasBuffer.Remove(user);
     }
 
-    private void Filter() => _vm.Filter();
+    private void Filter()
+    {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
+        _vm.Filter();
+    }
 
     private void ClearFilters()
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         grid.Reset(true);
     }
 

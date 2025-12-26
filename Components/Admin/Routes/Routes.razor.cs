@@ -27,6 +27,9 @@ public partial class Routes : ComponentBase
     private List<AreaAdminDto> areas => _vm.Areas;
     private List<ApplicationClientAdminDto> clients => _vm.Clients;
 
+    private bool IsLoading { get; set; }
+    private bool IsSaving { get; set; }
+
     protected override void OnInitialized()
     {
         _vm = new RoutesViewModel(RoutingService, AreaService, ClientService);
@@ -34,13 +37,38 @@ public partial class Routes : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadAsync(reloadGrid: false);
+    }
+
+    private async Task LoadAsync(bool reloadGrid)
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        IsLoading = true;
         try
         {
             await _vm.LoadAsync();
+            _areaBuffer.Clear();
+            _clientBuffer.Clear();
+            _urlBuffer.Clear();
+            _priorityBuffer.Clear();
+            _activeBuffer.Clear();
+            if (reloadGrid && grid is not null)
+            {
+                await grid.Reload();
+            }
         }
         catch (Exception ex)
         {
             NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar las rutas.", ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -106,6 +134,11 @@ public partial class Routes : ComponentBase
 
     private async Task BeginCreate()
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         _vm.BeginCreate();
         var newRoute = new AreaRouteAdminDto
         {
@@ -124,73 +157,119 @@ public partial class Routes : ComponentBase
 
     private async Task OnRowCreate(AreaRouteAdminDto route)
     {
-        _vm.BeginCreate();
-        _vm.SelectedAreaId = GetAreaBuffer(route);
-        _vm.SelectedClientId = GetClientBuffer(route);
-        _vm.EditReturnUrl = GetReturnUrlBuffer(route);
-        _vm.EditPriority = GetPriorityBuffer(route);
-        _vm.EditIsActive = GetActiveBuffer(route);
-
-        var result = await _vm.SaveAsync();
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        if (IsSaving)
         {
-            await _vm.LoadAsync();
-            await grid.Reload();
+            return;
         }
 
-        if (result.Outcome == RoutesVmOutcome.ValidationError)
+        IsSaving = true;
+        try
         {
-            routes.Remove(route);
-            await grid.Reload();
+            _vm.BeginCreate();
+            _vm.SelectedAreaId = GetAreaBuffer(route);
+            _vm.SelectedClientId = GetClientBuffer(route);
+            _vm.EditReturnUrl = GetReturnUrlBuffer(route);
+            _vm.EditPriority = GetPriorityBuffer(route);
+            _vm.EditIsActive = GetActiveBuffer(route);
+
+            var result = await _vm.SaveAsync();
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+
+            if (result.Outcome == RoutesVmOutcome.ValidationError)
+            {
+                routes.Remove(route);
+                await grid.Reload();
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private async Task EditRow(AreaRouteAdminDto route)
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         await grid.EditRow(route);
     }
 
     private async Task OnRowUpdate(AreaRouteAdminDto route)
     {
-        _vm.BeginEdit(route);
-        _vm.SelectedAreaId = GetAreaBuffer(route);
-        _vm.SelectedClientId = GetClientBuffer(route);
-        _vm.EditReturnUrl = GetReturnUrlBuffer(route);
-        _vm.EditPriority = GetPriorityBuffer(route);
-        _vm.EditIsActive = GetActiveBuffer(route);
-
-        var result = await _vm.SaveAsync();
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        if (IsSaving)
         {
-            await _vm.LoadAsync();
-            await grid.Reload();
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            _vm.BeginEdit(route);
+            _vm.SelectedAreaId = GetAreaBuffer(route);
+            _vm.SelectedClientId = GetClientBuffer(route);
+            _vm.EditReturnUrl = GetReturnUrlBuffer(route);
+            _vm.EditPriority = GetPriorityBuffer(route);
+            _vm.EditIsActive = GetActiveBuffer(route);
+
+            var result = await _vm.SaveAsync();
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private async Task DeleteRoute(int id)
     {
+        if (IsSaving)
+        {
+            return;
+        }
+
         var confirm = await DialogService.Confirm("¿Eliminar la ruta?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
         if (confirm != true)
         {
             return;
         }
 
-        var result = await _vm.DeleteAsync(id);
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        IsSaving = true;
+        try
         {
-            await _vm.LoadAsync();
-            await grid.Reload();
+            var result = await _vm.DeleteAsync(id);
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private void CancelEditRow(AreaRouteAdminDto route)
     {
+        if (IsSaving)
+        {
+            return;
+        }
+
         grid.CancelEditRow(route);
         _areaBuffer.Remove(route);
         _clientBuffer.Remove(route);
@@ -205,6 +284,11 @@ public partial class Routes : ComponentBase
 
     private void ClearFilters()
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         grid.Reset(true);
     }
 

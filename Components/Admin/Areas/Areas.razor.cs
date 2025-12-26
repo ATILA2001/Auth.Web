@@ -23,6 +23,9 @@ public partial class Areas : ComponentBase
         set => _vm.EditName = value;
     }
 
+    private bool IsLoading { get; set; }
+    private bool IsSaving { get; set; }
+
     protected override void OnInitialized()
     {
         _vm = new AreasViewModel(AdminAreaService);
@@ -30,13 +33,34 @@ public partial class Areas : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadAsync(reloadGrid: false);
+    }
+
+    private async Task LoadAsync(bool reloadGrid)
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        IsLoading = true;
         try
         {
             await _vm.LoadAsync();
+            _nameBuffer.Clear();
+            if (reloadGrid && grid is not null)
+            {
+                await grid.Reload();
+            }
         }
         catch (Exception ex)
         {
             NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar las áreas.", ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -57,6 +81,11 @@ public partial class Areas : ComponentBase
 
     private async Task BeginCreate()
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         _vm.BeginCreate();
         var newArea = new AreaAdminDto { Id = 0, Name = string.Empty, UserCount = 0 };
         areas.Insert(0, newArea);
@@ -65,63 +94,109 @@ public partial class Areas : ComponentBase
 
     private async Task OnRowCreate(AreaAdminDto area)
     {
-        _vm.BeginCreate();
-        editName = GetNameBuffer(area);
-        var result = await _vm.SaveAsync();
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        if (IsSaving)
         {
-            await _vm.LoadAsync();
-            await grid.Reload();
+            return;
         }
 
-        if (result.Outcome == AreasVmOutcome.ValidationError)
+        IsSaving = true;
+        try
         {
-            areas.Remove(area);
-            await grid.Reload();
+            _vm.BeginCreate();
+            editName = GetNameBuffer(area);
+            var result = await _vm.SaveAsync();
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+
+            if (result.Outcome == AreasVmOutcome.ValidationError)
+            {
+                areas.Remove(area);
+                await grid.Reload();
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private async Task EditRow(AreaAdminDto area)
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         await grid.EditRow(area);
     }
 
     private async Task OnRowUpdate(AreaAdminDto area)
     {
-        _vm.BeginEdit(area);
-        editName = GetNameBuffer(area);
-        var result = await _vm.SaveAsync();
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        if (IsSaving)
         {
-            await _vm.LoadAsync();
-            await grid.Reload();
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            _vm.BeginEdit(area);
+            editName = GetNameBuffer(area);
+            var result = await _vm.SaveAsync();
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private async Task DeleteArea(int id)
     {
+        if (IsSaving)
+        {
+            return;
+        }
+
         var confirm = await DialogService.Confirm("¿Eliminar el área?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
         if (confirm != true)
         {
             return;
         }
 
-        var result = await _vm.DeleteAsync(id);
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        IsSaving = true;
+        try
         {
-            await _vm.LoadAsync();
-            await grid.Reload();
+            var result = await _vm.DeleteAsync(id);
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private void CancelEditRow(AreaAdminDto area)
     {
+        if (IsSaving)
+        {
+            return;
+        }
+
         grid.CancelEditRow(area);
         _nameBuffer.Remove(area);
         if (area.Id == 0)
@@ -132,6 +207,11 @@ public partial class Areas : ComponentBase
 
     private void ClearFilters()
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         grid.Reset(true);
     }
 

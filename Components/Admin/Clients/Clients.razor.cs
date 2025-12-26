@@ -23,6 +23,9 @@ public partial class Clients : ComponentBase
         set => _vm.AllowedUrlsText = value;
     }
 
+    private bool IsLoading { get; set; }
+    private bool IsSaving { get; set; }
+
     protected override void OnInitialized()
     {
         _vm = new ClientsViewModel(ClientService);
@@ -30,13 +33,34 @@ public partial class Clients : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadAsync(reloadGrid: false);
+    }
+
+    private async Task LoadAsync(bool reloadGrid)
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        IsLoading = true;
         try
         {
             await _vm.LoadAsync();
+            _urlsBuffer.Clear();
+            if (reloadGrid && grid is not null)
+            {
+                await grid.Reload();
+            }
         }
         catch (Exception ex)
         {
             NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar los clientes.", ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -57,6 +81,11 @@ public partial class Clients : ComponentBase
 
     private async Task BeginCreate()
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         _vm.BeginCreate();
         var newClient = new ApplicationClientAdminDto
         {
@@ -71,69 +100,115 @@ public partial class Clients : ComponentBase
 
     private async Task OnRowCreate(ApplicationClientAdminDto client)
     {
-        _vm.BeginCreate();
-        _vm.EditModel.ClientId = client.ClientId;
-        _vm.EditModel.Audience = client.Audience;
-        allowedUrlsText = GetUrlsBuffer(client);
-
-        var result = await _vm.SaveAsync();
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        if (IsSaving)
         {
-            await _vm.LoadAsync();
-            await grid.Reload();
+            return;
         }
 
-        if (result.Outcome == ClientsVmOutcome.ValidationError)
+        IsSaving = true;
+        try
         {
-            clients.Remove(client);
-            await grid.Reload();
+            _vm.BeginCreate();
+            _vm.EditModel.ClientId = client.ClientId;
+            _vm.EditModel.Audience = client.Audience;
+            allowedUrlsText = GetUrlsBuffer(client);
+
+            var result = await _vm.SaveAsync();
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+
+            if (result.Outcome == ClientsVmOutcome.ValidationError)
+            {
+                clients.Remove(client);
+                await grid.Reload();
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private async Task EditRow(ApplicationClientAdminDto client)
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         await grid.EditRow(client);
     }
 
     private async Task OnRowUpdate(ApplicationClientAdminDto client)
     {
-        _vm.BeginEdit(client);
-        _vm.EditModel.ClientId = client.ClientId;
-        _vm.EditModel.Audience = client.Audience;
-        allowedUrlsText = GetUrlsBuffer(client);
-
-        var result = await _vm.SaveAsync();
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        if (IsSaving)
         {
-            await _vm.LoadAsync();
-            await grid.Reload();
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            _vm.BeginEdit(client);
+            _vm.EditModel.ClientId = client.ClientId;
+            _vm.EditModel.Audience = client.Audience;
+            allowedUrlsText = GetUrlsBuffer(client);
+
+            var result = await _vm.SaveAsync();
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private async Task DeleteClient(int id)
     {
+        if (IsSaving)
+        {
+            return;
+        }
+
         var confirm = await DialogService.Confirm("¿Eliminar el cliente?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
         if (confirm != true)
         {
             return;
         }
 
-        var result = await _vm.DeleteAsync(id);
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        IsSaving = true;
+        try
         {
-            await _vm.LoadAsync();
-            await grid.Reload();
+            var result = await _vm.DeleteAsync(id);
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private void CancelEditRow(ApplicationClientAdminDto client)
     {
+        if (IsSaving)
+        {
+            return;
+        }
+
         grid.CancelEditRow(client);
         _urlsBuffer.Remove(client);
         if (client.Id == 0)
@@ -144,6 +219,11 @@ public partial class Clients : ComponentBase
 
     private void ClearFilters()
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         grid.Reset(true);
     }
 

@@ -8,6 +8,11 @@
                Text="Permisos de Página"
                Class="rz-mb-3" />
 
+@if (IsLoading)
+{
+    <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="width: 100%;" />
+}
+
 <RadzenRow>
     <RadzenColumn Size="12" SizeMd="10" SizeLg="10" OffsetMd="1" OffsetLg="1">
         <RadzenCard Class="rz-shadow-3 rz-p-3">
@@ -18,10 +23,10 @@
                 <HeaderTemplate>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                            <RadzenButton ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button" Icon="add_circle" Text="Agregar" Click="@BeginCreate" />
+                            <RadzenButton ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button" Icon="add_circle" Text="Agregar" Click="@BeginCreate" Disabled="@(IsLoading || IsSaving)" />
                         </RadzenStack>
                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                            <RadzenButton ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button" Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" />
+                            <RadzenButton ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button" Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" Disabled="@(IsLoading || IsSaving)" />
                         </RadzenStack>
                     </RadzenStack>
                 </HeaderTemplate>
@@ -34,7 +39,8 @@
                                             ValueProperty="Id"
                                             Value="@p.RoleId"
                                             ValueChanged="@(v => OnRoleChanged(p, v))"
-                                            Style="width: 180px" />
+                                            Style="width: 180px"
+                                            Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="PageName" Title="Página">
@@ -45,7 +51,8 @@
                                             ValueProperty="Id"
                                             Value="@p.PageId"
                                             ValueChanged="@(v => OnPageChanged(p, v))"
-                                            Style="width: 200px" />
+                                            Style="width: 200px"
+                                            Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="PageUrl" Title="URL" />
@@ -57,17 +64,18 @@
                                             ValueProperty="Id"
                                             Value="@p.ActionPermissionId"
                                             ValueChanged="@(v => OnActionChanged(p, v))"
-                                            Style="width: 160px" />
+                                            Style="width: 160px"
+                                            Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Context="p" >
                         <Template Context="p">
-                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(p))" class="rz-mr-2" />
-                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeletePermission(p.Id))" />
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(p))" class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeletePermission(p.Id))" Disabled="@(IsLoading || IsSaving)" />
                         </Template>
                         <EditTemplate Context="p">
-                            <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Primary" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Guardar" AriaLabel="Guardar" Click="@(args => grid.UpdateRow(p))" />
-                            <RadzenButton Icon="cancel" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" class="rz-ml-2" Title="Cancelar" AriaLabel="Cancelar" Click="@(args => CancelEditRow(p))" />
+                            <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Primary" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Guardar" AriaLabel="Guardar" Click="@(args => grid.UpdateRow(p))" Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenButton Icon="cancel" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" class="rz-ml-2" Title="Cancelar" AriaLabel="Cancelar" Click="@(args => CancelEditRow(p))" Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
                 </Columns>

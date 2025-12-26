@@ -27,6 +27,9 @@ public partial class Pages : ComponentBase
         set => _vm.EditUrl = value;
     }
 
+    private bool IsLoading { get; set; }
+    private bool IsSaving { get; set; }
+
     protected override void OnInitialized()
     {
         _vm = new PagesViewModel(AdminPageService);
@@ -34,18 +37,43 @@ public partial class Pages : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadAsync(reloadGrid: false);
+    }
+
+    private async Task LoadAsync(bool reloadGrid)
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        IsLoading = true;
         try
         {
             await _vm.LoadAsync();
+            if (reloadGrid && grid is not null)
+            {
+                await grid.Reload();
+            }
         }
         catch (Exception ex)
         {
             NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar las páginas.", ex.Message);
         }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
     }
 
     private async Task BeginCreate()
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         _vm.BeginCreate();
         var newPage = new PageAdminDto { Id = 0, Name = string.Empty, Url = string.Empty, PermissionCount = 0 };
         pages.Insert(0, newPage);
@@ -54,65 +82,111 @@ public partial class Pages : ComponentBase
 
     private async Task OnRowCreate(PageAdminDto page)
     {
-        _vm.BeginCreate();
-        editName = page.Name;
-        editUrl = page.Url;
-        var result = await _vm.SaveAsync();
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        if (IsSaving)
         {
-            await _vm.LoadAsync();
-            await grid.Reload();
+            return;
         }
 
-        if (result.Outcome == PagesVmOutcome.ValidationError)
+        IsSaving = true;
+        try
         {
-            pages.Remove(page);
-            await grid.Reload();
+            _vm.BeginCreate();
+            editName = page.Name;
+            editUrl = page.Url;
+            var result = await _vm.SaveAsync();
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+
+            if (result.Outcome == PagesVmOutcome.ValidationError)
+            {
+                pages.Remove(page);
+                await grid.Reload();
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private async Task EditRow(PageAdminDto page)
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         await grid.EditRow(page);
     }
 
     private async Task OnRowUpdate(PageAdminDto page)
     {
-        _vm.BeginEdit(page);
-        editName = page.Name;
-        editUrl = page.Url;
-        var result = await _vm.SaveAsync();
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        if (IsSaving)
         {
-            await _vm.LoadAsync();
-            await grid.Reload();
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            _vm.BeginEdit(page);
+            editName = page.Name;
+            editUrl = page.Url;
+            var result = await _vm.SaveAsync();
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private async Task DeletePage(int id)
     {
+        if (IsSaving)
+        {
+            return;
+        }
+
         var confirm = await DialogService.Confirm("¿Eliminar la página?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
         if (confirm != true)
         {
             return;
         }
 
-        var result = await _vm.DeleteAsync(id);
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        IsSaving = true;
+        try
         {
-            await _vm.LoadAsync();
-            await grid.Reload();
+            var result = await _vm.DeleteAsync(id);
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private void CancelEditRow(PageAdminDto page)
     {
+        if (IsSaving)
+        {
+            return;
+        }
+
         grid.CancelEditRow(page);
         if (page.Id == 0)
         {
@@ -122,6 +196,11 @@ public partial class Pages : ComponentBase
 
     private void ClearFilters()
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         grid.Reset(true);
     }
 

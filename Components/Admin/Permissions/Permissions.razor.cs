@@ -44,6 +44,9 @@ public partial class Permissions : ComponentBase
         set => _vm.SelectedActionId = value;
     }
 
+    private bool IsLoading { get; set; }
+    private bool IsSaving { get; set; }
+
     protected override void OnInitialized()
     {
         _vm = new PermissionsViewModel(PermissionService, RoleService, PageService, ActionService);
@@ -51,6 +54,12 @@ public partial class Permissions : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        IsLoading = true;
         try
         {
             await _vm.LoadAsync();
@@ -59,10 +68,19 @@ public partial class Permissions : ComponentBase
         {
             NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar los permisos.", ex.Message);
         }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private async Task BeginCreate()
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         _vm.BeginCreate();
 
         var newPermission = new RolePagePermissionAdminDto
@@ -82,63 +100,93 @@ public partial class Permissions : ComponentBase
 
     private async Task OnRowCreate(RolePagePermissionAdminDto permission)
     {
-        _vm.SelectedRoleId = permission.RoleId;
-        _vm.SelectedPageId = permission.PageId;
-        _vm.SelectedActionId = permission.ActionPermissionId;
-
-        var result = await _vm.SaveAsync();
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        if (IsSaving)
         {
-            await _vm.LoadPermissionsAsync();
-            await grid.Reload();
+            return;
         }
 
-        if (result.Outcome == PermissionsVmOutcome.ValidationError)
+        IsSaving = true;
+        try
         {
-            permissions.Remove(permission);
-            await grid.Reload();
+            _vm.SelectedRoleId = permission.RoleId;
+            _vm.SelectedPageId = permission.PageId;
+            _vm.SelectedActionId = permission.ActionPermissionId;
+
+            var result = await _vm.SaveAsync();
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await _vm.LoadPermissionsAsync();
+                await grid.Reload();
+            }
+
+            if (result.Outcome == PermissionsVmOutcome.ValidationError)
+            {
+                permissions.Remove(permission);
+                await grid.Reload();
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private async Task EditRow(RolePagePermissionAdminDto permission)
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         await grid.EditRow(permission);
     }
 
     private async Task OnRowUpdate(RolePagePermissionAdminDto permission)
     {
-        // Si es edición de existente, eliminamos el permiso anterior antes de crear el nuevo
-        if (permission.Id != 0)
+        if (IsSaving)
         {
-            var deleteResult = await _vm.DeleteAsync(permission.Id);
-            if (deleteResult.Outcome == PermissionsVmOutcome.Error)
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            var originalId = permission.Id;
+
+            _vm.SelectedRoleId = permission.RoleId;
+            _vm.SelectedPageId = permission.PageId;
+            _vm.SelectedActionId = permission.ActionPermissionId;
+
+            var createResult = await _vm.SaveAsync();
+            NotifyUser(createResult);
+
+            if (createResult.RequiresReload)
             {
-                NotifyUser(deleteResult);
                 await _vm.LoadPermissionsAsync();
                 await grid.Reload();
+            }
+
+            if (createResult.Outcome == PermissionsVmOutcome.ValidationError || createResult.Outcome == PermissionsVmOutcome.Error)
+            {
                 return;
             }
+
+            if (originalId != 0)
+            {
+                var deleteResult = await _vm.DeleteAsync(originalId);
+                if (deleteResult.Outcome == PermissionsVmOutcome.Error)
+                {
+                    NotifyUser(deleteResult);
+                    await _vm.LoadPermissionsAsync();
+                    await grid.Reload();
+                }
+            }
         }
-
-        _vm.SelectedRoleId = permission.RoleId;
-        _vm.SelectedPageId = permission.PageId;
-        _vm.SelectedActionId = permission.ActionPermissionId;
-
-        var result = await _vm.SaveAsync();
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        finally
         {
-            await _vm.LoadPermissionsAsync();
-            await grid.Reload();
-        }
-
-        if (result.Outcome == PermissionsVmOutcome.ValidationError && permission.Id == 0)
-        {
-            permissions.Remove(permission);
-            await grid.Reload();
+            IsSaving = false;
         }
     }
 
@@ -164,24 +212,42 @@ public partial class Permissions : ComponentBase
 
     private async Task DeletePermission(int id)
     {
+        if (IsSaving)
+        {
+            return;
+        }
+
         var confirm = await DialogService.Confirm("¿Eliminar el permiso?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
         if (confirm != true)
         {
             return;
         }
 
-        var result = await _vm.DeleteAsync(id);
-        NotifyUser(result);
-
-        if (result.RequiresReload)
+        IsSaving = true;
+        try
         {
-            await _vm.LoadPermissionsAsync();
-            await grid.Reload();
+            var result = await _vm.DeleteAsync(id);
+            NotifyUser(result);
+
+            if (result.RequiresReload)
+            {
+                await _vm.LoadPermissionsAsync();
+                await grid.Reload();
+            }
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
     private void CancelEditRow(RolePagePermissionAdminDto permission)
     {
+        if (IsSaving)
+        {
+            return;
+        }
+
         grid.CancelEditRow(permission);
         if (permission.Id == 0)
         {
@@ -204,6 +270,11 @@ public partial class Permissions : ComponentBase
 
     private void ClearFilters()
     {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
         grid.Reset(true);
     }
 }
