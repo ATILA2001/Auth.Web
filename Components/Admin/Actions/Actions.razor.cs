@@ -14,6 +14,9 @@ public partial class Actions : ComponentBase
 
     private ActionsViewModel _vm = null!;
     private RadzenDataGrid<ActionPermissionAdminDto> grid = null!;
+    private readonly Dictionary<ActionPermissionAdminDto, string> _nameBuffer = new();
+    private readonly List<ActionPermissionAdminDto> _actionsToInsert = new();
+    private readonly List<ActionPermissionAdminDto> _actionsToUpdate = new();
 
     private List<ActionPermissionAdminDto> actions => _vm.Actions;
     private string editName
@@ -46,6 +49,12 @@ public partial class Actions : ComponentBase
         try
         {
             await _vm.LoadAsync();
+            
+            // Clear tracking lists after reload to avoid stale references
+            _nameBuffer.Clear();
+            _actionsToInsert.Clear();
+            _actionsToUpdate.Clear();
+            
             if (reloadGrid && grid is not null)
             {
                 await grid.Reload();
@@ -62,6 +71,21 @@ public partial class Actions : ComponentBase
         }
     }
 
+    private string GetNameBuffer(ActionPermissionAdminDto action)
+    {
+        if (!_nameBuffer.TryGetValue(action, out var value))
+        {
+            value = action.Name;
+            _nameBuffer[action] = value;
+        }
+        return value;
+    }
+
+    private void SetNameBuffer(ActionPermissionAdminDto action, string value)
+    {
+        _nameBuffer[action] = value;
+    }
+
     private async Task BeginCreate()
     {
         if (IsLoading || IsSaving)
@@ -69,10 +93,49 @@ public partial class Actions : ComponentBase
             return;
         }
 
+        // Prevent multiple pending CREATE rows (single-create-at-a-time)
+        if (_actionsToInsert.Count > 0)
+        {
+            return;
+        }
+
         _vm.BeginCreate();
         var newAction = new ActionPermissionAdminDto { Id = 0, Name = string.Empty, UsageCount = 0 };
+        _actionsToInsert.Add(newAction);
         actions.Insert(0, newAction);
         await grid.InsertRow(newAction);
+    }
+
+    private async Task ValidateAndSave(ActionPermissionAdminDto action)
+    {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
+        // Set VM context for validation: for EDIT set BeginEdit; for CREATE EditName is already set from buffer
+        if (action.Id != 0)
+        {
+            _vm.BeginEdit(action);
+        }
+        else
+        {
+            // For CREATE: ensure EditName is synced from buffer for pre-validation
+            _vm.EditName = GetNameBuffer(action);
+        }
+
+        var name = GetNameBuffer(action);
+        var validationResult = _vm.ValidateOnly(name);
+
+        if (validationResult.Outcome != ActionsVmOutcome.Success)
+        {
+            NotifyUser(validationResult);
+            // For CREATE: Do NOT call grid.UpdateRow - validation failed before persistence
+            // Keep the row in edit mode by not exiting; grid is already in edit mode
+            return;
+        }
+
+        await grid.UpdateRow(action);
     }
 
     private async Task OnRowCreate(ActionPermissionAdminDto action)
@@ -85,21 +148,33 @@ public partial class Actions : ComponentBase
         IsSaving = true;
         try
         {
-            _vm.BeginCreate();
-            editName = action.Name;
+            // EditName already set from ValidateAndSave; just call SaveAsync
+            editName = GetNameBuffer(action);
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
-            if (result.RequiresReload)
+            if (result.Outcome == ActionsVmOutcome.Success)
             {
-                await LoadAsync(reloadGrid: true);
+                // CRITICAL: Sync buffer ? DTO so grid displays the new name in view mode
+                action.Name = editName.Trim();
+                
+                // Apply CreatedId from service (no reload needed)
+                if (result.CreatedId.HasValue)
+                {
+                    action.Id = result.CreatedId.Value;
+                }
+                
+                _actionsToInsert.Remove(action);
+                _nameBuffer.Remove(action);
+                
+                // Only reload if CreatedId is missing (fallback)
+                if (!result.CreatedId.HasValue && result.RequiresReload)
+                {
+                    await LoadAsync(reloadGrid: true);
+                }
             }
-
-            if (result.Outcome == ActionsVmOutcome.ValidationError)
-            {
-                actions.Remove(action);
-                await grid.Reload();
-            }
+            // Note: ValidationError case removed - pre-validation in ValidateAndSave prevents reaching this point
+            // If SaveAsync returns ValidationError here, it's a service-layer issue, not UI validation
         }
         finally
         {
@@ -114,6 +189,10 @@ public partial class Actions : ComponentBase
             return;
         }
 
+        if (!_actionsToUpdate.Contains(action))
+        {
+            _actionsToUpdate.Add(action);
+        }
         await grid.EditRow(action);
     }
 
@@ -128,14 +207,24 @@ public partial class Actions : ComponentBase
         try
         {
             _vm.BeginEdit(action);
-            editName = action.Name;
+            editName = GetNameBuffer(action);
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
-            if (result.RequiresReload)
+            if (result.Outcome == ActionsVmOutcome.Success)
             {
-                await LoadAsync(reloadGrid: true);
+                // CRITICAL: Sync buffer ? DTO so grid displays the updated name in view mode
+                action.Name = editName.Trim();
+                
+                _actionsToUpdate.Remove(action);
+                _nameBuffer.Remove(action);
+                
+                // Explicit contract: UPDATE success does NOT require reload (RequiresReload=false)
+                // Filters/pagination/sorting preserved via local update
+                await InvokeAsync(StateHasChanged);
             }
+            // Note: ValidationError case removed - pre-validation in ValidateAndSave prevents reaching this point
+            // If SaveAsync returns ValidationError here, it's a service-layer issue, not UI validation
         }
         finally
         {
@@ -162,6 +251,7 @@ public partial class Actions : ComponentBase
             var result = await _vm.DeleteAsync(id);
             NotifyUser(result);
 
+            // Explicit contract: DELETE success requires reload to remove row from grid
             if (result.RequiresReload)
             {
                 await LoadAsync(reloadGrid: true);
@@ -181,6 +271,10 @@ public partial class Actions : ComponentBase
         }
 
         grid.CancelEditRow(action);
+        _nameBuffer.Remove(action);
+        _actionsToInsert.Remove(action);
+        _actionsToUpdate.Remove(action);
+        
         if (action.Id == 0)
         {
             actions.Remove(action);

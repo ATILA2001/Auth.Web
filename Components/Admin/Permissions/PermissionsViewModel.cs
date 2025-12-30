@@ -16,9 +16,13 @@ public sealed class PermissionsVmResult
     public string Title { get; init; } = string.Empty;
     public string Message { get; init; } = string.Empty;
     public bool RequiresReload { get; init; }
+    public int? CreatedId { get; init; }
 
     public static PermissionsVmResult Success(string title, string message, bool requiresReload = true) =>
         new() { Outcome = PermissionsVmOutcome.Success, Title = title, Message = message, RequiresReload = requiresReload };
+
+    public static PermissionsVmResult CreateSuccess(string title, string message, int createdId) =>
+        new() { Outcome = PermissionsVmOutcome.Success, Title = title, Message = message, RequiresReload = false, CreatedId = createdId };
 
     public static PermissionsVmResult ValidationFailed(string title, string message) =>
         new() { Outcome = PermissionsVmOutcome.ValidationError, Title = title, Message = message, RequiresReload = false };
@@ -55,8 +59,6 @@ public sealed class PermissionsViewModel
     public List<RoleAdminDto> Roles { get; private set; } = new();
     public List<PageAdminDto> Pages { get; private set; } = new();
     public List<ActionPermissionAdminDto> Actions { get; private set; } = new();
-
-    public bool Editing { get; private set; }
     public string SelectedRoleId { get; set; } = string.Empty;
     public int SelectedPageId { get; set; }
     public int SelectedActionId { get; set; }
@@ -67,25 +69,6 @@ public sealed class PermissionsViewModel
         Roles = (await _roleService.GetRolesAsync()).ToList();
         Pages = (await _pageService.GetPagesAsync()).ToList();
         Actions = (await _actionService.GetActionsAsync()).ToList();
-
-        await LoadPermissionsAsync();
-
-        // Valores por defecto para el formulario
-        if (Editing)
-        {
-            if (!Roles.Any(r => r.Id == SelectedRoleId))
-                SelectedRoleId = Roles.FirstOrDefault()?.Id ?? string.Empty;
-
-            if (!Pages.Any(p => p.Id == SelectedPageId))
-                SelectedPageId = Pages.FirstOrDefault()?.Id ?? 0;
-
-            if (!Actions.Any(a => a.Id == SelectedActionId))
-                SelectedActionId = Actions.FirstOrDefault()?.Id ?? 0;
-        }
-    }
-
-    public async Task LoadPermissionsAsync()
-    {
         Permissions = (await _permissionService.GetPermissionsAsync()).ToList();
     }
 
@@ -95,43 +78,79 @@ public sealed class PermissionsViewModel
         SelectedPageId = Pages.FirstOrDefault()?.Id ?? 0;
         SelectedActionId = Actions.FirstOrDefault()?.Id ?? 0;
         ValidationError = null;
-        Editing = true;
+    }
+
+    public PermissionsVmResult ValidateOnly(string roleId, int pageId, int actionId)
+    {
+        ValidationError = null;
+
+        if (string.IsNullOrWhiteSpace(roleId))
+        {
+            ValidationError = "Debe seleccionar un rol.";
+            return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
+        }
+
+        if (pageId <= 0)
+        {
+            ValidationError = "Debe seleccionar una página.";
+            return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
+        }
+
+        if (actionId <= 0)
+        {
+            ValidationError = "Debe seleccionar una acción.";
+            return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
+        }
+
+        if (!Roles.Any(r => r.Id == roleId))
+        {
+            ValidationError = "El rol seleccionado no existe.";
+            return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
+        }
+
+        if (!Pages.Any(p => p.Id == pageId))
+        {
+            ValidationError = "La página seleccionada no existe.";
+            return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
+        }
+
+        if (!Actions.Any(a => a.Id == actionId))
+        {
+            ValidationError = "La acción seleccionada no existe.";
+            return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
+        }
+
+        // Check for duplicate
+        var duplicate = Permissions.Any(p => p.RoleId == roleId && p.PageId == pageId && p.ActionPermissionId == actionId);
+        if (duplicate)
+        {
+            ValidationError = "Ya existe este permiso.";
+            return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
+        }
+
+        return PermissionsVmResult.Success("Válido", "", requiresReload: false);
     }
 
     public async Task<PermissionsVmResult> SaveAsync()
     {
-        ValidationError = null;
-
-        if (string.IsNullOrWhiteSpace(SelectedRoleId) || SelectedPageId <= 0 || SelectedActionId <= 0)
+        // Reuse validation logic to avoid duplication and rule drift
+        var validationResult = ValidateOnly(SelectedRoleId, SelectedPageId, SelectedActionId);
+        if (validationResult.Outcome != PermissionsVmOutcome.Success)
         {
-            ValidationError = "Selecciona rol, página y acción";
-            return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
-        }
-
-        if (!Roles.Any(r => r.Id == SelectedRoleId))
-        {
-            ValidationError = "El rol seleccionado no existe";
-            return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
-        }
-
-        if (!Pages.Any(p => p.Id == SelectedPageId))
-        {
-            ValidationError = "La página seleccionada no existe";
-            return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
-        }
-
-        if (!Actions.Any(a => a.Id == SelectedActionId))
-        {
-            ValidationError = "La acción seleccionada no existe";
-            return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
+            return validationResult;
         }
 
         try
         {
+            // CREATE only (no UPDATE for permissions - delete and recreate instead)
             var id = await _permissionService.CreatePermissionAsync(SelectedRoleId, SelectedPageId, SelectedActionId);
-            Editing = false;
-            ValidationError = null;
-            return PermissionsVmResult.Success("Permiso creado", $"Permiso Id {id} asignado.");
+            if (id != 0)
+            {
+                ValidationError = null;
+                return PermissionsVmResult.CreateSuccess("Permiso creado", $"Permiso asignado.", id);
+            }
+            ValidationError = "No se pudo crear el permiso.";
+            return PermissionsVmResult.ValidationFailed("Sin cambios", ValidationError);
         }
         catch (Exception ex)
         {
@@ -145,7 +164,8 @@ public sealed class PermissionsViewModel
         try
         {
             await _permissionService.DeletePermissionAsync(id);
-            return PermissionsVmResult.Success("Permiso eliminado", $"Id {id} eliminado.");
+            // DELETE: reload required to remove row from grid
+            return PermissionsVmResult.Success("Permiso eliminado", $"Id {id} removido.", requiresReload: true);
         }
         catch (Exception ex)
         {
@@ -153,9 +173,6 @@ public sealed class PermissionsViewModel
         }
     }
 
-    public void CancelEdit()
-    {
-        Editing = false;
-        ValidationError = null;
-    }
+    // Legacy: Editing property and CancelEdit method not used by current UI
+    // Code-behind calls grid.CancelEditRow directly; consider removal in future cleanup
 }

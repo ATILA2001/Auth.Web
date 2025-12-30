@@ -3,7 +3,6 @@ using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
 using Radzen.Blazor;
-using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Web.Components.Admin.Permissions;
 
@@ -18,31 +17,15 @@ public partial class Permissions : ComponentBase
 
     private PermissionsViewModel _vm = null!;
     private RadzenDataGrid<RolePagePermissionAdminDto> grid = null!;
+    private readonly Dictionary<RolePagePermissionAdminDto, string> _roleBuffer = new();
+    private readonly Dictionary<RolePagePermissionAdminDto, int> _pageBuffer = new();
+    private readonly Dictionary<RolePagePermissionAdminDto, int> _actionBuffer = new();
+    private readonly List<RolePagePermissionAdminDto> _permissionsToInsert = new();
 
-    // Expose VM state for Razor binding
     private List<RolePagePermissionAdminDto> permissions => _vm.Permissions;
     private List<RoleAdminDto> roles => _vm.Roles;
     private List<PageAdminDto> pages => _vm.Pages;
     private List<ActionPermissionAdminDto> actions => _vm.Actions;
-    private string? validationError => _vm.ValidationError;
-
-    private string selectedRoleId
-    {
-        get => _vm.SelectedRoleId;
-        set => _vm.SelectedRoleId = value;
-    }
-
-    private int selectedPageId
-    {
-        get => _vm.SelectedPageId;
-        set => _vm.SelectedPageId = value;
-    }
-
-    private int selectedActionId
-    {
-        get => _vm.SelectedActionId;
-        set => _vm.SelectedActionId = value;
-    }
 
     private bool IsLoading { get; set; }
     private bool IsSaving { get; set; }
@@ -54,6 +37,11 @@ public partial class Permissions : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadAsync(reloadGrid: false);
+    }
+
+    private async Task LoadAsync(bool reloadGrid)
+    {
         if (IsLoading)
         {
             return;
@@ -63,6 +51,17 @@ public partial class Permissions : ComponentBase
         try
         {
             await _vm.LoadAsync();
+            
+            // Clear tracking lists after reload to avoid stale references
+            _roleBuffer.Clear();
+            _pageBuffer.Clear();
+            _actionBuffer.Clear();
+            _permissionsToInsert.Clear();
+            
+            if (reloadGrid && grid is not null)
+            {
+                await grid.Reload();
+            }
         }
         catch (Exception ex)
         {
@@ -71,7 +70,58 @@ public partial class Permissions : ComponentBase
         finally
         {
             IsLoading = false;
+            StateHasChanged();
         }
+    }
+
+    private string GetRoleBuffer(RolePagePermissionAdminDto permission)
+    {
+        if (!_roleBuffer.TryGetValue(permission, out var value))
+        {
+            value = permission.RoleId;
+            _roleBuffer[permission] = value;
+        }
+        return value;
+    }
+
+    private void SetRoleBuffer(RolePagePermissionAdminDto permission, string value)
+    {
+        _roleBuffer[permission] = value;
+        permission.RoleName = roles.FirstOrDefault(r => r.Id == value)?.Name ?? string.Empty;
+    }
+
+    private int GetPageBuffer(RolePagePermissionAdminDto permission)
+    {
+        if (!_pageBuffer.TryGetValue(permission, out var value))
+        {
+            value = permission.PageId;
+            _pageBuffer[permission] = value;
+        }
+        return value;
+    }
+
+    private void SetPageBuffer(RolePagePermissionAdminDto permission, int value)
+    {
+        _pageBuffer[permission] = value;
+        var page = pages.FirstOrDefault(p => p.Id == value);
+        permission.PageName = page?.Name ?? string.Empty;
+        permission.PageUrl = page?.Url ?? string.Empty;
+    }
+
+    private int GetActionBuffer(RolePagePermissionAdminDto permission)
+    {
+        if (!_actionBuffer.TryGetValue(permission, out var value))
+        {
+            value = permission.ActionPermissionId;
+            _actionBuffer[permission] = value;
+        }
+        return value;
+    }
+
+    private void SetActionBuffer(RolePagePermissionAdminDto permission, int value)
+    {
+        _actionBuffer[permission] = value;
+        permission.ActionName = actions.FirstOrDefault(a => a.Id == value)?.Name ?? string.Empty;
     }
 
     private async Task BeginCreate()
@@ -81,21 +131,53 @@ public partial class Permissions : ComponentBase
             return;
         }
 
-        _vm.BeginCreate();
+        // Prevent multiple pending CREATE rows (single-create-at-a-time)
+        if (_permissionsToInsert.Count > 0)
+        {
+            return;
+        }
 
+        _vm.BeginCreate();
         var newPermission = new RolePagePermissionAdminDto
         {
-            RoleId = selectedRoleId,
-            RoleName = roles.FirstOrDefault(r => r.Id == selectedRoleId)?.Name ?? string.Empty,
-            PageId = selectedPageId,
-            PageName = pages.FirstOrDefault(p => p.Id == selectedPageId)?.Name ?? string.Empty,
-            PageUrl = pages.FirstOrDefault(p => p.Id == selectedPageId)?.Url ?? string.Empty,
-            ActionPermissionId = selectedActionId,
-            ActionName = actions.FirstOrDefault(a => a.Id == selectedActionId)?.Name ?? string.Empty
+            Id = 0,
+            RoleId = _vm.SelectedRoleId,
+            RoleName = roles.FirstOrDefault(r => r.Id == _vm.SelectedRoleId)?.Name ?? string.Empty,
+            PageId = _vm.SelectedPageId,
+            PageName = pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId)?.Name ?? string.Empty,
+            PageUrl = pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId)?.Url ?? string.Empty,
+            ActionPermissionId = _vm.SelectedActionId,
+            ActionName = actions.FirstOrDefault(a => a.Id == _vm.SelectedActionId)?.Name ?? string.Empty
         };
-
+        _permissionsToInsert.Add(newPermission);
         permissions.Insert(0, newPermission);
         await grid.InsertRow(newPermission);
+    }
+
+    private async Task ValidateAndSave(RolePagePermissionAdminDto permission)
+    {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
+        // Sync from buffers
+        _vm.SelectedRoleId = GetRoleBuffer(permission);
+        _vm.SelectedPageId = GetPageBuffer(permission);
+        _vm.SelectedActionId = GetActionBuffer(permission);
+
+        var roleId = GetRoleBuffer(permission);
+        var pageId = GetPageBuffer(permission);
+        var actionId = GetActionBuffer(permission);
+        var validationResult = _vm.ValidateOnly(roleId, pageId, actionId);
+
+        if (validationResult.Outcome != PermissionsVmOutcome.Success)
+        {
+            NotifyUser(validationResult);
+            return;
+        }
+
+        await grid.UpdateRow(permission);
     }
 
     private async Task OnRowCreate(RolePagePermissionAdminDto permission)
@@ -108,79 +190,37 @@ public partial class Permissions : ComponentBase
         IsSaving = true;
         try
         {
-            _vm.SelectedRoleId = permission.RoleId;
-            _vm.SelectedPageId = permission.PageId;
-            _vm.SelectedActionId = permission.ActionPermissionId;
+            _vm.SelectedRoleId = GetRoleBuffer(permission);
+            _vm.SelectedPageId = GetPageBuffer(permission);
+            _vm.SelectedActionId = GetActionBuffer(permission);
 
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
-            if (result.RequiresReload)
+            if (result.Outcome == PermissionsVmOutcome.Success)
             {
-                await _vm.LoadPermissionsAsync();
-                await grid.Reload();
-            }
+                // CRITICAL: Sync buffers ? DTO
+                permission.RoleId = _vm.SelectedRoleId;
+                permission.PageId = _vm.SelectedPageId;
+                permission.ActionPermissionId = _vm.SelectedActionId;
+                permission.RoleName = roles.FirstOrDefault(r => r.Id == _vm.SelectedRoleId)?.Name ?? string.Empty;
+                permission.PageName = pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId)?.Name ?? string.Empty;
+                permission.PageUrl = pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId)?.Url ?? string.Empty;
+                permission.ActionName = actions.FirstOrDefault(a => a.Id == _vm.SelectedActionId)?.Name ?? string.Empty;
 
-            if (result.Outcome == PermissionsVmOutcome.ValidationError)
-            {
-                permissions.Remove(permission);
-                await grid.Reload();
-            }
-        }
-        finally
-        {
-            IsSaving = false;
-        }
-    }
-
-    private async Task EditRow(RolePagePermissionAdminDto permission)
-    {
-        if (IsLoading || IsSaving)
-        {
-            return;
-        }
-
-        await grid.EditRow(permission);
-    }
-
-    private async Task OnRowUpdate(RolePagePermissionAdminDto permission)
-    {
-        if (IsSaving)
-        {
-            return;
-        }
-
-        IsSaving = true;
-        try
-        {
-            var originalId = permission.Id;
-
-            _vm.SelectedRoleId = permission.RoleId;
-            _vm.SelectedPageId = permission.PageId;
-            _vm.SelectedActionId = permission.ActionPermissionId;
-
-            var createResult = await _vm.SaveAsync();
-            NotifyUser(createResult);
-
-            if (createResult.RequiresReload)
-            {
-                await _vm.LoadPermissionsAsync();
-                await grid.Reload();
-            }
-
-            if (createResult.Outcome == PermissionsVmOutcome.ValidationError || createResult.Outcome == PermissionsVmOutcome.Error)
-            {
-                return;
-            }
-
-            if (originalId != 0)
-            {
-                var deleteResult = await _vm.DeleteAsync(originalId);
-                if (deleteResult.Outcome == PermissionsVmOutcome.Error)
+                if (result.CreatedId.HasValue)
                 {
-                    NotifyUser(deleteResult);
-                    await _vm.LoadPermissionsAsync();
-                    await grid.Reload();
+                    permission.Id = result.CreatedId.Value;
+                }
+
+                _permissionsToInsert.Remove(permission);
+                _roleBuffer.Remove(permission);
+                _pageBuffer.Remove(permission);
+                _actionBuffer.Remove(permission);
+
+                if (!result.CreatedId.HasValue && result.RequiresReload)
+                {
+                    await LoadAsync(reloadGrid: true);
                 }
             }
         }
@@ -188,26 +228,6 @@ public partial class Permissions : ComponentBase
         {
             IsSaving = false;
         }
-    }
-
-    private void OnRoleChanged(RolePagePermissionAdminDto permission, string? roleId)
-    {
-        permission.RoleId = roleId ?? string.Empty;
-        permission.RoleName = roles.FirstOrDefault(r => r.Id == permission.RoleId)?.Name ?? string.Empty;
-    }
-
-    private void OnPageChanged(RolePagePermissionAdminDto permission, int pageId)
-    {
-        permission.PageId = pageId;
-        var page = pages.FirstOrDefault(p => p.Id == pageId);
-        permission.PageName = page?.Name ?? string.Empty;
-        permission.PageUrl = page?.Url ?? string.Empty;
-    }
-
-    private void OnActionChanged(RolePagePermissionAdminDto permission, int actionId)
-    {
-        permission.ActionPermissionId = actionId;
-        permission.ActionName = actions.FirstOrDefault(a => a.Id == actionId)?.Name ?? string.Empty;
     }
 
     private async Task DeletePermission(int id)
@@ -231,8 +251,7 @@ public partial class Permissions : ComponentBase
 
             if (result.RequiresReload)
             {
-                await _vm.LoadPermissionsAsync();
-                await grid.Reload();
+                await LoadAsync(reloadGrid: true);
             }
         }
         finally
@@ -249,10 +268,25 @@ public partial class Permissions : ComponentBase
         }
 
         grid.CancelEditRow(permission);
+        _roleBuffer.Remove(permission);
+        _pageBuffer.Remove(permission);
+        _actionBuffer.Remove(permission);
+        _permissionsToInsert.Remove(permission);
+        
         if (permission.Id == 0)
         {
             permissions.Remove(permission);
         }
+    }
+
+    private void ClearFilters()
+    {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
+        grid.Reset(true);
     }
 
     private void NotifyUser(PermissionsVmResult result)
@@ -266,15 +300,5 @@ public partial class Permissions : ComponentBase
         };
 
         NotificationService.Notify(severity, result.Title, result.Message);
-    }
-
-    private void ClearFilters()
-    {
-        if (IsLoading || IsSaving)
-        {
-            return;
-        }
-
-        grid.Reset(true);
     }
 }

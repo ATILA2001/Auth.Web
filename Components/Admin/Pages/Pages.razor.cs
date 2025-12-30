@@ -14,6 +14,10 @@ public partial class Pages : ComponentBase
 
     private PagesViewModel _vm = null!;
     private RadzenDataGrid<PageAdminDto> grid = null!;
+    private readonly Dictionary<PageAdminDto, string> _nameBuffer = new();
+    private readonly Dictionary<PageAdminDto, string> _urlBuffer = new();
+    private readonly List<PageAdminDto> _pagesToInsert = new();
+    private readonly List<PageAdminDto> _pagesToUpdate = new();
 
     private List<PageAdminDto> pages => _vm.Pages;
     private string editName
@@ -51,6 +55,13 @@ public partial class Pages : ComponentBase
         try
         {
             await _vm.LoadAsync();
+            
+            // Clear tracking lists after reload to avoid stale references
+            _nameBuffer.Clear();
+            _urlBuffer.Clear();
+            _pagesToInsert.Clear();
+            _pagesToUpdate.Clear();
+            
             if (reloadGrid && grid is not null)
             {
                 await grid.Reload();
@@ -67,6 +78,36 @@ public partial class Pages : ComponentBase
         }
     }
 
+    private string GetNameBuffer(PageAdminDto page)
+    {
+        if (!_nameBuffer.TryGetValue(page, out var value))
+        {
+            value = page.Name;
+            _nameBuffer[page] = value;
+        }
+        return value;
+    }
+
+    private void SetNameBuffer(PageAdminDto page, string value)
+    {
+        _nameBuffer[page] = value;
+    }
+
+    private string GetUrlBuffer(PageAdminDto page)
+    {
+        if (!_urlBuffer.TryGetValue(page, out var value))
+        {
+            value = page.Url;
+            _urlBuffer[page] = value;
+        }
+        return value;
+    }
+
+    private void SetUrlBuffer(PageAdminDto page, string value)
+    {
+        _urlBuffer[page] = value;
+    }
+
     private async Task BeginCreate()
     {
         if (IsLoading || IsSaving)
@@ -74,10 +115,51 @@ public partial class Pages : ComponentBase
             return;
         }
 
+        // Prevent multiple pending CREATE rows (single-create-at-a-time)
+        if (_pagesToInsert.Count > 0)
+        {
+            return;
+        }
+
         _vm.BeginCreate();
         var newPage = new PageAdminDto { Id = 0, Name = string.Empty, Url = string.Empty, PermissionCount = 0 };
+        _pagesToInsert.Add(newPage);
         pages.Insert(0, newPage);
         await grid.InsertRow(newPage);
+    }
+
+    private async Task ValidateAndSave(PageAdminDto page)
+    {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
+        // Set VM context for validation: for EDIT set BeginEdit; for CREATE EditFields already set from buffer
+        if (page.Id != 0)
+        {
+            _vm.BeginEdit(page);
+        }
+        else
+        {
+            // For CREATE: ensure EditFields are synced from buffer for pre-validation
+            _vm.EditName = GetNameBuffer(page);
+            _vm.EditUrl = GetUrlBuffer(page);
+        }
+
+        var name = GetNameBuffer(page);
+        var url = GetUrlBuffer(page);
+        var validationResult = _vm.ValidateOnly(name, url);
+
+        if (validationResult.Outcome != PagesVmOutcome.Success)
+        {
+            NotifyUser(validationResult);
+            // For CREATE: Do NOT call grid.UpdateRow - validation failed before persistence
+            // Keep the row in edit mode by not exiting; grid is already in edit mode
+            return;
+        }
+
+        await grid.UpdateRow(page);
     }
 
     private async Task OnRowCreate(PageAdminDto page)
@@ -90,22 +172,36 @@ public partial class Pages : ComponentBase
         IsSaving = true;
         try
         {
-            _vm.BeginCreate();
-            editName = page.Name;
-            editUrl = page.Url;
+            // EditFields already set from ValidateAndSave; just call SaveAsync
+            editName = GetNameBuffer(page);
+            editUrl = GetUrlBuffer(page);
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
-            if (result.RequiresReload)
+            if (result.Outcome == PagesVmOutcome.Success)
             {
-                await LoadAsync(reloadGrid: true);
+                // CRITICAL: Sync buffer ? DTO so grid displays the new values in view mode
+                page.Name = editName.Trim();
+                page.Url = editUrl.Trim();
+                
+                // Apply CreatedId from service (no reload needed)
+                if (result.CreatedId.HasValue)
+                {
+                    page.Id = result.CreatedId.Value;
+                }
+                
+                _pagesToInsert.Remove(page);
+                _nameBuffer.Remove(page);
+                _urlBuffer.Remove(page);
+                
+                // Only reload if CreatedId is missing (fallback)
+                if (!result.CreatedId.HasValue && result.RequiresReload)
+                {
+                    await LoadAsync(reloadGrid: true);
+                }
             }
-
-            if (result.Outcome == PagesVmOutcome.ValidationError)
-            {
-                pages.Remove(page);
-                await grid.Reload();
-            }
+            // Note: ValidationError case removed - pre-validation in ValidateAndSave prevents reaching this point
+            // If SaveAsync returns ValidationError here, it's a service-layer issue, not UI validation
         }
         finally
         {
@@ -120,6 +216,10 @@ public partial class Pages : ComponentBase
             return;
         }
 
+        if (!_pagesToUpdate.Contains(page))
+        {
+            _pagesToUpdate.Add(page);
+        }
         await grid.EditRow(page);
     }
 
@@ -134,15 +234,27 @@ public partial class Pages : ComponentBase
         try
         {
             _vm.BeginEdit(page);
-            editName = page.Name;
-            editUrl = page.Url;
+            editName = GetNameBuffer(page);
+            editUrl = GetUrlBuffer(page);
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
-            if (result.RequiresReload)
+            if (result.Outcome == PagesVmOutcome.Success)
             {
-                await LoadAsync(reloadGrid: true);
+                // CRITICAL: Sync buffer ? DTO so grid displays the updated values in view mode
+                page.Name = editName.Trim();
+                page.Url = editUrl.Trim();
+                
+                _pagesToUpdate.Remove(page);
+                _nameBuffer.Remove(page);
+                _urlBuffer.Remove(page);
+                
+                // Explicit contract: UPDATE success does NOT require reload (RequiresReload=false)
+                // Filters/pagination/sorting preserved via local update
+                await InvokeAsync(StateHasChanged);
             }
+            // Note: ValidationError case removed - pre-validation in ValidateAndSave prevents reaching this point
+            // If SaveAsync returns ValidationError here, it's a service-layer issue, not UI validation
         }
         finally
         {
@@ -169,6 +281,7 @@ public partial class Pages : ComponentBase
             var result = await _vm.DeleteAsync(id);
             NotifyUser(result);
 
+            // Explicit contract: DELETE success requires reload to remove row from grid
             if (result.RequiresReload)
             {
                 await LoadAsync(reloadGrid: true);
@@ -188,6 +301,11 @@ public partial class Pages : ComponentBase
         }
 
         grid.CancelEditRow(page);
+        _nameBuffer.Remove(page);
+        _urlBuffer.Remove(page);
+        _pagesToInsert.Remove(page);
+        _pagesToUpdate.Remove(page);
+        
         if (page.Id == 0)
         {
             pages.Remove(page);

@@ -3,7 +3,6 @@ using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Radzen;
 using Radzen.Blazor;
-using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Web.Components.Admin.Roles;
 
@@ -15,34 +14,19 @@ public partial class Roles : ComponentBase
 
     private RolesViewModel _vm = null!;
     private RadzenDataGrid<RoleAdminDto> grid = null!;
+    private readonly Dictionary<RoleAdminDto, string> _nameBuffer = new();
+    private readonly List<RoleAdminDto> _rolesToInsert = new();
+    private readonly List<RoleAdminDto> _rolesToUpdate = new();
 
     private List<RoleAdminDto> roles => _vm.Roles;
-    private RoleAdminDto editModel => _vm.EditModel;
     private string editName
     {
         get => _vm.EditName;
         set => _vm.EditName = value;
     }
 
-    private readonly Dictionary<RoleAdminDto, string> _nameBuffer = new();
-
     private bool IsLoading { get; set; }
     private bool IsSaving { get; set; }
-
-    private string GetNameBuffer(RoleAdminDto role)
-    {
-        if (!_nameBuffer.TryGetValue(role, out var value))
-        {
-            value = role.Name;
-            _nameBuffer[role] = value;
-        }
-        return value;
-    }
-
-    private void SetNameBuffer(RoleAdminDto role, string value)
-    {
-        _nameBuffer[role] = value;
-    }
 
     protected override void OnInitialized()
     {
@@ -65,7 +49,12 @@ public partial class Roles : ComponentBase
         try
         {
             await _vm.LoadAsync();
+            
+            // Clear tracking lists after reload to avoid stale references
             _nameBuffer.Clear();
+            _rolesToInsert.Clear();
+            _rolesToUpdate.Clear();
+            
             if (reloadGrid && grid is not null)
             {
                 await grid.Reload();
@@ -82,6 +71,21 @@ public partial class Roles : ComponentBase
         }
     }
 
+    private string GetNameBuffer(RoleAdminDto role)
+    {
+        if (!_nameBuffer.TryGetValue(role, out var value))
+        {
+            value = role.Name;
+            _nameBuffer[role] = value;
+        }
+        return value;
+    }
+
+    private void SetNameBuffer(RoleAdminDto role, string value)
+    {
+        _nameBuffer[role] = value;
+    }
+
     private async Task BeginCreate()
     {
         if (IsLoading || IsSaving)
@@ -89,10 +93,49 @@ public partial class Roles : ComponentBase
             return;
         }
 
+        // Prevent multiple pending CREATE rows (single-create-at-a-time)
+        if (_rolesToInsert.Count > 0)
+        {
+            return;
+        }
+
         _vm.BeginCreate();
         var newRole = new RoleAdminDto { Id = string.Empty, Name = string.Empty, UserCount = 0 };
+        _rolesToInsert.Add(newRole);
         roles.Insert(0, newRole);
         await grid.InsertRow(newRole);
+    }
+
+    private async Task ValidateAndSave(RoleAdminDto role)
+    {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
+        // Set VM context for validation: for EDIT set BeginEdit; for CREATE EditName is already set from buffer
+        if (!string.IsNullOrWhiteSpace(role.Id))
+        {
+            _vm.BeginEdit(role);
+        }
+        else
+        {
+            // For CREATE: ensure EditName is synced from buffer for pre-validation
+            _vm.EditName = GetNameBuffer(role);
+        }
+
+        var name = GetNameBuffer(role);
+        var validationResult = _vm.ValidateOnly(name);
+
+        if (validationResult.Outcome != RolesVmOutcome.Success)
+        {
+            NotifyUser(validationResult);
+            // For CREATE: Do NOT call grid.UpdateRow - validation failed before persistence
+            // Keep the row in edit mode by not exiting; grid is already in edit mode
+            return;
+        }
+
+        await grid.UpdateRow(role);
     }
 
     private async Task OnRowCreate(RoleAdminDto role)
@@ -105,21 +148,33 @@ public partial class Roles : ComponentBase
         IsSaving = true;
         try
         {
-            _vm.BeginCreate();
+            // EditName already set from ValidateAndSave; just call SaveAsync
             editName = GetNameBuffer(role);
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
-            if (result.RequiresReload)
+            if (result.Outcome == RolesVmOutcome.Success)
             {
-                await LoadAsync(reloadGrid: true);
+                // CRITICAL: Sync buffer ? DTO so grid displays the new name in view mode
+                role.Name = editName.Trim();
+                
+                // Apply CreatedId from service (no reload needed)
+                if (!string.IsNullOrEmpty(result.CreatedId))
+                {
+                    role.Id = result.CreatedId;
+                }
+                
+                _rolesToInsert.Remove(role);
+                _nameBuffer.Remove(role);
+                
+                // Only reload if CreatedId is missing (fallback)
+                if (string.IsNullOrEmpty(result.CreatedId) && result.RequiresReload)
+                {
+                    await LoadAsync(reloadGrid: true);
+                }
             }
-
-            if (result.Outcome == RolesVmOutcome.ValidationError)
-            {
-                roles.Remove(role);
-                await grid.Reload();
-            }
+            // Note: ValidationError case removed - pre-validation in ValidateAndSave prevents reaching this point
+            // If SaveAsync returns ValidationError here, it's a service-layer issue, not UI validation
         }
         finally
         {
@@ -134,6 +189,10 @@ public partial class Roles : ComponentBase
             return;
         }
 
+        if (!_rolesToUpdate.Contains(role))
+        {
+            _rolesToUpdate.Add(role);
+        }
         await grid.EditRow(role);
     }
 
@@ -152,10 +211,20 @@ public partial class Roles : ComponentBase
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
-            if (result.RequiresReload)
+            if (result.Outcome == RolesVmOutcome.Success)
             {
-                await LoadAsync(reloadGrid: true);
+                // CRITICAL: Sync buffer ? DTO so grid displays the updated name in view mode
+                role.Name = editName.Trim();
+                
+                _rolesToUpdate.Remove(role);
+                _nameBuffer.Remove(role);
+                
+                // Explicit contract: UPDATE success does NOT require reload (RequiresReload=false)
+                // Filters/pagination/sorting preserved via local update
+                await InvokeAsync(StateHasChanged);
             }
+            // Note: ValidationError case removed - pre-validation in ValidateAndSave prevents reaching this point
+            // If SaveAsync returns ValidationError here, it's a service-layer issue, not UI validation
         }
         finally
         {
@@ -182,6 +251,7 @@ public partial class Roles : ComponentBase
             var result = await _vm.DeleteAsync(roleId);
             NotifyUser(result);
 
+            // Explicit contract: DELETE success requires reload to remove row from grid
             if (result.RequiresReload)
             {
                 await LoadAsync(reloadGrid: true);
@@ -202,6 +272,9 @@ public partial class Roles : ComponentBase
 
         grid.CancelEditRow(role);
         _nameBuffer.Remove(role);
+        _rolesToInsert.Remove(role);
+        _rolesToUpdate.Remove(role);
+        
         if (string.IsNullOrWhiteSpace(role.Id))
         {
             roles.Remove(role);
@@ -230,10 +303,4 @@ public partial class Roles : ComponentBase
 
         NotificationService.Notify(severity, result.Title, result.Message);
     }
-}
-
-public sealed class RoleFormModel
-{
-    [Required(ErrorMessage = "Nombre requerido")]
-    public string Name { get; set; } = string.Empty;
 }

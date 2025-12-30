@@ -16,9 +16,13 @@ public sealed class ClientsVmResult
     public string Title { get; init; } = string.Empty;
     public string Message { get; init; } = string.Empty;
     public bool RequiresReload { get; init; }
+    public int? CreatedId { get; init; }
 
     public static ClientsVmResult Success(string title, string message, bool requiresReload = true) =>
         new() { Outcome = ClientsVmOutcome.Success, Title = title, Message = message, RequiresReload = requiresReload };
+
+    public static ClientsVmResult CreateSuccess(string title, string message, int createdId) =>
+        new() { Outcome = ClientsVmOutcome.Success, Title = title, Message = message, RequiresReload = false, CreatedId = createdId };
 
     public static ClientsVmResult ValidationFailed(string title, string message) =>
         new() { Outcome = ClientsVmOutcome.ValidationError, Title = title, Message = message, RequiresReload = false };
@@ -38,8 +42,9 @@ public sealed class ClientsViewModel
     }
 
     public List<ApplicationClientAdminDto> Clients { get; private set; } = new();
-    public bool Editing { get; private set; }
     public ApplicationClientAdminDto EditModel { get; private set; } = new();
+    public string EditClientId { get; set; } = string.Empty;
+    public string EditAudience { get; set; } = string.Empty;
     public string AllowedUrlsText { get; set; } = string.Empty;
     public string? ValidationError { get; private set; }
 
@@ -57,13 +62,15 @@ public sealed class ClientsViewModel
             Audience = string.Empty,
             AllowedReturnUrls = Array.Empty<string>()
         };
+        EditClientId = string.Empty;
+        EditAudience = string.Empty;
         AllowedUrlsText = string.Empty;
         ValidationError = null;
-        Editing = true;
     }
 
     public void BeginEdit(ApplicationClientAdminDto dto)
     {
+        ArgumentNullException.ThrowIfNull(dto);
         EditModel = new ApplicationClientAdminDto
         {
             Id = dto.Id,
@@ -71,43 +78,73 @@ public sealed class ClientsViewModel
             Audience = dto.Audience,
             AllowedReturnUrls = dto.AllowedReturnUrls.ToArray()
         };
+        EditClientId = dto.ClientId ?? string.Empty;
+        EditAudience = dto.Audience ?? string.Empty;
         AllowedUrlsText = string.Join("\n", dto.AllowedReturnUrls);
         ValidationError = null;
-        Editing = true;
     }
 
-    public async Task<ClientsVmResult> SaveAsync()
+    public ClientsVmResult ValidateOnly(string clientId, string audience, string urlsText)
     {
         ValidationError = null;
+        var trimmedClientId = (clientId ?? string.Empty).Trim();
+        var trimmedAudience = (audience ?? string.Empty).Trim();
 
-        if (string.IsNullOrWhiteSpace(EditModel.ClientId))
+        if (string.IsNullOrWhiteSpace(trimmedClientId))
         {
             ValidationError = "El ClientId no puede estar vacío.";
             return ClientsVmResult.ValidationFailed("Validación", ValidationError);
         }
 
-        if (string.IsNullOrWhiteSpace(EditModel.Audience))
+        if (string.IsNullOrWhiteSpace(trimmedAudience))
         {
             ValidationError = "El Audience no puede estar vacío.";
             return ClientsVmResult.ValidationFailed("Validación", ValidationError);
         }
 
+        var duplicate = Clients.Any(c => c.Id != EditModel.Id && 
+                                         string.Equals(c.ClientId, trimmedClientId, StringComparison.OrdinalIgnoreCase));
+        if (duplicate)
+        {
+            ValidationError = "Ya existe un cliente con ese ClientId.";
+            return ClientsVmResult.ValidationFailed("Validación", ValidationError);
+        }
+
+        return ClientsVmResult.Success("Válido", "", requiresReload: false);
+    }
+
+    public async Task<ClientsVmResult> SaveAsync()
+    {
+        // Reuse validation logic to avoid duplication and rule drift
+        var validationResult = ValidateOnly(EditClientId, EditAudience, AllowedUrlsText);
+        if (validationResult.Outcome != ClientsVmOutcome.Success)
+        {
+            return validationResult;
+        }
+
+        var clientId = EditClientId.Trim();
+        var audience = EditAudience.Trim();
         var urls = NormalizeUrls(AllowedUrlsText);
 
         try
         {
             if (EditModel.Id == 0)
             {
-                var id = await _clientService.CreateClientAsync(EditModel.ClientId, EditModel.Audience, urls);
-                Editing = false;
-                return ClientsVmResult.Success("Cliente creado", $"Se creó '{EditModel.ClientId}' (Id {id}).");
+                // CREATE: return CreatedId so UI can set it locally without reload
+                var id = await _clientService.CreateClientAsync(clientId, audience, urls);
+                if (id != 0)
+                {
+                    ValidationError = null;
+                    return ClientsVmResult.CreateSuccess("Cliente creado", $"Se creó '{clientId}'.", id);
+                }
+                ValidationError = "Nombre inválido o duplicado.";
+                return ClientsVmResult.ValidationFailed("Sin cambios", ValidationError);
             }
-            else
-            {
-                await _clientService.UpdateClientAsync(EditModel.Id, EditModel.ClientId, EditModel.Audience, urls);
-                Editing = false;
-                return ClientsVmResult.Success("Cliente actualizado", $"Se actualizó '{EditModel.ClientId}'.");
-            }
+
+            // UPDATE: no reload required; buffer?DTO sync handles display update
+            await _clientService.UpdateClientAsync(EditModel.Id, clientId, audience, urls);
+            ValidationError = null;
+            return ClientsVmResult.Success("Cliente actualizado", $"Se actualizó '{clientId}'.", requiresReload: false);
         }
         catch (Exception ex)
         {
@@ -121,7 +158,8 @@ public sealed class ClientsViewModel
         try
         {
             await _clientService.DeleteClientAsync(id);
-            return ClientsVmResult.Success("Cliente eliminado", $"Id {id} eliminado.");
+            // DELETE: reload required to remove row from grid
+            return ClientsVmResult.Success("Cliente eliminado", $"Id {id} removido.", requiresReload: true);
         }
         catch (Exception ex)
         {
@@ -129,15 +167,12 @@ public sealed class ClientsViewModel
         }
     }
 
-    public void CancelEdit()
-    {
-        Editing = false;
-        ValidationError = null;
-    }
-
-    private static string[] NormalizeUrls(string text)
+    public static string[] NormalizeUrls(string text)
     {
         var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return lines.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
+
+    // Legacy: Editing property and CancelEdit method not used by current UI
+    // Code-behind calls grid.CancelEditRow directly; consider removal in future cleanup
 }

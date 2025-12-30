@@ -16,9 +16,13 @@ public sealed class PagesVmResult
     public string Title { get; init; } = string.Empty;
     public string Message { get; init; } = string.Empty;
     public bool RequiresReload { get; init; }
+    public int? CreatedId { get; init; }
 
     public static PagesVmResult Success(string title, string message, bool requiresReload = true) =>
         new() { Outcome = PagesVmOutcome.Success, Title = title, Message = message, RequiresReload = requiresReload };
+
+    public static PagesVmResult CreateSuccess(string title, string message, int createdId) =>
+        new() { Outcome = PagesVmOutcome.Success, Title = title, Message = message, RequiresReload = false, CreatedId = createdId };
 
     public static PagesVmResult ValidationFailed(string title, string message) =>
         new() { Outcome = PagesVmOutcome.ValidationError, Title = title, Message = message, RequiresReload = false };
@@ -38,7 +42,6 @@ public sealed class PagesViewModel
     }
 
     public List<PageAdminDto> Pages { get; private set; } = new();
-    public bool Editing { get; private set; }
     public PageAdminDto EditModel { get; private set; } = new();
     public string EditName { get; set; } = string.Empty;
     public string EditUrl { get; set; } = string.Empty;
@@ -51,60 +54,80 @@ public sealed class PagesViewModel
 
     public void BeginCreate()
     {
-        EditModel = new PageAdminDto { Id = 0 };
+        EditModel = new PageAdminDto { Id = 0, Name = string.Empty, Url = string.Empty, PermissionCount = 0 };
         EditName = string.Empty;
         EditUrl = string.Empty;
         ValidationError = null;
-        Editing = true;
     }
 
     public void BeginEdit(PageAdminDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
-
-        EditModel = new PageAdminDto { Id = dto.Id };
+        EditModel = new PageAdminDto { Id = dto.Id, Name = dto.Name, Url = dto.Url, PermissionCount = dto.PermissionCount };
         EditName = dto.Name ?? string.Empty;
         EditUrl = dto.Url ?? string.Empty;
         ValidationError = null;
-        Editing = true;
+    }
+
+    public PagesVmResult ValidateOnly(string name, string url)
+    {
+        ValidationError = null;
+        var trimmedName = (name ?? string.Empty).Trim();
+        var trimmedUrl = (url ?? string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(trimmedName))
+        {
+            ValidationError = "El nombre de la página no puede estar vacío.";
+            return PagesVmResult.ValidationFailed("Validación", ValidationError);
+        }
+
+        if (string.IsNullOrWhiteSpace(trimmedUrl))
+        {
+            ValidationError = "La URL de la página no puede estar vacía.";
+            return PagesVmResult.ValidationFailed("Validación", ValidationError);
+        }
+
+        var duplicateUrl = Pages.Any(p => p.Id != EditModel.Id && string.Equals(p.Url, trimmedUrl, StringComparison.OrdinalIgnoreCase));
+        if (duplicateUrl)
+        {
+            ValidationError = "Ya existe una página con esa URL.";
+            return PagesVmResult.ValidationFailed("Validación", ValidationError);
+        }
+
+        return PagesVmResult.Success("Válido", "", requiresReload: false);
     }
 
     public async Task<PagesVmResult> SaveAsync()
     {
-        ValidationError = null;
-
-        var name = (EditName ?? string.Empty).Trim();
-        var url = (EditUrl ?? string.Empty).Trim();
-
-        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url))
+        // Reuse validation logic to avoid duplication and rule drift
+        var validationResult = ValidateOnly(EditName, EditUrl);
+        if (validationResult.Outcome != PagesVmOutcome.Success)
         {
-            ValidationError = "Completa todos los campos";
-            return PagesVmResult.ValidationFailed("Validación", ValidationError);
+            return validationResult;
         }
 
-        
-
-        var duplicateUrl = Pages.Any(p => p.Id != EditModel.Id && string.Equals(p.Url, url, StringComparison.OrdinalIgnoreCase));
-        if (duplicateUrl)
-        {
-            ValidationError = "Ya existe una página con esa URL";
-            return PagesVmResult.ValidationFailed("Validación", ValidationError);
-        }
+        var name = EditName.Trim();
+        var url = EditUrl.Trim();
 
         try
         {
             if (EditModel.Id == 0)
             {
+                // CREATE: return CreatedId so UI can set it locally without reload
                 var id = await _pageService.CreatePageAsync(name, url);
-                Editing = false;
-                ValidationError = null;
-                return PagesVmResult.Success("Página creada", $"Id {id} creada.");
+                if (id != 0)
+                {
+                    ValidationError = null;
+                    return PagesVmResult.CreateSuccess("Página creada", $"Se creó '{name}'.", id);
+                }
+                ValidationError = "Nombre inválido o duplicado.";
+                return PagesVmResult.ValidationFailed("Sin cambios", ValidationError);
             }
 
+            // UPDATE: no reload required; buffer?DTO sync handles display update
             await _pageService.UpdatePageAsync(EditModel.Id, name, url);
-            Editing = false;
             ValidationError = null;
-            return PagesVmResult.Success("Página actualizada", $"Id {EditModel.Id} actualizada.");
+            return PagesVmResult.Success("Página actualizada", $"Se actualizó '{name}'.", requiresReload: false);
         }
         catch (Exception ex)
         {
@@ -118,7 +141,8 @@ public sealed class PagesViewModel
         try
         {
             await _pageService.DeletePageAsync(id);
-            return PagesVmResult.Success("Página eliminada", $"Id {id} eliminada.");
+            // DELETE: reload required to remove row from grid
+            return PagesVmResult.Success("Página eliminada", $"Id {id} removido.", requiresReload: true);
         }
         catch (Exception ex)
         {
@@ -126,12 +150,6 @@ public sealed class PagesViewModel
         }
     }
 
-    public void CancelEdit()
-    {
-        Editing = false;
-        ValidationError = null;
-        EditName = string.Empty;
-        EditUrl = string.Empty;
-        EditModel = new PageAdminDto { Id = 0 };
-    }
+    // Legacy: Editing property and CancelEdit method not used by current UI
+    // Code-behind calls grid.CancelEditRow directly; consider removal in future cleanup
 }

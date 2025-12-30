@@ -1,5 +1,6 @@
 @page "/admin/permissions"
 @using Microsoft.AspNetCore.Authorization
+@using Auth.Web.Application.Admin.Dtos
 @attribute [Authorize(Roles = "Admin")]
 @layout Auth.Web.Components.Admin.AdminLayout
 @namespace Auth.Web.Components.Admin.Permissions
@@ -16,14 +17,14 @@
 <RadzenRow>
     <RadzenColumn Size="12" SizeMd="10" SizeLg="10" OffsetMd="1" OffsetLg="1">
         <RadzenCard Class="rz-shadow-3 rz-p-3">
-            <RadzenDataGrid TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Data="@permissions" @ref="grid" AllowPaging="true" PageSize="15" AllowSorting="true" AllowFiltering="true" AllowColumnResize="true"
-                            EditMode="DataGridEditMode.Single" RowCreate="@OnRowCreate" RowUpdate="@OnRowUpdate"
+            <RadzenDataGrid TItem="RolePagePermissionAdminDto" Data="@permissions" @ref="grid" AllowPaging="true" PageSize="15" AllowSorting="true" AllowFiltering="true" AllowColumnResize="true"
+                            EditMode="DataGridEditMode.Single" RowCreate="@OnRowCreate"
                             FilterMode="FilterMode.CheckBoxList" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
                             AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas" EmptyText="No hay registros para mostrar.">
                 <HeaderTemplate>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                            <RadzenButton ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button" Icon="add_circle" Text="Agregar" Click="@BeginCreate" Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenButton ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button" Icon="add_circle" Text="Agregar" Click="@BeginCreate" Disabled="@(IsLoading || IsSaving || _permissionsToInsert.Count > 0)" />
                         </RadzenStack>
                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
                             <RadzenButton ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button" Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" Disabled="@(IsLoading || IsSaving)" />
@@ -31,50 +32,49 @@
                     </RadzenStack>
                 </HeaderTemplate>
                 <Columns>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="RoleName" Title="Rol" >
+                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="RoleName" Title="Rol" >
                         <EditTemplate Context="p">
                             <RadzenDropDown TValue="string"
                                             Data="@roles"
                                             TextProperty="Name"
                                             ValueProperty="Id"
-                                            Value="@p.RoleId"
-                                            ValueChanged="@(v => OnRoleChanged(p, v))"
+                                            Value="@GetRoleBuffer(p)"
+                                            ValueChanged="@(v => SetRoleBuffer(p, v))"
                                             Style="width: 180px"
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="PageName" Title="Página">
+                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="PageName" Title="Página">
                         <EditTemplate Context="p">
                             <RadzenDropDown TValue="int"
                                             Data="@pages"
                                             TextProperty="Name"
                                             ValueProperty="Id"
-                                            Value="@p.PageId"
-                                            ValueChanged="@(v => OnPageChanged(p, v))"
+                                            Value="@GetPageBuffer(p)"
+                                            ValueChanged="@(v => SetPageBuffer(p, v))"
                                             Style="width: 200px"
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="PageUrl" Title="URL" />
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Property="ActionName" Title="Acción" >
+                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="PageUrl" Title="URL" />
+                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="ActionName" Title="Acción" >
                         <EditTemplate Context="p">
                             <RadzenDropDown TValue="int"
                                             Data="@actions"
                                             TextProperty="Name"
                                             ValueProperty="Id"
-                                            Value="@p.ActionPermissionId"
-                                            ValueChanged="@(v => OnActionChanged(p, v))"
+                                            Value="@GetActionBuffer(p)"
+                                            ValueChanged="@(v => SetActionBuffer(p, v))"
                                             Style="width: 160px"
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.RolePagePermissionAdminDto" Context="p" >
+                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Context="p" >
                         <Template Context="p">
-                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(p))" class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />
-                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeletePermission(p.Id))" Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeletePermission(p.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />
                         </Template>
                         <EditTemplate Context="p">
-                            <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Primary" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Guardar" AriaLabel="Guardar" Click="@(args => grid.UpdateRow(p))" Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Primary" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Guardar" AriaLabel="Guardar" Click="@(args => ValidateAndSave(p))" Disabled="@(IsLoading || IsSaving)" />
                             <RadzenButton Icon="cancel" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" class="rz-ml-2" Title="Cancelar" AriaLabel="Cancelar" Click="@(args => CancelEditRow(p))" Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>

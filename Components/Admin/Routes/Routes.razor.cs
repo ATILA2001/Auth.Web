@@ -16,12 +16,13 @@ public partial class Routes : ComponentBase
 
     private RoutesViewModel _vm = null!;
     private RadzenDataGrid<AreaRouteAdminDto> grid = null!;
-
     private readonly Dictionary<AreaRouteAdminDto, int> _areaBuffer = new();
     private readonly Dictionary<AreaRouteAdminDto, int> _clientBuffer = new();
     private readonly Dictionary<AreaRouteAdminDto, string> _urlBuffer = new();
     private readonly Dictionary<AreaRouteAdminDto, int> _priorityBuffer = new();
     private readonly Dictionary<AreaRouteAdminDto, bool> _activeBuffer = new();
+    private readonly List<AreaRouteAdminDto> _routesToInsert = new();
+    private readonly List<AreaRouteAdminDto> _routesToUpdate = new();
 
     private List<AreaRouteAdminDto> routes => _vm.Routes;
     private List<AreaAdminDto> areas => _vm.Areas;
@@ -51,11 +52,16 @@ public partial class Routes : ComponentBase
         try
         {
             await _vm.LoadAsync();
+            
+            // Clear tracking lists after reload to avoid stale references
             _areaBuffer.Clear();
             _clientBuffer.Clear();
             _urlBuffer.Clear();
             _priorityBuffer.Clear();
             _activeBuffer.Clear();
+            _routesToInsert.Clear();
+            _routesToUpdate.Clear();
+            
             if (reloadGrid && grid is not null)
             {
                 await grid.Reload();
@@ -139,6 +145,12 @@ public partial class Routes : ComponentBase
             return;
         }
 
+        // Prevent multiple pending CREATE rows (single-create-at-a-time)
+        if (_routesToInsert.Count > 0)
+        {
+            return;
+        }
+
         _vm.BeginCreate();
         var newRoute = new AreaRouteAdminDto
         {
@@ -148,11 +160,49 @@ public partial class Routes : ComponentBase
             ReturnUrl = string.Empty,
             Priority = 1,
             IsActive = true,
-            AreaName = areas.FirstOrDefault(a => a.Id == _vm.SelectedAreaId)?.Name,
-            ApplicationName = clients.FirstOrDefault(c => c.Id == _vm.SelectedClientId)?.Audience
+            AreaName = areas.FirstOrDefault()?.Name,
+            ApplicationName = clients.FirstOrDefault()?.Audience
         };
+        _routesToInsert.Add(newRoute);
         routes.Insert(0, newRoute);
         await grid.InsertRow(newRoute);
+    }
+
+    private async Task ValidateAndSave(AreaRouteAdminDto route)
+    {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
+        // Set VM context for validation
+        if (route.Id != 0)
+        {
+            _vm.BeginEdit(route);
+        }
+        else
+        {
+            // For CREATE: ensure fields are synced from buffers
+            _vm.SelectedAreaId = GetAreaBuffer(route);
+            _vm.SelectedClientId = GetClientBuffer(route);
+            _vm.EditReturnUrl = GetReturnUrlBuffer(route);
+            _vm.EditPriority = GetPriorityBuffer(route);
+            _vm.EditIsActive = GetActiveBuffer(route);
+        }
+
+        var areaId = GetAreaBuffer(route);
+        var clientId = GetClientBuffer(route);
+        var returnUrl = GetReturnUrlBuffer(route);
+        var priority = GetPriorityBuffer(route);
+        var validationResult = _vm.ValidateOnly(areaId, clientId, returnUrl, priority);
+
+        if (validationResult.Outcome != RoutesVmOutcome.Success)
+        {
+            NotifyUser(validationResult);
+            return;
+        }
+
+        await grid.UpdateRow(route);
     }
 
     private async Task OnRowCreate(AreaRouteAdminDto route)
@@ -165,7 +215,6 @@ public partial class Routes : ComponentBase
         IsSaving = true;
         try
         {
-            _vm.BeginCreate();
             _vm.SelectedAreaId = GetAreaBuffer(route);
             _vm.SelectedClientId = GetClientBuffer(route);
             _vm.EditReturnUrl = GetReturnUrlBuffer(route);
@@ -175,15 +224,33 @@ public partial class Routes : ComponentBase
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
-            if (result.RequiresReload)
+            if (result.Outcome == RoutesVmOutcome.Success)
             {
-                await LoadAsync(reloadGrid: true);
-            }
+                // CRITICAL: Sync buffers ? DTO
+                route.AreaId = _vm.SelectedAreaId;
+                route.ClientId = _vm.SelectedClientId;
+                route.ReturnUrl = _vm.EditReturnUrl.Trim();
+                route.Priority = _vm.EditPriority;
+                route.IsActive = _vm.EditIsActive;
+                route.AreaName = areas.FirstOrDefault(a => a.Id == _vm.SelectedAreaId)?.Name;
+                route.ApplicationName = clients.FirstOrDefault(c => c.Id == _vm.SelectedClientId)?.Audience;
 
-            if (result.Outcome == RoutesVmOutcome.ValidationError)
-            {
-                routes.Remove(route);
-                await grid.Reload();
+                if (result.CreatedId.HasValue)
+                {
+                    route.Id = result.CreatedId.Value;
+                }
+
+                _routesToInsert.Remove(route);
+                _areaBuffer.Remove(route);
+                _clientBuffer.Remove(route);
+                _urlBuffer.Remove(route);
+                _priorityBuffer.Remove(route);
+                _activeBuffer.Remove(route);
+
+                if (!result.CreatedId.HasValue && result.RequiresReload)
+                {
+                    await LoadAsync(reloadGrid: true);
+                }
             }
         }
         finally
@@ -199,6 +266,10 @@ public partial class Routes : ComponentBase
             return;
         }
 
+        if (!_routesToUpdate.Contains(route))
+        {
+            _routesToUpdate.Add(route);
+        }
         await grid.EditRow(route);
     }
 
@@ -222,9 +293,25 @@ public partial class Routes : ComponentBase
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
-            if (result.RequiresReload)
+            if (result.Outcome == RoutesVmOutcome.Success)
             {
-                await LoadAsync(reloadGrid: true);
+                // CRITICAL: Sync buffers ? DTO
+                route.AreaId = _vm.SelectedAreaId;
+                route.ClientId = _vm.SelectedClientId;
+                route.ReturnUrl = _vm.EditReturnUrl.Trim();
+                route.Priority = _vm.EditPriority;
+                route.IsActive = _vm.EditIsActive;
+                route.AreaName = areas.FirstOrDefault(a => a.Id == _vm.SelectedAreaId)?.Name;
+                route.ApplicationName = clients.FirstOrDefault(c => c.Id == _vm.SelectedClientId)?.Audience;
+
+                _routesToUpdate.Remove(route);
+                _areaBuffer.Remove(route);
+                _clientBuffer.Remove(route);
+                _urlBuffer.Remove(route);
+                _priorityBuffer.Remove(route);
+                _activeBuffer.Remove(route);
+
+                await InvokeAsync(StateHasChanged);
             }
         }
         finally
@@ -276,6 +363,9 @@ public partial class Routes : ComponentBase
         _urlBuffer.Remove(route);
         _priorityBuffer.Remove(route);
         _activeBuffer.Remove(route);
+        _routesToInsert.Remove(route);
+        _routesToUpdate.Remove(route);
+        
         if (route.Id == 0)
         {
             routes.Remove(route);

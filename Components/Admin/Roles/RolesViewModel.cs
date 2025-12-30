@@ -16,9 +16,13 @@ public sealed class RolesVmResult
     public string Title { get; init; } = string.Empty;
     public string Message { get; init; } = string.Empty;
     public bool RequiresReload { get; init; }
+    public string? CreatedId { get; init; }
 
     public static RolesVmResult Success(string title, string message, bool requiresReload = true) =>
         new() { Outcome = RolesVmOutcome.Success, Title = title, Message = message, RequiresReload = requiresReload };
+
+    public static RolesVmResult CreateSuccess(string title, string message, string createdId) =>
+        new() { Outcome = RolesVmOutcome.Success, Title = title, Message = message, RequiresReload = false, CreatedId = createdId };
 
     public static RolesVmResult ValidationFailed(string title, string message) =>
         new() { Outcome = RolesVmOutcome.ValidationError, Title = title, Message = message, RequiresReload = false };
@@ -40,7 +44,6 @@ public sealed class RolesViewModel
     public List<RoleAdminDto> Roles { get; private set; } = new();
     public RoleAdminDto EditModel { get; private set; } = new() { Id = string.Empty, Name = string.Empty, UserCount = 0 };
     public string EditName { get; set; } = string.Empty;
-    public bool Editing { get; internal set; }
     public string? ValidationError { get; private set; }
 
     public async Task LoadAsync()
@@ -53,7 +56,6 @@ public sealed class RolesViewModel
         EditModel = new RoleAdminDto { Id = string.Empty, Name = string.Empty, UserCount = 0 };
         EditName = string.Empty;
         ValidationError = null;
-        Editing = true;
     }
 
     public void BeginEdit(RoleAdminDto dto)
@@ -62,41 +64,59 @@ public sealed class RolesViewModel
         EditModel = new RoleAdminDto { Id = dto.Id, Name = dto.Name, UserCount = dto.UserCount };
         EditName = dto.Name ?? string.Empty;
         ValidationError = null;
-        Editing = true;
     }
 
-    public async Task<RolesVmResult> SaveAsync()
+    public RolesVmResult ValidateOnly(string name)
     {
         ValidationError = null;
-        var name = (EditName ?? string.Empty).Trim();
+        var trimmedName = (name ?? string.Empty).Trim();
 
-        if (string.IsNullOrWhiteSpace(name))
+        if (string.IsNullOrWhiteSpace(trimmedName))
         {
             ValidationError = "El nombre del rol no puede estar vacío.";
             return RolesVmResult.ValidationFailed("Validación", ValidationError);
         }
 
-        var duplicate = Roles.Any(r => r.Id != EditModel.Id && string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
+        var duplicate = Roles.Any(r => r.Id != EditModel.Id && string.Equals(r.Name, trimmedName, StringComparison.OrdinalIgnoreCase));
         if (duplicate)
         {
             ValidationError = "Ya existe un rol con ese nombre.";
             return RolesVmResult.ValidationFailed("Validación", ValidationError);
         }
 
+        return RolesVmResult.Success("Válido", "", requiresReload: false);
+    }
+
+    public async Task<RolesVmResult> SaveAsync()
+    {
+        // Reuse validation logic to avoid duplication and rule drift
+        var validationResult = ValidateOnly(EditName);
+        if (validationResult.Outcome != RolesVmOutcome.Success)
+        {
+            return validationResult;
+        }
+
+        var name = EditName.Trim();
+
         try
         {
             if (string.IsNullOrWhiteSpace(EditModel.Id))
             {
+                // CREATE: return CreatedId so UI can set it locally without reload
                 var id = await _roleService.CreateRoleAsync(name);
-                Editing = false;
-                ValidationError = null;
-                return RolesVmResult.Success("Rol creado", $"Se creó '{name}'.");
+                if (!string.IsNullOrEmpty(id))
+                {
+                    ValidationError = null;
+                    return RolesVmResult.CreateSuccess("Rol creado", $"Se creó '{name}'.", id);
+                }
+                ValidationError = "Nombre inválido o duplicado.";
+                return RolesVmResult.ValidationFailed("Sin cambios", ValidationError);
             }
 
+            // UPDATE: no reload required; buffer?DTO sync handles display update
             await _roleService.RenameRoleAsync(EditModel.Id, name);
-            Editing = false;
             ValidationError = null;
-            return RolesVmResult.Success("Rol actualizado", $"Se actualizó '{name}'.");
+            return RolesVmResult.Success("Rol actualizado", $"Se actualizó '{name}'.", requiresReload: false);
         }
         catch (Exception ex)
         {
@@ -110,7 +130,8 @@ public sealed class RolesViewModel
         try
         {
             await _roleService.DeleteRoleAsync(roleId);
-            return RolesVmResult.Success("Rol eliminado", $"Id {roleId} eliminado.");
+            // DELETE: reload required to remove row from grid
+            return RolesVmResult.Success("Rol eliminado", $"Id {roleId} removido.", requiresReload: true);
         }
         catch (Exception ex)
         {
@@ -118,11 +139,6 @@ public sealed class RolesViewModel
         }
     }
 
-    public void CancelEdit()
-    {
-        Editing = false;
-        ValidationError = null;
-        EditName = string.Empty;
-        EditModel = new RoleAdminDto { Id = string.Empty, Name = string.Empty, UserCount = 0 };
-    }
+    // Legacy: Editing property and CancelEdit method not used by current UI
+    // Code-behind calls grid.CancelEditRow directly; consider removal in future cleanup
 }
