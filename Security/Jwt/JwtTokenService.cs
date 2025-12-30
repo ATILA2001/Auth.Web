@@ -29,38 +29,39 @@ public class JwtTokenService : IJwtTokenService
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, model.UserId),
-            new(JwtRegisteredClaimNames.Iss, _options.Issuer),
-            new(JwtRegisteredClaimNames.Aud, audience),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
             new(JwtRegisteredClaimNames.Iat, ((DateTimeOffset)now).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
         };
 
         if (!string.IsNullOrWhiteSpace(model.Email))
-        {
-            claims.Add(new Claim(ClaimTypes.Email, model.Email));
-        }
+            claims.Add(new Claim("email", model.Email));
 
         if (!string.IsNullOrWhiteSpace(model.DisplayName))
-        {
             claims.Add(new Claim("name", model.DisplayName));
-        }
 
-        foreach (var role in model.Roles)
+        if (model.Roles != null)
         {
-            claims.Add(new Claim(ClaimTypes.Role, role));
+            foreach (var role in model.Roles
+                         .Where(r => !string.IsNullOrWhiteSpace(r))
+                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                claims.Add(new Claim("roles", role));
+            }
         }
 
-        foreach (var area in model.Areas)
+        // areas: múltiples claims "areas"
+        if (model.Areas != null)
         {
-            claims.Add(new Claim("area", area));
+            foreach (var area in model.Areas
+                         .Where(a => !string.IsNullOrWhiteSpace(a))
+                         .Distinct())
+            {
+                claims.Add(new Claim("areas", area));
+            }
         }
 
-        foreach (var app in model.Apps)
-        {
-            claims.Add(new Claim("app", app));
-        }
 
-        claims.Add(new Claim("perms_ver", model.PermissionsVersion.ToString()));
+        claims.Add(new Claim("perms_version", model.PermissionsVersion.ToString(), ClaimValueTypes.Integer32));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
