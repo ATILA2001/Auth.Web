@@ -148,7 +148,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 
-// Redireccion inmediata del root a /Account/Login (HTTP 302) para evitar delay en cliente
+// Redirección inmediata del root a /Account/Login (HTTP 302) para evitar delay en cliente
 app.MapGet("/", (HttpContext ctx) =>
 {
     var returnUrl = ctx.Request.Query["returnUrl"].ToString();

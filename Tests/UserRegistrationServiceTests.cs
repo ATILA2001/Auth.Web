@@ -46,7 +46,7 @@ namespace Auth.Web.Tests
             var svc = new UserRegistrationService(ad.Object, um.Object, store.Object, new Mock<ILogger<UserRegistrationService>>().Object);
 
             var res = await svc.RegisterUserAsync(new RegisterUserRequest { Email = "a@b.com", FullName = "Name" });
-            Assert.Equal("El correo ya est· registrado.", res.Message);
+            Assert.Equal("El correo ya est√≥ registrado.", res.Message);
         }
 
         [Fact]
@@ -80,7 +80,7 @@ namespace Auth.Web.Tests
 
             var svc = new UserRegistrationService(ad.Object, um.Object, store.Object, new Mock<ILogger<UserRegistrationService>>().Object);
             var res = await svc.RegisterUserAsync(new RegisterUserRequest { Email = "e@d.com", FullName = "Valid Name" });
-            Assert.Equal("Cuenta creada correctamente. Inicie sesiÛn.", res.Message);
+            Assert.Equal("Cuenta creada correctamente. Inicie sesi√≥n.", res.Message);
         }
     }
 }

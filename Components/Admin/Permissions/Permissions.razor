@@ -6,7 +6,7 @@
 @namespace Auth.Web.Components.Admin.Permissions
 
 <RadzenHeading Size="HeadingSize.H3"
-               Text="Permisos de Página"
+               Text="Permisos de pÃ¡gina"
                Class="rz-mb-3" />
 
 @if (IsLoading)
@@ -44,7 +44,7 @@
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="PageName" Title="Página">
+                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="PageName" Title="pÃ¡gina">
                         <EditTemplate Context="p">
                             <RadzenDropDown TValue="int"
                                             Data="@pages"
@@ -57,7 +57,7 @@
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="PageUrl" Title="URL" />
-                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="ActionName" Title="Acción" >
+                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="ActionName" Title="acciÃ³n" >
                         <EditTemplate Context="p">
                             <RadzenDropDown TValue="int"
                                             Data="@actions"

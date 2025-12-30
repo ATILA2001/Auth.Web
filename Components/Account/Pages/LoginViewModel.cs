@@ -82,8 +82,8 @@ public sealed class LoginViewModel
         [Required(ErrorMessage = "Debe ingresar nombre completo.")]
         public string FullName { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Debe ingresar correo electrÛnico.")]
-        [EmailAddress(ErrorMessage = "El correo electrÛnico no es v·lido.")]
+        [Required(ErrorMessage = "Debe ingresar correo electr√≥nico.")]
+        [EmailAddress(ErrorMessage = "El correo electr√≥nico no es v√°lido.")]
         public string Email { get; set; } = string.Empty;
     }
 }

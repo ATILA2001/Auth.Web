@@ -31,11 +31,11 @@ public static class Seed
         await EnsureRoleAsync(roleManager, "Admin");
         await EnsureRoleAsync(roleManager, "Usuario");
 
-        // 羠eas requeridas
+        // 贸reas requeridas
         var areaDgayf = await EnsureAreaAsync(context, "DGAYF");
         var areaContable = await EnsureAreaAsync(context, "CONTABLE");
 
-        // Cliente 鷑ico WebsiteV2
+        // Cliente 贸nico WebsiteV2
         await EnsureClientAsync(context,
             clientId: "WebsiteV2",
             audience: "websitev2",
@@ -49,7 +49,7 @@ public static class Seed
         {
             foreach (var r in routesToFix)
             {
-                // Si ya existe una regla equivalente con WebsiteV2, eliminar la obsoleta para evitar duplicados (clave 鷑ica)
+                // Si ya existe una regla equivalente con WebsiteV2, eliminar la obsoleta para evitar duplicados (clave 贸nica)
                 var existsTarget = await context.AreaRoutes.AnyAsync(x => x.AreaId == r.AreaId && x.ClientId == "WebsiteV2" && x.ReturnUrl == r.ReturnUrl);
                 if (existsTarget)
                 {
@@ -69,11 +69,11 @@ public static class Seed
             context.ApplicationClients.Remove(obsoleteClient);
         }
 
-        // Reglas de ruteo por 醨ea (si no existen)
+        // Reglas de ruteo por 贸rea (si no existen)
         await EnsureAreaRouteAsync(context, areaDgayf.Id, clientId: "WebsiteV2", returnUrl: "http://10.10.12.37/websitev2", priority: 1);
         await EnsureAreaRouteAsync(context, areaContable.Id, clientId: "WebsiteV2", returnUrl: "http://10.10.12.37/websitev2", priority: 1);
 
-        // Usuarios locales y asignaci髇 de 醨eas
+        // Usuarios locales y asignaci贸n de 贸reas
         var userManager = scopedProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
         var user1 = await EnsureUserAsync(userManager, "n.carracedo@buenosaires.gob.ar", nombre: "N. Carracedo");

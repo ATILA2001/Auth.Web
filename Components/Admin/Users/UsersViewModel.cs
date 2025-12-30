@@ -112,7 +112,7 @@ public sealed class UsersViewModel
     {
         if (SelectedUser is null)
         {
-            return UsersVmResult.ValidationFailed("Validación", "No hay usuario seleccionado.");
+            return UsersVmResult.ValidationFailed("ValidaciÃ³n", "No hay usuario seleccionado.");
         }
 
         try
@@ -120,7 +120,7 @@ public sealed class UsersViewModel
             var userName = string.IsNullOrWhiteSpace(SelectedUser.UserName) ? "(sin nombre)" : SelectedUser.UserName;
             await _userService.UpdateUserRolesAndAreasAsync(SelectedUser.Id, SelectedRoles, SelectedAreaIds);
             SelectedUser = null;
-            return UsersVmResult.Success("Usuario actualizado", $"Se actualizaron roles/áreas de {userName}.");
+            return UsersVmResult.Success("Usuario actualizado", $"Se actualizaron roles/Ã¡reas de {userName}.");
         }
         catch (Exception ex)
         {

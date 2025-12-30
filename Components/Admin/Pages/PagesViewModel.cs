@@ -77,24 +77,24 @@ public sealed class PagesViewModel
 
         if (string.IsNullOrWhiteSpace(trimmedName))
         {
-            ValidationError = "El nombre de la p·gina no puede estar vacÌo.";
-            return PagesVmResult.ValidationFailed("ValidaciÛn", ValidationError);
+            ValidationError = "El nombre de la p√°gina no puede estar vac√≠o.";
+            return PagesVmResult.ValidationFailed("Validaci√≥n", ValidationError);
         }
 
         if (string.IsNullOrWhiteSpace(trimmedUrl))
         {
-            ValidationError = "La URL de la p·gina no puede estar vacÌa.";
-            return PagesVmResult.ValidationFailed("ValidaciÛn", ValidationError);
+            ValidationError = "La URL de la p√°gina no puede estar vac√≥a.";
+            return PagesVmResult.ValidationFailed("Validaci√≥n", ValidationError);
         }
 
         var duplicateUrl = Pages.Any(p => p.Id != EditModel.Id && string.Equals(p.Url, trimmedUrl, StringComparison.OrdinalIgnoreCase));
         if (duplicateUrl)
         {
-            ValidationError = "Ya existe una p·gina con esa URL.";
-            return PagesVmResult.ValidationFailed("ValidaciÛn", ValidationError);
+            ValidationError = "Ya existe una p√°gina con esa URL.";
+            return PagesVmResult.ValidationFailed("Validaci√≥n", ValidationError);
         }
 
-        return PagesVmResult.Success("V·lido", "", requiresReload: false);
+        return PagesVmResult.Success("V√°lido", "", requiresReload: false);
     }
 
     public async Task<PagesVmResult> SaveAsync()
@@ -118,21 +118,21 @@ public sealed class PagesViewModel
                 if (id != 0)
                 {
                     ValidationError = null;
-                    return PagesVmResult.CreateSuccess("P·gina creada", $"Se creÛ '{name}'.", id);
+                    return PagesVmResult.CreateSuccess("p√°gina creada", $"Se cre√≥ '{name}'.", id);
                 }
-                ValidationError = "Nombre inv·lido o duplicado.";
+                ValidationError = "Nombre inV√°lido o duplicado.";
                 return PagesVmResult.ValidationFailed("Sin cambios", ValidationError);
             }
 
             // UPDATE: no reload required; buffer?DTO sync handles display update
             await _pageService.UpdatePageAsync(EditModel.Id, name, url);
             ValidationError = null;
-            return PagesVmResult.Success("P·gina actualizada", $"Se actualizÛ '{name}'.", requiresReload: false);
+            return PagesVmResult.Success("p√°gina actualizada", $"Se actualiz√≥ '{name}'.", requiresReload: false);
         }
         catch (Exception ex)
         {
             ValidationError = ex.Message;
-            return PagesVmResult.Failed("Error al guardar p·gina", ex.Message);
+            return PagesVmResult.Failed("Error al guardar p√°gina", ex.Message);
         }
     }
 
@@ -142,11 +142,11 @@ public sealed class PagesViewModel
         {
             await _pageService.DeletePageAsync(id);
             // DELETE: reload required to remove row from grid
-            return PagesVmResult.Success("P·gina eliminada", $"Id {id} removido.", requiresReload: true);
+            return PagesVmResult.Success("p√°gina eliminada", $"Id {id} removido.", requiresReload: true);
         }
         catch (Exception ex)
         {
-            return PagesVmResult.Failed("Error al eliminar p·gina", ex.Message);
+            return PagesVmResult.Failed("Error al eliminar p√°gina", ex.Message);
         }
     }
 

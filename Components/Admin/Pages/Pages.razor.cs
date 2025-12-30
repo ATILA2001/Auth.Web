@@ -69,7 +69,7 @@ public partial class Pages : ComponentBase
         }
         catch (Exception ex)
         {
-            NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar las páginas.", ex.Message);
+            NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar las PÃ¡ginas.", ex.Message);
         }
         finally
         {
@@ -269,7 +269,7 @@ public partial class Pages : ComponentBase
             return;
         }
 
-        var confirm = await DialogService.Confirm("¿Eliminar la página?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
+        var confirm = await DialogService.Confirm("Eliminar la pÃ¡gina?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
         if (confirm != true)
         {
             return;

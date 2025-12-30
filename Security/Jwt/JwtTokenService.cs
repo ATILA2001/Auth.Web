@@ -49,7 +49,7 @@ public class JwtTokenService : IJwtTokenService
             }
         }
 
-        // areas: múltiples claims "areas"
+        // areas: mÃ³ltiples claims "areas"
         if (model.Areas != null)
         {
             foreach (var area in model.Areas

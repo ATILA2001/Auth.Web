@@ -87,37 +87,37 @@ public sealed class PermissionsViewModel
         if (string.IsNullOrWhiteSpace(roleId))
         {
             ValidationError = "Debe seleccionar un rol.";
-            return PermissionsVmResult.ValidationFailed("Validaci髇", ValidationError);
+            return PermissionsVmResult.ValidationFailed("Validaci贸n", ValidationError);
         }
 
         if (pageId <= 0)
         {
-            ValidationError = "Debe seleccionar una p醙ina.";
-            return PermissionsVmResult.ValidationFailed("Validaci髇", ValidationError);
+            ValidationError = "Debe seleccionar una p谩gina.";
+            return PermissionsVmResult.ValidationFailed("Validaci贸n", ValidationError);
         }
 
         if (actionId <= 0)
         {
-            ValidationError = "Debe seleccionar una acci髇.";
-            return PermissionsVmResult.ValidationFailed("Validaci髇", ValidationError);
+            ValidationError = "Debe seleccionar una acci贸n.";
+            return PermissionsVmResult.ValidationFailed("Validaci贸n", ValidationError);
         }
 
         if (!Roles.Any(r => r.Id == roleId))
         {
             ValidationError = "El rol seleccionado no existe.";
-            return PermissionsVmResult.ValidationFailed("Validaci髇", ValidationError);
+            return PermissionsVmResult.ValidationFailed("Validaci贸n", ValidationError);
         }
 
         if (!Pages.Any(p => p.Id == pageId))
         {
-            ValidationError = "La p醙ina seleccionada no existe.";
-            return PermissionsVmResult.ValidationFailed("Validaci髇", ValidationError);
+            ValidationError = "La p谩gina seleccionada no existe.";
+            return PermissionsVmResult.ValidationFailed("Validaci贸n", ValidationError);
         }
 
         if (!Actions.Any(a => a.Id == actionId))
         {
-            ValidationError = "La acci髇 seleccionada no existe.";
-            return PermissionsVmResult.ValidationFailed("Validaci髇", ValidationError);
+            ValidationError = "La acci贸n seleccionada no existe.";
+            return PermissionsVmResult.ValidationFailed("Validaci贸n", ValidationError);
         }
 
         // Check for duplicate
@@ -125,10 +125,10 @@ public sealed class PermissionsViewModel
         if (duplicate)
         {
             ValidationError = "Ya existe este permiso.";
-            return PermissionsVmResult.ValidationFailed("Validaci髇", ValidationError);
+            return PermissionsVmResult.ValidationFailed("Validaci贸n", ValidationError);
         }
 
-        return PermissionsVmResult.Success("V醠ido", "", requiresReload: false);
+        return PermissionsVmResult.Success("V贸lido", "", requiresReload: false);
     }
 
     public async Task<PermissionsVmResult> SaveAsync()

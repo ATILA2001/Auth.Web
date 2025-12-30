@@ -1,4 +1,4 @@
-using AuthClaimsModel = Auth.Web.Application.Auth.AuthClaimsModel;
+﻿using AuthClaimsModel = Auth.Web.Application.Auth.AuthClaimsModel;
 using Auth.Web.Contracts.Auth;
 using Auth.Web.Services.Abstractions.Auth;
 using Auth.Web.Services.Abstractions.Clients;
@@ -58,13 +58,13 @@ public sealed class AuthFlowService : IAuthFlowService
 
         if (string.IsNullOrWhiteSpace(dto.UserNameOrEmail) || string.IsNullOrWhiteSpace(dto.Password))
         {
-            return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contrase\u00f1a requeridos.", dto.ReturnUrl, dto.ClientId));
+            return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña requeridos.", dto.ReturnUrl, dto.ClientId));
         }
 
         var adOk = await _adAuth.ValidateCredentialsAsync(dto.UserNameOrEmail, dto.Password);
         if (!adOk)
         {
-            return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contrase\u00f1a inv\u00e1lidos.", dto.ReturnUrl, dto.ClientId));
+            return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
         }
 
         var user = await _userManagement.FindByNameAsync(dto.UserNameOrEmail)
@@ -88,11 +88,11 @@ public sealed class AuthFlowService : IAuthFlowService
             client = await _clientService.GetAsync(dto.ClientId);
             if (client is null)
             {
-                return await FinalizeResultAsync(BuildLoginRedirect("invalid_client", "Aplicaci\u00f3n destino inv\u00e1lida.", dto.ReturnUrl, dto.ClientId));
+                return await FinalizeResultAsync(BuildLoginRedirect("invalid_client", "Aplicación destino inválida.", dto.ReturnUrl, dto.ClientId));
             }
             if (!_clientService.IsReturnUrlAllowed(client, dto.ReturnUrl))
             {
-                return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "URL de retorno inv\u00e1lida.", dto.ReturnUrl, dto.ClientId));
+                return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "URL de retorno inválida.", dto.ReturnUrl, dto.ClientId));
             }
             clientId = dto.ClientId;
             returnUrl = dto.ReturnUrl;
@@ -102,14 +102,14 @@ public sealed class AuthFlowService : IAuthFlowService
             var routing = await _routingService.ResolveForUserAsync(user.Id);
             if (routing is null)
             {
-                return await FinalizeResultAsync(BuildLoginRedirect("no_route", "No se encontr\u00f3 una aplicaci\u00f3n de destino para el usuario.", dto.ReturnUrl, dto.ClientId));
+                return await FinalizeResultAsync(BuildLoginRedirect("no_route", "No se encontró una aplicación de destino para el usuario.", dto.ReturnUrl, dto.ClientId));
             }
             clientId = routing.Value.ClientId;
             returnUrl = routing.Value.ReturnUrl;
             client = await _clientService.GetAsync(clientId);
             if (client is null || !_clientService.IsReturnUrlAllowed(client, returnUrl))
             {
-                return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "Aplicaci\u00f3n o URL de retorno inv\u00e1lida.", dto.ReturnUrl, dto.ClientId));
+                return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "Aplicación o URL de retorno inválida.", dto.ReturnUrl, dto.ClientId));
             }
         }
 

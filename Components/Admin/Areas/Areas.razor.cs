@@ -62,7 +62,7 @@ public partial class Areas : ComponentBase
         }
         catch (Exception ex)
         {
-            NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar las áreas.", ex.Message);
+            NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar las Ã¡reas.", ex.Message);
         }
         finally
         {
@@ -239,7 +239,7 @@ public partial class Areas : ComponentBase
             return;
         }
 
-        var confirm = await DialogService.Confirm("¿Eliminar el área?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
+        var confirm = await DialogService.Confirm("Eliminar el Ã¡rea?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
         if (confirm != true)
         {
             return;

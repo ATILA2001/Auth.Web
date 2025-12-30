@@ -73,18 +73,18 @@ public sealed class RolesViewModel
 
         if (string.IsNullOrWhiteSpace(trimmedName))
         {
-            ValidationError = "El nombre del rol no puede estar vacío.";
-            return RolesVmResult.ValidationFailed("Validación", ValidationError);
+            ValidationError = "El nombre del rol no puede estar vacÃ­o.";
+            return RolesVmResult.ValidationFailed("ValidaciÃ³n", ValidationError);
         }
 
         var duplicate = Roles.Any(r => r.Id != EditModel.Id && string.Equals(r.Name, trimmedName, StringComparison.OrdinalIgnoreCase));
         if (duplicate)
         {
             ValidationError = "Ya existe un rol con ese nombre.";
-            return RolesVmResult.ValidationFailed("Validación", ValidationError);
+            return RolesVmResult.ValidationFailed("ValidaciÃ³n", ValidationError);
         }
 
-        return RolesVmResult.Success("Válido", "", requiresReload: false);
+        return RolesVmResult.Success("VÃ¡lido", "", requiresReload: false);
     }
 
     public async Task<RolesVmResult> SaveAsync()
@@ -107,16 +107,16 @@ public sealed class RolesViewModel
                 if (!string.IsNullOrEmpty(id))
                 {
                     ValidationError = null;
-                    return RolesVmResult.CreateSuccess("Rol creado", $"Se creó '{name}'.", id);
+                    return RolesVmResult.CreateSuccess("Rol creado", $"Se creÃ³ '{name}'.", id);
                 }
-                ValidationError = "Nombre inválido o duplicado.";
+                ValidationError = "Nombre inVÃ¡lido o duplicado.";
                 return RolesVmResult.ValidationFailed("Sin cambios", ValidationError);
             }
 
             // UPDATE: no reload required; buffer?DTO sync handles display update
             await _roleService.RenameRoleAsync(EditModel.Id, name);
             ValidationError = null;
-            return RolesVmResult.Success("Rol actualizado", $"Se actualizó '{name}'.", requiresReload: false);
+            return RolesVmResult.Success("Rol actualizado", $"Se actualizÃ³ '{name}'.", requiresReload: false);
         }
         catch (Exception ex)
         {

@@ -73,18 +73,18 @@ public sealed class ActionsViewModel
 
         if (string.IsNullOrWhiteSpace(trimmedName))
         {
-            ValidationError = "El nombre de la acción no puede estar vacío.";
-            return ActionsVmResult.ValidationFailed("Validación", ValidationError);
+            ValidationError = "El nombre de la acciÃ³n no puede estar vacÃ­o.";
+            return ActionsVmResult.ValidationFailed("ValidaciÃ³n", ValidationError);
         }
 
         var duplicate = Actions.Any(a => a.Id != EditModel.Id && string.Equals(a.Name, trimmedName, StringComparison.OrdinalIgnoreCase));
         if (duplicate)
         {
-            ValidationError = "Ya existe una acción con ese nombre.";
-            return ActionsVmResult.ValidationFailed("Validación", ValidationError);
+            ValidationError = "Ya existe una acciÃ³n con ese nombre.";
+            return ActionsVmResult.ValidationFailed("ValidaciÃ³n", ValidationError);
         }
 
-        return ActionsVmResult.Success("Válido", "", requiresReload: false);
+        return ActionsVmResult.Success("VÃ¡lido", "", requiresReload: false);
     }
 
     public async Task<ActionsVmResult> SaveAsync()
@@ -107,21 +107,21 @@ public sealed class ActionsViewModel
                 if (id != 0)
                 {
                     ValidationError = null;
-                    return ActionsVmResult.CreateSuccess("Acción creada", $"Se creó '{name}'.", id);
+                    return ActionsVmResult.CreateSuccess("acciÃ³n creada", $"Se creÃ³ '{name}'.", id);
                 }
-                ValidationError = "Nombre inválido o duplicado.";
+                ValidationError = "Nombre inVÃ¡lido o duplicado.";
                 return ActionsVmResult.ValidationFailed("Sin cambios", ValidationError);
             }
 
             // UPDATE: no reload required; buffer?DTO sync handles display update
             await _actionService.UpdateActionAsync(EditModel.Id, name);
             ValidationError = null;
-            return ActionsVmResult.Success("Acción actualizada", $"Se actualizó '{name}'.", requiresReload: false);
+            return ActionsVmResult.Success("acciÃ³n actualizada", $"Se actualizÃ³ '{name}'.", requiresReload: false);
         }
         catch (Exception ex)
         {
             ValidationError = ex.Message;
-            return ActionsVmResult.Failed("Error al guardar acción", ex.Message);
+            return ActionsVmResult.Failed("Error al guardar acciÃ³n", ex.Message);
         }
     }
 
@@ -131,11 +131,11 @@ public sealed class ActionsViewModel
         {
             await _actionService.DeleteActionAsync(id);
             // DELETE: reload required to remove row from grid
-            return ActionsVmResult.Success("Acción eliminada", $"Id {id} removido.", requiresReload: true);
+            return ActionsVmResult.Success("acciÃ³n eliminada", $"Id {id} removido.", requiresReload: true);
         }
         catch (Exception ex)
         {
-            return ActionsVmResult.Failed("Error al eliminar acción", ex.Message);
+            return ActionsVmResult.Failed("Error al eliminar acciÃ³n", ex.Message);
         }
     }
 

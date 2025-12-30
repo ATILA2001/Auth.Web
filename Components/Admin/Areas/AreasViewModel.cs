@@ -73,18 +73,18 @@ public sealed class AreasViewModel
 
         if (string.IsNullOrWhiteSpace(trimmedName))
         {
-            ValidationError = "El nombre del área no puede estar vacío.";
-            return AreasVmResult.ValidationFailed("Validación", ValidationError);
+            ValidationError = "El nombre del Ã¡rea no puede estar vacÃ­o.";
+            return AreasVmResult.ValidationFailed("ValidaciÃ³n", ValidationError);
         }
 
         var duplicate = Areas.Any(a => a.Id != EditModel.Id && string.Equals(a.Name, trimmedName, StringComparison.OrdinalIgnoreCase));
         if (duplicate)
         {
-            ValidationError = "Ya existe un área con ese nombre.";
-            return AreasVmResult.ValidationFailed("Validación", ValidationError);
+            ValidationError = "Ya existe un Ã¡rea con ese nombre.";
+            return AreasVmResult.ValidationFailed("ValidaciÃ³n", ValidationError);
         }
 
-        return AreasVmResult.Success("Válido", "", requiresReload: false);
+        return AreasVmResult.Success("VÃ¡lido", "", requiresReload: false);
     }
 
     public async Task<AreasVmResult> SaveAsync()
@@ -107,21 +107,21 @@ public sealed class AreasViewModel
                 if (id != 0)
                 {
                     ValidationError = null;
-                    return AreasVmResult.CreateSuccess("Área creada", $"Se creó '{name}'.", id);
+                    return AreasVmResult.CreateSuccess("Ã¡rea creada", $"Se creÃ³ '{name}'.", id);
                 }
-                ValidationError = "Nombre inválido o duplicado.";
+                ValidationError = "Nombre inVÃ¡lido o duplicado.";
                 return AreasVmResult.ValidationFailed("Sin cambios", ValidationError);
             }
 
             // UPDATE: no reload required; buffer?DTO sync handles display update
             await _areaService.UpdateAreaAsync(EditModel.Id, name);
             ValidationError = null;
-            return AreasVmResult.Success("Área actualizada", $"Se actualizó '{name}'.", requiresReload: false);
+            return AreasVmResult.Success("Ã¡rea actualizada", $"Se actualizÃ³ '{name}'.", requiresReload: false);
         }
         catch (Exception ex)
         {
             ValidationError = ex.Message;
-            return AreasVmResult.Failed("Error al guardar área", ex.Message);
+            return AreasVmResult.Failed("Error al guardar Ã¡rea", ex.Message);
         }
     }
 
@@ -131,11 +131,11 @@ public sealed class AreasViewModel
         {
             await _areaService.DeleteAreaAsync(id);
             // DELETE: reload required to remove row from grid
-            return AreasVmResult.Success("Área eliminada", $"Id {id} removido.", requiresReload: true);
+            return AreasVmResult.Success("Ã¡rea eliminada", $"Id {id} removido.", requiresReload: true);
         }
         catch (Exception ex)
         {
-            return AreasVmResult.Failed("Error al eliminar área", ex.Message);
+            return AreasVmResult.Failed("Error al eliminar Ã¡rea", ex.Message);
         }
     }
 

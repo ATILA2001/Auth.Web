@@ -1,7 +1,7 @@
 @page "/Account/Login"
 @rendermode InteractiveServer
 
-<PageTitle>Inicio de sesi髇</PageTitle>
+<PageTitle>Inicio de sesi贸n</PageTitle>
 
 <div class="container-fluid vh-100 d-flex justify-content-center align-items-center">
     <div class="row justify-content-center w-100">
@@ -9,10 +9,10 @@
             <RadzenCard Class="rz-shadow-3 rz-p-4">
                 <RadzenTabs @bind-Value="selectedTabIndex">
                     <Tabs>
-                        <RadzenTabsItem Text="INICIAR SESI覰">
+                        <RadzenTabsItem Text="INICIAR SESI脫N">
                             <ChildContent>
                                 <RadzenStack Orientation="Orientation.Vertical" Gap="1.25rem">
-                                    <RadzenLabel Text="Use sus credenciales de Windows para iniciar sesi髇." />
+                                    <RadzenLabel Text="Use sus credenciales de Windows para iniciar sesi贸n." />
 
                                     @if (!string.IsNullOrWhiteSpace(ErrorMessage))
                                     {
@@ -28,12 +28,12 @@
                                         <RadzenStack Orientation="Orientation.Vertical" Gap="1.25rem">
                                             <RadzenTextBox Name="UserNameOrEmail"
                                                            Style="width:100%"
-                                                           Placeholder="Correo electr髇ico / CUIL"
+                                                           Placeholder="Correo electr贸nico / CUIL"
                                                            @bind-Value="loginUser" />
 
                                             <RadzenPassword Name="Password"
                                                             Style="width:100%"
-                                                            Placeholder="Contrase馻" />
+                                                            Placeholder="Contrase帽a" />
 
                                             <input type="hidden" name="ReturnUrl" value="@(ReturnUrlFromQuery ?? string.Empty)" />
                                             <input type="hidden" name="ClientId" value="@(ClientIdFromQuery ?? string.Empty)" />
@@ -71,7 +71,7 @@
                                                        Placeholder="Nombre completo"
                                                        Style="width:100%" />
                                         <RadzenTextBox @bind-Value="RegInput.Email"
-                                                       Placeholder="Correo electr髇ico"
+                                                       Placeholder="Correo electr贸nico"
                                                        Style="width:100%" />
                                         <RadzenButton ButtonStyle="ButtonStyle.Primary"
                                                       Text="Registrarse"

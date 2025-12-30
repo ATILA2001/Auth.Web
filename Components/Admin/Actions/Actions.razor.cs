@@ -239,7 +239,7 @@ public partial class Actions : ComponentBase
             return;
         }
 
-        var confirm = await DialogService.Confirm("¿Eliminar la acción?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
+        var confirm = await DialogService.Confirm("Eliminar la acciÃ³n?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
         if (confirm != true)
         {
             return;

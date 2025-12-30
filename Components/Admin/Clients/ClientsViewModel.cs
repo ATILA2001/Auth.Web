@@ -92,14 +92,14 @@ public sealed class ClientsViewModel
 
         if (string.IsNullOrWhiteSpace(trimmedClientId))
         {
-            ValidationError = "El ClientId no puede estar vacío.";
-            return ClientsVmResult.ValidationFailed("Validación", ValidationError);
+            ValidationError = "El ClientId no puede estar vacÃ­o.";
+            return ClientsVmResult.ValidationFailed("ValidaciÃ³n", ValidationError);
         }
 
         if (string.IsNullOrWhiteSpace(trimmedAudience))
         {
-            ValidationError = "El Audience no puede estar vacío.";
-            return ClientsVmResult.ValidationFailed("Validación", ValidationError);
+            ValidationError = "El Audience no puede estar vacÃ­o.";
+            return ClientsVmResult.ValidationFailed("ValidaciÃ³n", ValidationError);
         }
 
         var duplicate = Clients.Any(c => c.Id != EditModel.Id && 
@@ -107,10 +107,10 @@ public sealed class ClientsViewModel
         if (duplicate)
         {
             ValidationError = "Ya existe un cliente con ese ClientId.";
-            return ClientsVmResult.ValidationFailed("Validación", ValidationError);
+            return ClientsVmResult.ValidationFailed("ValidaciÃ³n", ValidationError);
         }
 
-        return ClientsVmResult.Success("Válido", "", requiresReload: false);
+        return ClientsVmResult.Success("VÃ¡lido", "", requiresReload: false);
     }
 
     public async Task<ClientsVmResult> SaveAsync()
@@ -135,16 +135,16 @@ public sealed class ClientsViewModel
                 if (id != 0)
                 {
                     ValidationError = null;
-                    return ClientsVmResult.CreateSuccess("Cliente creado", $"Se creó '{clientId}'.", id);
+                    return ClientsVmResult.CreateSuccess("Cliente creado", $"Se creÃ³ '{clientId}'.", id);
                 }
-                ValidationError = "Nombre inválido o duplicado.";
+                ValidationError = "Nombre inVÃ¡lido o duplicado.";
                 return ClientsVmResult.ValidationFailed("Sin cambios", ValidationError);
             }
 
             // UPDATE: no reload required; buffer?DTO sync handles display update
             await _clientService.UpdateClientAsync(EditModel.Id, clientId, audience, urls);
             ValidationError = null;
-            return ClientsVmResult.Success("Cliente actualizado", $"Se actualizó '{clientId}'.", requiresReload: false);
+            return ClientsVmResult.Success("Cliente actualizado", $"Se actualizÃ³ '{clientId}'.", requiresReload: false);
         }
         catch (Exception ex)
         {

@@ -59,7 +59,7 @@ public partial class AdminLayout : LayoutComponentBase, IDisposable
         }
         catch (Exception ex)
         {
-            NotificationService.Notify(NotificationSeverity.Error, "No se pudo cargar la información inicial.", ex.Message);
+            NotificationService.Notify(NotificationSeverity.Error, "No se pudo cargar la informaciÃ³n inicial.", ex.Message);
         }
     }
 

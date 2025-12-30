@@ -6,13 +6,13 @@ public class AreaRoute
 
     public int AreaId { get; set; }
 
-    // ClientId de ApplicationClient (FK lÛgica por string)
+    // ClientId de ApplicationClient (FK l√≥gica por string)
     public string ClientId { get; set; } = string.Empty;
 
     // Debe estar incluida en AllowedReturnUrlsJson del cliente
     public string ReturnUrl { get; set; } = string.Empty;
 
-    // Menor prioridad => se eval˙a primero
+    // Menor prioridad => se eval√≥a primero
     public int Priority { get; set; } = 1;
 
     public bool IsActive { get; set; } = true;

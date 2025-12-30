@@ -47,7 +47,7 @@
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Áreas" Filterable="false">
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Ã¡reas" Filterable="false">
                         <Template Context="u">@string.Join(", ", u.Areas)</Template>
                         <EditTemplate Context="u">
                             <RadzenDropDown TValue="IEnumerable<int>"

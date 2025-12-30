@@ -32,7 +32,7 @@
                     </RadzenStack>
                 </HeaderTemplate>
                 <Columns>
-                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="AreaName" Title="Área">
+                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="AreaName" Title="Ã¡rea">
                         <EditTemplate Context="r">
                             <RadzenDropDown TValue="int"
                                             Data="@areas"
@@ -44,7 +44,7 @@
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="ApplicationName" Title="Aplicación">
+                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="ApplicationName" Title="AplicaciÃ³n">
                         <EditTemplate Context="r">
                             <RadzenDropDown TValue="int"
                                             Data="@clients"

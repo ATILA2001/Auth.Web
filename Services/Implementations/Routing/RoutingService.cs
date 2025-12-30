@@ -31,7 +31,7 @@ public sealed class RoutingService : IRoutingService
 
         if (areaIds.Count == 0)
         {
-            _logger.LogInformation("Routing: usuario {UserId} sin áreas asignadas", userId);
+            _logger.LogInformation("Routing: usuario {UserId} sin Ã¡reas asignadas", userId);
             return null;
         }
 

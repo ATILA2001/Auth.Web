@@ -305,7 +305,7 @@ public partial class Clients : ComponentBase
             return;
         }
 
-        var confirm = await DialogService.Confirm("¿Eliminar el cliente?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
+        var confirm = await DialogService.Confirm("Eliminar el cliente?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
         if (confirm != true)
         {
             return;

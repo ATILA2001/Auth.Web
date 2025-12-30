@@ -327,7 +327,7 @@ public partial class Routes : ComponentBase
             return;
         }
 
-        var confirm = await DialogService.Confirm("¿Eliminar la ruta?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
+        var confirm = await DialogService.Confirm("Eliminar la ruta?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
         if (confirm != true)
         {
             return;

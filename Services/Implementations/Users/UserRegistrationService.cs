@@ -39,7 +39,7 @@ public sealed class UserRegistrationService : IUserRegistrationService
         var existing = await _userManager.FindByEmailAsync(email);
         if (existing is not null)
         {
-            return RegisterUserResult.AlreadyExists("El correo ya est· registrado.");
+            return RegisterUserResult.AlreadyExists("El correo ya est√° registrado.");
         }
 
         var existsInAd = await _adAuth.ExistsByEmailAsync(email);
@@ -60,7 +60,7 @@ public sealed class UserRegistrationService : IUserRegistrationService
         }
 
         _logger.LogInformation("Usuario creado sin password local (AD-backed).");
-        return RegisterUserResult.Success("Cuenta creada correctamente. Inicie sesiÛn.");
+        return RegisterUserResult.Success("Cuenta creada correctamente. Inicie sesi√≥n.");
     }
 
     private IUserEmailStore<ApplicationUser> GetEmailStore()

@@ -94,30 +94,30 @@ public sealed class RoutesViewModel
 
         if (areaId <= 0)
         {
-            ValidationError = "Debe seleccionar un área.";
-            return RoutesVmResult.ValidationFailed("Validación", ValidationError);
+            ValidationError = "Debe seleccionar un Ã¡rea.";
+            return RoutesVmResult.ValidationFailed("ValidaciÃ³n", ValidationError);
         }
 
         if (clientId <= 0)
         {
             ValidationError = "Debe seleccionar un cliente.";
-            return RoutesVmResult.ValidationFailed("Validación", ValidationError);
+            return RoutesVmResult.ValidationFailed("ValidaciÃ³n", ValidationError);
         }
 
         var normalizedUrl = (returnUrl ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(normalizedUrl))
         {
-            ValidationError = "La URL de retorno no puede estar vacía.";
-            return RoutesVmResult.ValidationFailed("Validación", ValidationError);
+            ValidationError = "La URL de retorno no puede estar vacÃ­a.";
+            return RoutesVmResult.ValidationFailed("ValidaciÃ³n", ValidationError);
         }
 
         if (priority <= 0)
         {
             ValidationError = "La prioridad debe ser mayor a 0.";
-            return RoutesVmResult.ValidationFailed("Validación", ValidationError);
+            return RoutesVmResult.ValidationFailed("ValidaciÃ³n", ValidationError);
         }
 
-        return RoutesVmResult.Success("Válido", "", requiresReload: false);
+        return RoutesVmResult.Success("VÃ¡lido", "", requiresReload: false);
     }
 
     public async Task<RoutesVmResult> SaveAsync()
@@ -141,7 +141,7 @@ public sealed class RoutesViewModel
                 if (id != 0)
                 {
                     ValidationError = null;
-                    return RoutesVmResult.CreateSuccess("Ruta creada", $"Se creó la ruta.", id);
+                    return RoutesVmResult.CreateSuccess("Ruta creada", $"Se creÃ³ la ruta.", id);
                 }
                 ValidationError = "No se pudo crear la ruta.";
                 return RoutesVmResult.ValidationFailed("Sin cambios", ValidationError);
@@ -150,7 +150,7 @@ public sealed class RoutesViewModel
             // UPDATE: no reload required; buffer?DTO sync handles display update
             await _routingService.UpdateRouteAsync(EditModel.Id, SelectedAreaId, SelectedClientId, normalizedUrl, priority, EditIsActive);
             ValidationError = null;
-            return RoutesVmResult.Success("Ruta actualizada", $"Se actualizó la ruta.", requiresReload: false);
+            return RoutesVmResult.Success("Ruta actualizada", $"Se actualizÃ³ la ruta.", requiresReload: false);
         }
         catch (Exception ex)
         {

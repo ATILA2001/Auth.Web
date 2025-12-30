@@ -4,6 +4,6 @@ namespace Auth.Web.Components.Layout
 {
     public partial class MainLayout : LayoutComponentBase
     {
-        // Layout simple, sin lógica adicional.
+        // Layout simple, sin lÃ³gica adicional.
     }
 }
