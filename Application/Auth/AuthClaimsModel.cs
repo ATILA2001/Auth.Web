@@ -9,4 +9,5 @@ public sealed class AuthClaimsModel
     public IReadOnlyCollection<string> Areas { get; init; } = Array.Empty<string>();
     public IReadOnlyCollection<string> Apps { get; init; } = Array.Empty<string>();
     public int PermissionsVersion { get; init; } = 1;
+    public string PermissionsJson { get; init; } = "{}";
 }

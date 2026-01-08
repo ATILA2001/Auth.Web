@@ -1,5 +1,4 @@
 using System.Threading;
-using AuthClaimsModel = Auth.Web.Application.Auth.AuthClaimsModel;
 using Auth.Web.Application.Permissions;
 using Auth.Web.Application.Permissions.Dtos;
 using Auth.Web.Contracts.Auth;
@@ -12,6 +11,8 @@ using Auth.Web.Services.Abstractions.Routing;
 using Auth.Web.Services.Abstractions.Users;
 using Auth.Web.Services.Implementations.Auth;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authentication;
 using Moq;
 using Xunit;
 
@@ -24,24 +25,28 @@ public class AuthFlowServiceTests
         Mock<IClientService>? client = null,
         Mock<IRoutingService>? routing = null,
         Mock<IPermissionService>? perms = null,
-        Mock<IJwtTokenService>? jwt = null,
         Mock<IUserManagementService>? userManagement = null,
         Mock<IUserProvisioningService>? provisioning = null,
         UserPermissionsAssembler? assembler = null,
-        Mock<IAdminSignInService>? adminSignIn = null)
+        Mock<IAdminSignInService>? adminSignIn = null,
+        Mock<IAuthenticationService>? authService = null,
+        IHttpContextAccessor? httpContextAccessor = null)
     {
         ad ??= new Mock<IActiveDirectoryAuthService>();
         client ??= new Mock<IClientService>();
         routing ??= new Mock<IRoutingService>();
         perms ??= new Mock<IPermissionService>();
-        jwt ??= new Mock<IJwtTokenService>();
 
         userManagement ??= new Mock<IUserManagementService>();
         provisioning ??= new Mock<IUserProvisioningService>();
         assembler ??= new UserPermissionsAssembler();
         adminSignIn ??= new Mock<IAdminSignInService>();
 
-        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, jwt.Object, provisioning.Object, assembler, adminSignIn.Object);
+        var ctx = new DefaultHttpContext();
+        httpContextAccessor ??= new HttpContextAccessor { HttpContext = ctx };
+        authService ??= new Mock<IAuthenticationService>();
+
+        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, provisioning.Object, assembler, adminSignIn.Object, authService.Object, httpContextAccessor);
     }
 
     /// <summary>
@@ -89,7 +94,7 @@ public class AuthFlowServiceTests
     }
 
     [Fact]
-    public async Task Login_NonAdmin_SuccessExternalWithToken()
+    public async Task Login_NonAdmin_Success_With_Cookie_SignIn()
     {
         var ad = new Mock<IActiveDirectoryAuthService>();
         ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
@@ -111,17 +116,17 @@ public class AuthFlowServiceTests
         var perms = new Mock<IPermissionService>();
         perms.Setup(x => x.GetAsync(userName)).ReturnsAsync(new UserPermissionsDto { Areas = new List<int> { 1 }, Version = 1 });
 
-        var jwt = new Mock<IJwtTokenService>();
-        jwt.Setup(x => x.CreateToken(It.IsAny<AuthClaimsModel>(), client.Audience)).Returns("TOKEN_X");
+        var authService = new Mock<IAuthenticationService>();
 
         var assembler = new UserPermissionsAssembler();
 
-        var svc = CreateService(ad: ad, client: clientSvc, routing: routing, perms: perms, jwt: jwt, userManagement: userManagement, assembler: assembler);
+        var svc = CreateService(ad: ad, client: clientSvc, routing: routing, perms: perms, userManagement: userManagement, assembler: assembler, authService: authService);
         var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = userName, Password = "pwd" });
 
         Assert.False(outcome.SignInAdmin);
         Assert.NotNull(outcome.RedirectUrl);
-        Assert.Contains("token=TOKEN_X", outcome.RedirectUrl);
+        Assert.Equal("https://app/landing", outcome.RedirectUrl);
+        authService.Verify(x => x.SignInAsync(It.IsAny<HttpContext>(), IdentityConstants.ApplicationScheme, It.IsAny<System.Security.Claims.ClaimsPrincipal>(), It.IsAny<AuthenticationProperties>()), Times.Once);
     }
 
     [Fact]

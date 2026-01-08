@@ -49,11 +49,11 @@ public class ConnectControllerTests
     {
         var authFlow = new Mock<IAuthFlowService>();
         authFlow.Setup(x => x.LoginAsync(It.IsAny<LoginRequestDto>()))
-            .ReturnsAsync(new LoginResult { SignInAdmin = false, RedirectUrl = "https://app?token=XYZ" });
+            .ReturnsAsync(new LoginResult { SignInAdmin = false, RedirectUrl = "https://app" });
         var controller = CreateController(authFlow.Object);
         var result = await controller.Login(new LoginRequestDto { UserNameOrEmail = "user@corp", Password = "pwd" });
         var redirect = Assert.IsType<RedirectResult>(result);
-        Assert.Equal("https://app?token=XYZ", redirect.Url);
+        Assert.Equal("https://app", redirect.Url);
     }
 
     [Fact]

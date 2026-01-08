@@ -1,6 +1,7 @@
 using Auth.Web.Application.Auth;
 using Auth.Web.Application.Permissions.Dtos;
 using Auth.Web.Data.Entities;
+using System.Text.Json;
 
 namespace Auth.Web.Application.Permissions;
 
@@ -12,6 +13,25 @@ public sealed class UserPermissionsAssembler
         // Areas: convertir a string para claims (usar Id numérico como string)
         var areaCodes = rawPermissions.Areas.Select(a => a.ToString()).ToArray();
 
+        // Serializar permisos por página/acción en JSON compacto (camelCase)
+        var permissionsPayload = new
+        {
+            pages = rawPermissions.Pages
+                .Select(p => new
+                {
+                    url = p.Url,
+                    actions = p.Actions.Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+                })
+                .ToArray(),
+            version = rawPermissions.Version
+        };
+
+        var permissionsJson = JsonSerializer.Serialize(permissionsPayload, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = false
+        });
+
         return new AuthClaimsModel
         {
             UserId = user.Id,
@@ -20,7 +40,8 @@ public sealed class UserPermissionsAssembler
             Roles = roles.ToArray(),
             Areas = areaCodes,
             Apps = apps.ToArray(),
-            PermissionsVersion = rawPermissions.Version
+            PermissionsVersion = rawPermissions.Version,
+            PermissionsJson = permissionsJson
         };
     }
 }

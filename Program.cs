@@ -4,11 +4,12 @@ using Auth.Web.Components.Account;
 using Auth.Web.Configuration;
 using Auth.Web.Data;
 using Auth.Web.Data.Entities;
-using Auth.Web.Security.Jwt;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
 using Auth.Web.Services.Abstractions.Auth;
 using Auth.Web.Services.Abstractions.Users;
 using Auth.Web.Services.Abstractions.Admin;
@@ -42,9 +43,12 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddRadzenComponents();
 
-builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<AdOptions>(builder.Configuration.GetSection("ActiveDirectory"));
 builder.Services.Configure<FeatureOptions>(builder.Configuration.GetSection("Features"));
+
+var sharedCookieName = builder.Configuration["SharedCookie:Name"] ?? ".Auth.Shared";
+var sharedCookieDomain = builder.Configuration["SharedCookie:Domain"];
+var dataProtectionAppName = builder.Configuration["SharedCookie:ApplicationName"] ?? "Auth.SharedCookie";
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -62,12 +66,27 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
+builder.Services.AddDataProtection()
+    .PersistKeysToDbContext<AuthDbContext>()
+    .SetApplicationName(dataProtectionAppName);
+
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = IdentityConstants.ApplicationScheme;
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
     })
     .AddIdentityCookies();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.Name = sharedCookieName;
+    options.Cookie.Domain = string.IsNullOrWhiteSpace(sharedCookieDomain) ? null : sharedCookieDomain;
+    options.Cookie.SameSite = SameSiteMode.None;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.HttpOnly = true;
+    options.SlidingExpiration = true;
+    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+});
 
 builder.Services.AddAuthorization();
 
@@ -87,7 +106,6 @@ else
 {
     builder.Services.AddScoped<IActiveDirectoryAuthService, NoopAdAuthService>();
 }
-builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAdminSignInService, AdminSignInService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IClientService, ClientService>();
