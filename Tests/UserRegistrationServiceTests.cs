@@ -46,7 +46,7 @@ namespace Auth.Web.Tests
             var svc = new UserRegistrationService(ad.Object, um.Object, store.Object, new Mock<ILogger<UserRegistrationService>>().Object);
 
             var res = await svc.RegisterUserAsync(new RegisterUserRequest { Email = "a@b.com", FullName = "Name" });
-            Assert.Equal("El correo ya estó registrado.", res.Message);
+            Assert.Equal("El correo ya está registrado.", res.Message);
         }
 
         [Fact]

@@ -10,6 +10,7 @@ using Auth.Web.Services.Abstractions.Clients;
 using Auth.Web.Services.Abstractions.Permissions;
 using Auth.Web.Services.Abstractions.Routing;
 using Auth.Web.Services.Abstractions.Users;
+using Auth.Web.Services.Implementations.Auth;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 using Xunit;
@@ -18,7 +19,7 @@ namespace Auth.Web.Tests;
 
 public class AuthFlowServiceTests
 {
-    private static Services.Implementations.Auth.AuthFlowService CreateService(
+    private static AuthFlowService CreateService(
         Mock<IActiveDirectoryAuthService>? ad = null,
         Mock<IClientService>? client = null,
         Mock<IRoutingService>? routing = null,
@@ -40,7 +41,7 @@ public class AuthFlowServiceTests
         assembler ??= new UserPermissionsAssembler();
         adminSignIn ??= new Mock<IAdminSignInService>();
 
-        return new Services.Implementations.Auth.AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, jwt.Object, provisioning.Object, assembler, adminSignIn.Object);
+        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, jwt.Object, provisioning.Object, assembler, adminSignIn.Object);
     }
 
     /// <summary>
