@@ -34,6 +34,7 @@ using Auth.Web.Repositories.Abstractions.Routing;
 using Auth.Web.Repositories.Implementations.Routing;
 using Auth.Web.Repositories.Abstractions.Clients;
 using Auth.Web.Repositories.Implementations.Clients;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,7 +55,9 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 builder.Services.AddDbContextFactory<AuthDbContext>(options => options.UseSqlServer(connectionString));
-builder.Services.AddDbContext<AuthDbContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddDbContext<AuthDbContext>(
+    options => options.UseSqlServer(connectionString),
+    optionsLifetime: ServiceLifetime.Singleton);
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
@@ -149,6 +152,10 @@ builder.Services.AddAuthorizationBuilder()
 
 var app = builder.Build();
 
+// Ensure database migrations and seed run before any middleware/components that may use
+// data protection (shared cookie SSO) so the DataProtectionKeys table exists.
+await Seed.RunAsync(app.Services);
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -181,7 +188,5 @@ app.MapAdditionalIdentityEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-
-await Seed.RunAsync(app.Services);
 
 app.Run();
