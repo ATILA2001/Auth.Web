@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.WebUtilities;
 using Auth.Web.Services.Abstractions.Auth.Models;
 using Auth.Web.Application.Permissions;
 using Auth.Web.Data.Entities;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
 
 namespace Auth.Web.Services.Implementations.Auth;
 
@@ -19,10 +22,11 @@ public sealed class AuthFlowService : IAuthFlowService
     private readonly IPermissionService _permissionService;
     private readonly IRoutingService _routingService;
     private readonly IClientService _clientService;
-    private readonly IJwtTokenService _jwtTokenService;
     private readonly IUserProvisioningService _userProvisioningService;
     private readonly UserPermissionsAssembler _permissionsAssembler;
     private readonly IAdminSignInService _adminSignInService;
+    private readonly IAuthenticationService _authenticationService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public AuthFlowService(
         IActiveDirectoryAuthService adAuth,
@@ -30,20 +34,22 @@ public sealed class AuthFlowService : IAuthFlowService
         IPermissionService permissionService,
         IRoutingService routingService,
         IClientService clientService,
-        IJwtTokenService jwtTokenService,
         IUserProvisioningService userProvisioningService,
         UserPermissionsAssembler permissionsAssembler,
-        IAdminSignInService adminSignInService)
+        IAdminSignInService adminSignInService,
+        IAuthenticationService authenticationService,
+        IHttpContextAccessor httpContextAccessor)
     {
         _adAuth = adAuth;
         _userManagement = userManagement;
         _permissionService = permissionService;
         _routingService = routingService;
         _clientService = clientService;
-        _jwtTokenService = jwtTokenService;
         _userProvisioningService = userProvisioningService;
         _permissionsAssembler = permissionsAssembler;
         _adminSignInService = adminSignInService;
+        _authenticationService = authenticationService;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<LoginResult> LoginAsync(LoginRequestDto request)
@@ -116,10 +122,9 @@ public sealed class AuthFlowService : IAuthFlowService
         var rawPermissions = await _permissionService.GetAsync(user.UserName!);
         var apps = new List<string> { clientId };
         var claimsModel = _permissionsAssembler.BuildClaims(user, roles, rawPermissions, apps);
-        var token = _jwtTokenService.CreateToken(claimsModel, client!.Audience);
-        var redirect = QueryHelpers.AddQueryString(returnUrl, "token", token);
+        await SignInAsync(claimsModel);
 
-        return await FinalizeResultAsync(new LoginResult { RedirectUrl = redirect, SignInAdmin = false });
+        return await FinalizeResultAsync(new LoginResult { RedirectUrl = returnUrl, SignInAdmin = false });
     }
 
     private static LoginResult BuildLoginRedirect(string errorCode, string errorMessage, string? returnUrl, string? clientId)
@@ -143,5 +148,57 @@ public sealed class AuthFlowService : IAuthFlowService
         }
 
         return result;
+    }
+
+    private async Task SignInAsync(AuthClaimsModel claimsModel)
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext is null)
+        {
+            throw new InvalidOperationException("HttpContext no disponible para iniciar sesión.");
+        }
+
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, claimsModel.UserId),
+            new(ClaimTypes.Name, claimsModel.DisplayName ?? claimsModel.Email ?? claimsModel.UserId)
+        };
+
+        if (!string.IsNullOrWhiteSpace(claimsModel.Email))
+        {
+            claims.Add(new Claim(ClaimTypes.Email, claimsModel.Email));
+        }
+
+        foreach (var role in claimsModel.Roles.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        foreach (var area in claimsModel.Areas.Distinct())
+        {
+            claims.Add(new Claim("area", area));
+        }
+
+        if (!string.IsNullOrWhiteSpace(claimsModel.PermissionsJson))
+        {
+            claims.Add(new Claim("perms_json", claimsModel.PermissionsJson));
+        }
+
+        claims.Add(new Claim("perms_version", claimsModel.PermissionsVersion.ToString()));
+
+        foreach (var app in claimsModel.Apps)
+        {
+            claims.Add(new Claim("app", app));
+        }
+
+        var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
+        var principal = new ClaimsPrincipal(identity);
+        var authProps = new AuthenticationProperties
+        {
+            IsPersistent = false,
+            AllowRefresh = true
+        };
+
+        await _authenticationService.SignInAsync(httpContext, IdentityConstants.ApplicationScheme, principal, authProps);
     }
 }

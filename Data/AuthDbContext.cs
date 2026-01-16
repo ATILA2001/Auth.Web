@@ -2,11 +2,12 @@ using Auth.Web.Data.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 
 namespace Auth.Web.Data;
 
 public class AuthDbContext(DbContextOptions<AuthDbContext> options)
-    : IdentityDbContext<ApplicationUser, IdentityRole, string>(options)
+    : IdentityDbContext<ApplicationUser, IdentityRole, string>(options), IDataProtectionKeyContext
 {
     public DbSet<Page> Pages => Set<Page>();
 
@@ -21,6 +22,9 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
     public DbSet<ApplicationClient> ApplicationClients => Set<ApplicationClient>();
 
     public DbSet<AreaRoute> AreaRoutes => Set<AreaRoute>();
+
+    // Data Protection key storage for shared cookie SSO
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

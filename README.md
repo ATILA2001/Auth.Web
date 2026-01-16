@@ -5,7 +5,7 @@
 `Auth.Web` es el servicio central de autenticación SSO interno y panel de administración para aplicaciones de la organización. Sus responsabilidades principales son:
 
 - Autenticación contra Active Directory (AD).
-- Emisión de tokens JWT con claims (roles, áreas, aplicaciones y versión de permisos).
+- Emisión de cookie compartida con claims (roles, áreas, aplicaciones, versión y permisos JSON).
 - Panel de administración para gestionar roles, áreas, clientes y rutas (Blazor Server UI).
 - Enrutamiento por cliente: reglas que determinan la URL de retorno por `ClientId` + `Area`.
 
@@ -113,7 +113,7 @@ wwwroot/
 
 - `Data/AuthDbContext.cs` y `Data/Seed.cs` — Contexto de EF Core y seeding inicial.
 
-- `Security/` — Todo lo relacionado a autenticación externa y JWT: opciones y servicios para emisión/validación de tokens en `Jwt/`, y proveedores de autenticación como AD en `Auth/`.
+- `Security/` — Autenticación externa (AD). El flujo actual usa cookie compartida.
 
 - `Components/` — Toda la UI Blazor Server. Los ViewModels de cada página/componente residen junto al componente.
   - Ejemplo: `Components/Admin/Areas/Area.razor`, `Area.razor.cs`, `AreaViewModel.cs`.
@@ -134,10 +134,9 @@ wwwroot/
 - Flujo de login (resumen):
   1. El cliente redirige al formulario de login o invoca `/connect/login`.
   2. Servicio de autenticación AD valida credenciales contra Active Directory (concreto en `Security/Auth/AdAuthService.cs`).
-  3. Si la validación es exitosa, se construyen claims del usuario (roles, áreas y aplicaciones) vía servicios en `Services/Implementations/*`.
-  4. Servicio JWT en `Security/Jwt` genera el token que incluye `sub`, `email`, `name`, `role`, `area`, `app` y `perms_ver`.
-  5. Si es una sesión administrativa, se autentica con cookie y se redirige al panel `/admin`.
-  6. Para clientes externos, se valida `ReturnUrl` con `IClientService.IsReturnUrlAllowed` y se redirige con `?token=...`.
+  3. Se construyen claims del usuario (roles, áreas, aplicaciones, permisos JSON) vía servicios en `Services/Implementations/*`.
+  4. Se firma una cookie del esquema compartido (Data Protection en BD) y se redirige sin `?token=`.
+  5. Admin sigue el mismo esquema de cookie y se redirige a `/admin`.
 
 - Administración (panel Blazor): CRUD de `ApplicationClient`, `Area`, `AreaRoute` y asignación de roles/areas a usuarios. Las páginas de administración usan Radzen Blazor components y están protegidas con `[Authorize(Roles = "Admin")]`.
 
@@ -197,7 +196,7 @@ Requisitos mínimos
 Configuración principal (appsettings)
 - `ConnectionStrings:DefaultConnection` — cadena de conexión a SQL Server.
 - `ActiveDirectory` — opciones para conexión AD (ver `Configuration/AdOptions.cs`).
-- `Jwt` — `Issuer`, `Audience`, `SigningKey` (mín. 32 chars), `TokenLifetimeMinutes`.
+- Shared cookie: `SharedCookie:Name`, `SharedCookie:Domain`, `SharedCookie:ApplicationName` (usar variables de entorno/IIS; en dev, user secrets).
 - `Features` — opciones de toggles/feature flags (ver `Configuration/FeatureOptions.cs`).
 
 Paquetes NuGet recomendados (presentes o esperados)
