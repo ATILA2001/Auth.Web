@@ -52,6 +52,24 @@ public sealed class RolePagePermissionAdminService : IAdminRolePagePermissionSer
         return permission.Id;
     }
 
+    public async Task UpdatePermissionAsync(int permissionId, string roleId, int pageId, int actionId, CancellationToken cancellationToken = default)
+    {
+        var permission = await _repository.GetByIdAsync(permissionId, cancellationToken);
+        if (permission is null)
+        {
+            throw new InvalidOperationException($"Permission with id {permissionId} not found.");
+        }
+
+        // Check for duplicate with different ID
+        var duplicate = await _repository.FindAsync(roleId, pageId, actionId, cancellationToken);
+        if (duplicate is not null && duplicate.Id != permissionId)
+        {
+            throw new InvalidOperationException("Ya existe este permiso.");
+        }
+
+        await _repository.UpdateAsync(permissionId, roleId, pageId, actionId, cancellationToken);
+    }
+
     public Task DeletePermissionAsync(int permissionId, CancellationToken cancellationToken = default)
         => _repository.DeleteAsync(permissionId, cancellationToken);
 

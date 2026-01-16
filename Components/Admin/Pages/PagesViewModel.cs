@@ -83,7 +83,7 @@ public sealed class PagesViewModel
 
         if (string.IsNullOrWhiteSpace(trimmedUrl))
         {
-            ValidationError = "La URL de la página no puede estar vacóa.";
+            ValidationError = "La URL de la página no puede estar vacía.";
             return PagesVmResult.ValidationFailed("Validación", ValidationError);
         }
 

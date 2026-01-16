@@ -10,6 +10,7 @@ public interface IRolePagePermissionAdminRepository
     Task<RolePagePermission?> GetByIdAsync(int id, CancellationToken ct = default);
     Task<RolePagePermission?> FindAsync(string roleId, int pageId, int actionId, CancellationToken ct = default);
     Task<RolePagePermission> CreateAsync(string roleId, int pageId, int actionId, CancellationToken ct = default);
+    Task UpdateAsync(int permissionId, string roleId, int pageId, int actionId, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
     Task<bool> DeleteAsync(string roleId, int pageId, int actionId, CancellationToken ct = default);
 }

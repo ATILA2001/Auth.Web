@@ -85,6 +85,23 @@ public sealed class RolePagePermissionAdminRepository : IRolePagePermissionAdmin
         return permission;
     }
 
+    public async Task UpdateAsync(int permissionId, string roleId, int pageId, int actionId, CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var permission = await db.RolePagePermissions.FindAsync(new object[] { permissionId }, ct);
+        if (permission is null)
+        {
+            throw new InvalidOperationException($"Permission with id {permissionId} not found.");
+        }
+
+        permission.RoleId = roleId;
+        permission.PageId = pageId;
+        permission.ActionPermissionId = actionId;
+        
+        db.RolePagePermissions.Update(permission);
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);

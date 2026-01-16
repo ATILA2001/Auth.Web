@@ -21,6 +21,7 @@ public partial class Permissions : ComponentBase
     private readonly Dictionary<RolePagePermissionAdminDto, int> _pageBuffer = new();
     private readonly Dictionary<RolePagePermissionAdminDto, int> _actionBuffer = new();
     private readonly List<RolePagePermissionAdminDto> _permissionsToInsert = new();
+    private readonly List<RolePagePermissionAdminDto> _permissionsToUpdate = new();
 
     private List<RolePagePermissionAdminDto> permissions => _vm.Permissions;
     private List<RoleAdminDto> roles => _vm.Roles;
@@ -57,6 +58,7 @@ public partial class Permissions : ComponentBase
             _pageBuffer.Clear();
             _actionBuffer.Clear();
             _permissionsToInsert.Clear();
+            _permissionsToUpdate.Clear();
             
             if (reloadGrid && grid is not null)
             {
@@ -161,15 +163,23 @@ public partial class Permissions : ComponentBase
             return;
         }
 
-        // Sync from buffers
-        _vm.SelectedRoleId = GetRoleBuffer(permission);
-        _vm.SelectedPageId = GetPageBuffer(permission);
-        _vm.SelectedActionId = GetActionBuffer(permission);
+        // Set VM context for validation: for EDIT set BeginEdit; for CREATE sync from buffer
+        if (permission.Id != 0)
+        {
+            _vm.BeginEdit(permission);
+        }
+        else
+        {
+            // For CREATE: ensure fields are synced from buffer for pre-validation
+            _vm.SelectedRoleId = GetRoleBuffer(permission);
+            _vm.SelectedPageId = GetPageBuffer(permission);
+            _vm.SelectedActionId = GetActionBuffer(permission);
+        }
 
         var roleId = GetRoleBuffer(permission);
         var pageId = GetPageBuffer(permission);
         var actionId = GetActionBuffer(permission);
-        var validationResult = _vm.ValidateOnly(roleId, pageId, actionId);
+        var validationResult = _vm.ValidateOnly(roleId, pageId, actionId, permission.Id);
 
         if (validationResult.Outcome != PermissionsVmOutcome.Success)
         {
@@ -230,6 +240,66 @@ public partial class Permissions : ComponentBase
         }
     }
 
+    private async Task EditRow(RolePagePermissionAdminDto permission)
+    {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
+        if (!_permissionsToUpdate.Contains(permission))
+        {
+            _permissionsToUpdate.Add(permission);
+        }
+        await grid.EditRow(permission);
+    }
+
+    private async Task OnRowUpdate(RolePagePermissionAdminDto permission)
+    {
+        if (IsSaving)
+        {
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            _vm.BeginEdit(permission);
+            _vm.SelectedRoleId = GetRoleBuffer(permission);
+            _vm.SelectedPageId = GetPageBuffer(permission);
+            _vm.SelectedActionId = GetActionBuffer(permission);
+
+            var result = await _vm.UpdateAsync();
+            NotifyUser(result);
+
+            if (result.Outcome == PermissionsVmOutcome.Success)
+            {
+                // CRITICAL: Sync buffers ? DTO so grid displays the updated values in view mode
+                // Note: ID remains the same now (direct update, not delete+create)
+                permission.RoleId = _vm.SelectedRoleId;
+                permission.PageId = _vm.SelectedPageId;
+                permission.ActionPermissionId = _vm.SelectedActionId;
+                permission.RoleName = roles.FirstOrDefault(r => r.Id == _vm.SelectedRoleId)?.Name ?? string.Empty;
+                permission.PageName = pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId)?.Name ?? string.Empty;
+                permission.PageUrl = pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId)?.Url ?? string.Empty;
+                permission.ActionName = actions.FirstOrDefault(a => a.Id == _vm.SelectedActionId)?.Name ?? string.Empty;
+
+                _permissionsToUpdate.Remove(permission);
+                _roleBuffer.Remove(permission);
+                _pageBuffer.Remove(permission);
+                _actionBuffer.Remove(permission);
+
+                // Explicit contract: UPDATE success does NOT require reload (RequiresReload=false)
+                // Filters/pagination/sorting preserved via local update
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
     private async Task DeletePermission(int id)
     {
         if (IsSaving)
@@ -272,6 +342,7 @@ public partial class Permissions : ComponentBase
         _pageBuffer.Remove(permission);
         _actionBuffer.Remove(permission);
         _permissionsToInsert.Remove(permission);
+        _permissionsToUpdate.Remove(permission);
         
         if (permission.Id == 0)
         {
