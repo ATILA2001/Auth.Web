@@ -58,7 +58,7 @@
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="ReturnUrl" Title="ReturnUrl">
                         <EditTemplate Context="r">
-                            <RadzenTextBox Value="@GetReturnUrlBuffer(r)" ValueChanged="@(v => SetReturnUrlBuffer(r, v))" Style="width: 260px" Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenText Text="@GetReturnUrlBuffer(r)" Style="width: 260px" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="Priority" Title="Prioridad" Width="120px">

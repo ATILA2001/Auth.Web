@@ -100,7 +100,17 @@ public partial class Routes : ComponentBase
         return value;
     }
 
-    private void SetClientBuffer(AreaRouteAdminDto route, int value) => _clientBuffer[route] = value;
+    private void SetClientBuffer(AreaRouteAdminDto route, int value)
+    {
+        _clientBuffer[route] = value;
+        // Actualizar ReturnUrl automaticamente basado en el cliente seleccionado
+        var client = clients.FirstOrDefault(c => c.Id == value);
+        if (client is not null)
+        {
+            _urlBuffer[route] = client.AllowedReturnUrls.FirstOrDefault() ?? string.Empty;
+            StateHasChanged();
+        }
+    }
 
     private string GetReturnUrlBuffer(AreaRouteAdminDto route)
     {
@@ -152,16 +162,17 @@ public partial class Routes : ComponentBase
         }
 
         _vm.BeginCreate();
+        var firstClient = clients.FirstOrDefault();
         var newRoute = new AreaRouteAdminDto
         {
             Id = 0,
             AreaId = areas.FirstOrDefault()?.Id ?? 0,
-            ClientId = clients.FirstOrDefault()?.Id ?? 0,
-            ReturnUrl = string.Empty,
+            ClientId = firstClient?.Id ?? 0,
+            ReturnUrl = firstClient?.AllowedReturnUrls.FirstOrDefault() ?? string.Empty,
             Priority = 1,
             IsActive = true,
             AreaName = areas.FirstOrDefault()?.Name,
-            ApplicationName = clients.FirstOrDefault()?.Audience
+            ApplicationName = firstClient?.Audience
         };
         _routesToInsert.Add(newRoute);
         routes.Insert(0, newRoute);
