@@ -109,6 +109,7 @@ public sealed class UserAdminService : IAdminUserService
         {
             Id = user.Id,
             UserName = user.UserName ?? string.Empty,
+            FullName = user.Nombre,
             Email = user.Email,
             Roles = roles,
             Areas = areaNames,

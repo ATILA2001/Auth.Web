@@ -24,7 +24,7 @@
                                 TextProperty="ClientId"
                                 ValueProperty="Id"
                                 @bind-Value="selectedClientId"
-                                Placeholder="Aplicativos"
+                                Placeholder="Aplicaciones"
                                 Change="@OnClientChanged" />
 
                 @if (!string.IsNullOrWhiteSpace(CurrentUserName))
@@ -59,7 +59,7 @@
         <RadzenPanelMenu>
             <RadzenPanelMenuItem Text="Acciones" Icon="touch_app" Path="/admin/actions" />
             <RadzenPanelMenuItem Text="Áreas" Icon="domain" Path="/admin/areas" />
-            <RadzenPanelMenuItem Text="Clientes" Icon="apps" Path="/admin/clients" />
+            <RadzenPanelMenuItem Text="Aplicaciones" Icon="apps" Path="/admin/clients" />
             <RadzenPanelMenuItem Text="Páginas" Icon="pageview" Path="/admin/pages" />
             <RadzenPanelMenuItem Text="Permisos" Icon="security" Path="/admin/permissions" />
             <RadzenPanelMenuItem Text="Roles" Icon="admin_panel_settings" Path="/admin/roles" />

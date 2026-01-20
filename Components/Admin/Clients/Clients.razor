@@ -42,13 +42,13 @@
                             <RadzenTextBox Value="@GetAudienceBuffer(c)" ValueChanged="@(v => SetAudienceBuffer(c, v))" Style="width: 200px" Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="ApplicationClientAdminDto" Title="ReturnUrls">
+                    <RadzenDataGridColumn TItem="ApplicationClientAdminDto" Title="ReturnUrls" Filterable="false">
                         <Template Context="c">@string.Join("; ", c.AllowedReturnUrls)</Template>
                         <EditTemplate Context="c">
                             <RadzenTextArea Value="@GetUrlsBuffer(c)" ValueChanged="@(v => SetUrlsBuffer(c, v))" Rows="4" Style="width: 280px" Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="ApplicationClientAdminDto" Context="c" >
+                    <RadzenDataGridColumn TItem="ApplicationClientAdminDto" Context="c" Filterable="false" Title="Acciones">
                         <Template Context="c">
                             <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(c))" @onclick:stopPropagation class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />
                             <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeleteClient(c.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />

@@ -44,7 +44,7 @@
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="PageName" Title="página">
+                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="PageName" Title="Página">
                         <EditTemplate Context="p">
                             <RadzenDropDown TValue="int"
                                             Data="@pages"
@@ -57,7 +57,7 @@
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="PageUrl" Title="URL" />
-                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="ActionName" Title="acción" >
+                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="ActionName" Title="Acción" >
                         <EditTemplate Context="p">
                             <RadzenDropDown TValue="int"
                                             Data="@actions"
@@ -69,7 +69,7 @@
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Context="p" Filterable="false" Sortable="false" Width="150px" TextAlign="TextAlign.Center">
+                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Context="p" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Title="Acciones">
                         <Template Context="p">
                             <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(p))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />
                             <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" class="rz-ml-2" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeletePermission(p.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />

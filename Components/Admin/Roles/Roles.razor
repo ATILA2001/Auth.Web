@@ -38,7 +38,7 @@
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="RoleAdminDto" Property="UserCount" Title="Usuarios" />
-                    <RadzenDataGridColumn TItem="RoleAdminDto" Context="r" >
+                    <RadzenDataGridColumn TItem="RoleAdminDto" Context="r" Filterable="false" Title="Acciones">
                         <Template Context="r">
                             <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(r))" @onclick:stopPropagation class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />
                             <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeleteRole(r.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />

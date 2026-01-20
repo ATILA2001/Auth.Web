@@ -32,7 +32,7 @@
                     </RadzenStack>
                 </HeaderTemplate>
                 <Columns>
-                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="AreaName" Title="área">
+                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="AreaName" Title="Área">
                         <EditTemplate Context="r">
                             <RadzenDropDown TValue="int"
                                             Data="@areas"
@@ -61,17 +61,17 @@
                             <RadzenText Text="@GetReturnUrlBuffer(r)" Style="width: 260px" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="Priority" Title="Prioridad" Width="120px">
+                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="Priority" Title="Prioridad">
                         <EditTemplate Context="r">
                             <RadzenNumeric TValue="int" Value="@GetPriorityBuffer(r)" ValueChanged="@(v => SetPriorityBuffer(r, v))" Style="width: 140px" Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="IsActive" Title="Activo" Width="100px">
+                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="IsActive" Title="Activo">
                         <EditTemplate Context="r">
                             <RadzenCheckBox TValue="bool" Value="@GetActiveBuffer(r)" ValueChanged="@(v => SetActiveBuffer(r, v))" Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Context="r" Width="220px">
+                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Context="r" Filterable="false" Title="Acciones">
                         <Template Context="r">
                             <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(r))" @onclick:stopPropagation class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />
                             <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeleteRoute(r.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />

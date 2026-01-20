@@ -31,7 +31,7 @@
                     </RadzenStack>
                 </HeaderTemplate>
                 <Columns>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="UserName" Title="Usuario" />
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="FullName" Title="Usuario" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="Email" Title="Correo" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Roles" Filterable="false">
                         <Template Context="u">@string.Join(", ", u.Roles)</Template>
@@ -47,7 +47,7 @@
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="áreas" Filterable="false">
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Áreas" Filterable="false">
                         <Template Context="u">@string.Join(", ", u.Areas)</Template>
                         <EditTemplate Context="u">
                             <RadzenDropDown TValue="IEnumerable<int>"
@@ -61,7 +61,7 @@
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Context="u" Width="200px">
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Context="u" Filterable="false" Title="Acciones">
                         <Template Context="u">
                             <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(u))" Disabled="@(IsLoading || IsSaving)" />
                         </Template>

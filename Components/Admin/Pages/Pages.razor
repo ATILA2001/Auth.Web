@@ -43,7 +43,7 @@
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="PageAdminDto" Property="PermissionCount" Title="Permisos"  />
-                    <RadzenDataGridColumn TItem="PageAdminDto" Context="p" >
+                    <RadzenDataGridColumn TItem="PageAdminDto" Context="p" Filterable="false" Title="Acciones">
                         <Template Context="p">
                             <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(p))" @onclick:stopPropagation class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />
                             <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeletePage(p.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />

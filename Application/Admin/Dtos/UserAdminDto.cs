@@ -4,6 +4,7 @@ public sealed class UserAdminDto
 {
     public string Id { get; set; } = default!;
     public string UserName { get; set; } = default!;
+    public string? FullName { get; set; }
     public string? Email { get; set; }
     public IReadOnlyCollection<string> Roles { get; set; } = Array.Empty<string>();
     public IReadOnlyCollection<string> Areas { get; set; } = Array.Empty<string>();
