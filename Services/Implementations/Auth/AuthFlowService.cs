@@ -186,6 +186,9 @@ public sealed class AuthFlowService : IAuthFlowService
 
         claims.Add(new Claim("perms_version", claimsModel.PermissionsVersion.ToString()));
 
+        // Add auth_time claim to record session start time (UTC, ISO 8601)
+        claims.Add(new Claim("auth_time", DateTime.UtcNow.ToString("o")));
+
         foreach (var app in claimsModel.Apps)
         {
             claims.Add(new Claim("app", app));
