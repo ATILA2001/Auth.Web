@@ -46,7 +46,8 @@ public class AuthFlowServiceTests
         httpContextAccessor ??= new HttpContextAccessor { HttpContext = ctx };
         authService ??= new Mock<IAuthenticationService>();
 
-        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, provisioning.Object, assembler, adminSignIn.Object, authService.Object, httpContextAccessor);
+        var options = Microsoft.Extensions.Options.Options.Create(new Auth.Web.Configuration.TestUsersOptions());
+        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, provisioning.Object, assembler, adminSignIn.Object, authService.Object, httpContextAccessor, options);
     }
 
     /// <summary>

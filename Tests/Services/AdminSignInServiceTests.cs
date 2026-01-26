@@ -43,6 +43,8 @@ public class AdminSignInServiceTests
 
         userManagerMock.Setup(um => um.FindByIdAsync("admin123"))
             .ReturnsAsync(user);
+        userManagerMock.Setup(um => um.GetRolesAsync(user))
+            .ReturnsAsync(new List<string>());
 
         signInManagerMock.Setup(sim => sim.SignInAsync(user, false, null))
             .Returns(Task.CompletedTask);
@@ -111,6 +113,8 @@ public class AdminSignInServiceTests
 
         userManagerMock.Setup(um => um.FindByIdAsync("user1"))
             .ReturnsAsync(user);
+        userManagerMock.Setup(um => um.GetRolesAsync(user))
+            .ReturnsAsync(new List<string>());
 
         bool? capturedIsPersistent = null;
         signInManagerMock.Setup(sim => sim.SignInAsync(user, It.IsAny<bool>(), null))

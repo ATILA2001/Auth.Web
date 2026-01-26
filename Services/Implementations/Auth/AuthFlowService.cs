@@ -12,6 +12,8 @@ using Auth.Web.Data.Entities;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Auth.Web.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Auth.Web.Services.Implementations.Auth;
 
@@ -27,6 +29,7 @@ public sealed class AuthFlowService : IAuthFlowService
     private readonly IAdminSignInService _adminSignInService;
     private readonly IAuthenticationService _authenticationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly TestUsersOptions _testUsers;
 
     public AuthFlowService(
         IActiveDirectoryAuthService adAuth,
@@ -38,7 +41,8 @@ public sealed class AuthFlowService : IAuthFlowService
         UserPermissionsAssembler permissionsAssembler,
         IAdminSignInService adminSignInService,
         IAuthenticationService authenticationService,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IOptions<TestUsersOptions> testUsersOptions)
     {
         _adAuth = adAuth;
         _userManagement = userManagement;
@@ -50,6 +54,7 @@ public sealed class AuthFlowService : IAuthFlowService
         _adminSignInService = adminSignInService;
         _authenticationService = authenticationService;
         _httpContextAccessor = httpContextAccessor;
+        _testUsers = testUsersOptions.Value ?? new TestUsersOptions();
     }
 
     public async Task<LoginResult> LoginAsync(LoginRequestDto request)
@@ -67,20 +72,71 @@ public sealed class AuthFlowService : IAuthFlowService
             return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña requeridos.", dto.ReturnUrl, dto.ClientId));
         }
 
-        var adOk = await _adAuth.ValidateCredentialsAsync(dto.UserNameOrEmail, dto.Password);
-        if (!adOk)
+        var testUser = TryGetTestUser(dto.UserNameOrEmail);
+
+        // dbAuthUser: user retrieved from DB used for password verification when username ends with .test
+        ApplicationUser? dbAuthUser = null;
+
+        if (testUser is not null)
         {
-            return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
+            if (!PasswordMatches(dto.Password, testUser.Password))
+            {
+                return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
+            }
+        }
+        else
+        {
+            var isDbTest = dto.UserNameOrEmail.EndsWith(".test", StringComparison.OrdinalIgnoreCase);
+
+            if (isDbTest)
+            {
+                dbAuthUser = await _userManagement.FindByNameAsync(dto.UserNameOrEmail)
+                             ?? await _userManagement.FindByEmailAsync(dto.UserNameOrEmail);
+
+                var dbPasswordOk = dbAuthUser is not null && VerifyPasswordHash(dbAuthUser.PasswordHash, dto.Password);
+
+                if (!dbPasswordOk)
+                {
+                    // Fallback to AD if DB check fails for .test users
+                    var adOkFallback = await _adAuth.ValidateCredentialsAsync(dto.UserNameOrEmail, dto.Password);
+                    if (!adOkFallback)
+                    {
+                        return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
+                    }
+                }
+            }
+            else
+            {
+                var adOk = await _adAuth.ValidateCredentialsAsync(dto.UserNameOrEmail, dto.Password);
+                if (!adOk)
+                {
+                    return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
+                }
+            }
         }
 
-        var user = await _userManagement.FindByNameAsync(dto.UserNameOrEmail)
-                   ?? await _userManagement.FindByEmailAsync(dto.UserNameOrEmail)
-                   ?? await _userProvisioningService.EnsureUserAsync(dto.UserNameOrEmail);
+        var user = dbAuthUser ?? await _userManagement.FindByNameAsync(dto.UserNameOrEmail)
+                   ?? await _userManagement.FindByEmailAsync(dto.UserNameOrEmail);
+
+        if (user is null && testUser is not null)
+        {
+            var testEmail = testUser.Email;
+            user = await _userManagement.FindByNameAsync(testEmail)
+                   ?? await _userManagement.FindByEmailAsync(testEmail);
+
+            if (user is null)
+            {
+                user = await _userProvisioningService.EnsureUserAsync(testEmail);
+            }
+        }
+
+        user ??= await _userProvisioningService.EnsureUserAsync(dto.UserNameOrEmail);
 
         var rolesList = await _userManagement.GetRolesAsync(user);
         var roles = rolesList.ToArray();
         var isAdmin = roles.Contains("Admin") || roles.Contains("Administrador");
-        if (isAdmin)
+        var hasClientRequest = !string.IsNullOrWhiteSpace(dto.ClientId) && !string.IsNullOrWhiteSpace(dto.ReturnUrl);
+        if (isAdmin && !hasClientRequest)
         {
             return await FinalizeResultAsync(new LoginResult { SignInAdmin = true, AdminUserId = user.Id, RedirectUrl = "/admin" });
         }
@@ -191,6 +247,31 @@ public sealed class AuthFlowService : IAuthFlowService
             claims.Add(new Claim("app", app));
         }
 
+        foreach (var page in claimsModel.Pages)
+        {
+            if (string.IsNullOrWhiteSpace(page.Url))
+            {
+                continue;
+            }
+
+            claims.Add(new Claim("page", page.Url));
+
+            foreach (var action in page.Actions?.AsEnumerable() ?? Enumerable.Empty<string>())
+            {
+                if (string.IsNullOrWhiteSpace(action))
+                {
+                    continue;
+                }
+
+                claims.Add(new Claim("page_action", $"{page.Url}|{action}"));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(claimsModel.FirstPageUrl))
+        {
+            claims.Add(new Claim("first_page", claimsModel.FirstPageUrl));
+        }
+
         var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
         var principal = new ClaimsPrincipal(identity);
         var authProps = new AuthenticationProperties
@@ -200,5 +281,60 @@ public sealed class AuthFlowService : IAuthFlowService
         };
 
         await _authenticationService.SignInAsync(httpContext, IdentityConstants.ApplicationScheme, principal, authProps);
+    }
+
+    private TestUserOptions? TryGetTestUser(string userNameOrEmail)
+    {
+        if (_testUsers.Users is null || _testUsers.Users.Count == 0)
+        {
+            return null;
+        }
+
+        var normalized = userNameOrEmail.Trim();
+        var localPart = normalized.Contains('@') ? normalized.Split('@')[0] : normalized;
+
+        foreach (var candidate in _testUsers.Users)
+        {
+            if (string.IsNullOrWhiteSpace(candidate.Email))
+            {
+                continue;
+            }
+
+            if (normalized.Equals(candidate.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                return candidate;
+            }
+
+            var candidateLocal = candidate.Email.Split('@')[0];
+            if (localPart.Equals(candidateLocal, StringComparison.OrdinalIgnoreCase))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool PasswordMatches(string inputPassword, string expectedPassword)
+    {
+        if (string.IsNullOrEmpty(expectedPassword))
+        {
+            return false;
+        }
+
+        return string.Equals(inputPassword ?? string.Empty, expectedPassword, StringComparison.Ordinal);
+    }
+
+    private static bool VerifyPasswordHash(string? passwordHash, string inputPassword)
+    {
+        if (string.IsNullOrEmpty(passwordHash))
+        {
+            return false;
+        }
+
+        var hasher = new PasswordHasher<ApplicationUser>();
+        var dummy = new ApplicationUser();
+        var result = hasher.VerifyHashedPassword(dummy, passwordHash, inputPassword ?? string.Empty);
+        return result == PasswordVerificationResult.Success || result == PasswordVerificationResult.SuccessRehashNeeded;
     }
 }

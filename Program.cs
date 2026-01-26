@@ -35,6 +35,7 @@ using Auth.Web.Repositories.Implementations.Routing;
 using Auth.Web.Repositories.Abstractions.Clients;
 using Auth.Web.Repositories.Implementations.Clients;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +47,7 @@ builder.Services.AddRadzenComponents();
 
 builder.Services.Configure<AdOptions>(builder.Configuration.GetSection("ActiveDirectory"));
 builder.Services.Configure<FeatureOptions>(builder.Configuration.GetSection("Features"));
+builder.Services.Configure<TestUsersOptions>(builder.Configuration.GetSection("TestUsers"));
 
 var sharedCookieName = builder.Configuration["SharedCookie:Name"] ?? ".Auth.Shared";
 var sharedCookieDomain = builder.Configuration["SharedCookie:Domain"];
@@ -90,6 +92,17 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
 });
+
+// Use a shared, net48-compatible ticket format for the shared cookie (run after ConfigureApplicationCookie)
+builder.Services.AddOptions<CookieAuthenticationOptions>(IdentityConstants.ApplicationScheme)
+    .PostConfigure<IDataProtectionProvider>((options, dp) =>
+    {
+        var protector = dp.CreateProtector(
+            "Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationMiddleware",
+            IdentityConstants.ApplicationScheme,
+            "v2");
+        options.TicketDataFormat = new Auth.Web.Security.SharedCookieTicketDataFormat(protector);
+    });
 
 builder.Services.AddAuthorization();
 
@@ -152,9 +165,44 @@ builder.Services.AddAuthorizationBuilder()
 
 var app = builder.Build();
 
-// Ensure database migrations and seed run before any middleware/components that may use
-// data protection (shared cookie SSO) so the DataProtectionKeys table exists.
-await Seed.RunAsync(app.Services);
+
+// --- Development helper: delete existing DataProtectionKeys to force regeneration under the new protector (development only) ---
+if (app.Environment.IsDevelopment())
+{
+    try
+    {
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+            var loggerFactory = scope.ServiceProvider.GetService<Microsoft.Extensions.Logging.ILoggerFactory>();
+            var logger = loggerFactory?.CreateLogger("DataProtectionStartup");
+
+            var keys = db.DataProtectionKeys.ToList();
+            if (keys.Count > 0)
+            {
+                db.DataProtectionKeys.RemoveRange(keys);
+                db.SaveChanges();
+                logger?.LogInformation("Deleted {Count} existing DataProtectionKeys to force regeneration under machine DPAPI.", keys.Count);
+            }
+            else
+            {
+                logger?.LogInformation("No DataProtectionKeys found to delete.");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        // Swallowing exceptions here so startup proceeds; errors will be visible in logs.
+        var logger = app.Services.GetService<Microsoft.Extensions.Logging.ILoggerFactory>()?.CreateLogger("DataProtectionStartup");
+        logger?.LogWarning(ex, "Failed to clean DataProtectionKeys during startup: {Message}", ex.Message);
+    }
+}
+else
+{
+    // Intentionally no-op in non-development environments to avoid invalidating production cookies/SO S.
+    var logger = app.Services.GetService<Microsoft.Extensions.Logging.ILoggerFactory>()?.CreateLogger("DataProtectionStartup");
+    logger?.LogInformation("DataProtectionKeys cleanup skipped in non-development environment.");
+}
 
 if (app.Environment.IsDevelopment())
 {

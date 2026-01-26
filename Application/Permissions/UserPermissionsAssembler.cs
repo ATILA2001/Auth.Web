@@ -14,15 +14,17 @@ public sealed class UserPermissionsAssembler
         var areaCodes = rawPermissions.Areas.Select(a => a.ToString()).ToArray();
 
         // Serializar permisos por página/acción en JSON compacto (camelCase)
+        var pages = rawPermissions.Pages
+            .Select(p => new
+            {
+                url = p.Url,
+                actions = p.Actions.Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+            })
+            .ToArray();
+
         var permissionsPayload = new
         {
-            pages = rawPermissions.Pages
-                .Select(p => new
-                {
-                    url = p.Url,
-                    actions = p.Actions.Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
-                })
-                .ToArray(),
+            pages,
             version = rawPermissions.Version
         };
 
@@ -40,8 +42,10 @@ public sealed class UserPermissionsAssembler
             Roles = roles.ToArray(),
             Areas = areaCodes,
             Apps = apps.ToArray(),
+            Pages = rawPermissions.Pages.ToArray(),
             PermissionsVersion = rawPermissions.Version,
-            PermissionsJson = permissionsJson
+            PermissionsJson = permissionsJson,
+            FirstPageUrl = pages.FirstOrDefault()?.url
         };
     }
 }

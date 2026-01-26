@@ -64,6 +64,12 @@ public class PermissionService : IPermissionService
     private static string NormalizePagePath(string url)
     {
         url = url.Trim();
+        if (Uri.TryCreate(url, UriKind.Absolute, out var absolute))
+        {
+            var pathAndQuery = string.IsNullOrWhiteSpace(absolute.PathAndQuery) ? "/" : absolute.PathAndQuery;
+            return pathAndQuery.StartsWith("/") ? pathAndQuery : "/" + pathAndQuery;
+        }
+
         if (url.StartsWith("~/")) url = url.Substring(1);
         if (!url.StartsWith("/")) url = "/" + url;
         return url;
