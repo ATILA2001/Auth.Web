@@ -114,7 +114,6 @@ public class LoginViewModelTests
         Assert.Equal("Usuario registrado exitosamente", vm.SuccessMessage);
         Assert.Null(vm.RegisterMessage);
         Assert.Equal("john@example.com", vm.LoginUser);
-        Assert.Equal(0, vm.SelectedTabIndex);
     }
 
     [Fact]

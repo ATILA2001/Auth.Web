@@ -1,0 +1,137 @@
+/* Login Page Styles */
+:root {
+    --panel-h: 400px;
+    --panel-h-mobile: 100px;
+}
+
+
+/* Flip animation */
+.flip-container {
+    perspective: 1000px;
+    height: var(--panel-h);
+    position: relative;
+}
+
+.flipper {
+    position: absolute;
+    inset: 0;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+}
+
+.flip-container.flipped .flipper {
+    transform: rotateY(180deg);
+}
+
+.front, .back {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+}
+
+.front {
+    z-index: 2;
+}
+
+.back {
+    transform: rotateY(180deg);
+}
+
+/* Layout */
+.login-background {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: center/cover;
+    padding: 1rem;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 1220px;
+    overflow: hidden;
+    box-shadow: var(--rz-shadow-6);
+}
+
+.login-left-panel {
+    background: #2b3a50;
+    min-height: var(--panel-h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    border-radius: var(--rz-border-radius) 0 0 var(--rz-border-radius);
+}
+
+.login-logo {
+    max-width: 55%;
+}
+
+.login-right-panel {
+    background: var(--rz-base-background-color);
+    min-height: var(--panel-h);
+    position: relative;
+}
+
+.login-form-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 3rem;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+    .login-form-content h2 {
+        font-size: 1.75rem;
+        font-weight: 500;
+        color: var(--rz-text-color);
+        margin: 0 0 1rem;
+        line-height: 1.4;
+    }
+
+/* Form */
+.login-field {
+    margin-bottom: 1.5rem;
+}
+
+.login-form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1.5rem;
+}
+
+.validation-message {
+    color: var(--rz-danger);
+    font-size: 0.8125rem;
+    margin-top: 0.25rem;
+}
+
+/* Mobile */
+@media (max-width: 767.98px) {
+    .flip-container {
+        height: 380px;
+    }
+
+    .login-left-panel {
+        min-height: var(--panel-h-mobile);
+        padding: 1rem;
+        border-radius: var(--rz-border-radius) var(--rz-border-radius) 0 0;
+    }
+
+    .login-logo {
+        max-width: 35%;
+    }
+
+    .login-form-content {
+        padding: 1.5rem;
+    }
+
+        .login-form-content h2 {
+            font-size: 1.5rem;
+        }
+}

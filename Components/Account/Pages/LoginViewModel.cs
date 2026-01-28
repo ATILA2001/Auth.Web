@@ -5,23 +5,12 @@ using Microsoft.AspNetCore.WebUtilities;
 
 namespace Auth.Web.Components.Account.Pages;
 
-public sealed class LoginViewModel
+public sealed class LoginViewModel(IUserRegistrationService registrationService)
 {
-    private readonly IUserRegistrationService _registrationService;
-
-    public LoginViewModel(IUserRegistrationService registrationService)
-    {
-        ArgumentNullException.ThrowIfNull(registrationService);
-        _registrationService = registrationService;
-    }
-
-    public int SelectedTabIndex { get; set; }
     public string? ErrorMessage { get; private set; }
     public string? ReturnUrl { get; private set; }
     public string? ClientId { get; private set; }
-
     public string LoginUser { get; set; } = string.Empty;
-
     public RegisterInputModel Register { get; } = new();
     public string? RegisterMessage { get; private set; }
     public string? SuccessMessage { get; private set; }
@@ -30,20 +19,14 @@ public sealed class LoginViewModel
     {
         ArgumentNullException.ThrowIfNull(uri);
 
-        ErrorMessage = null;
-        ReturnUrl = null;
-        ClientId = null;
-
         var query = QueryHelpers.ParseQuery(uri.Query);
 
-        if (query.TryGetValue("error", out var errorValues))
-            ErrorMessage = errorValues.FirstOrDefault();
-
-        if (query.TryGetValue("returnUrl", out var returnValues))
-            ReturnUrl = returnValues.FirstOrDefault();
-
-        if (query.TryGetValue("clientId", out var clientValues))
-            ClientId = clientValues.FirstOrDefault();
+        ErrorMessage = query.TryGetValue("error", out var errorValues) 
+            ? errorValues.FirstOrDefault() : null;
+        ReturnUrl = query.TryGetValue("returnUrl", out var returnValues) 
+            ? returnValues.FirstOrDefault() : null;
+        ClientId = query.TryGetValue("clientId", out var clientValues) 
+            ? clientValues.FirstOrDefault() : null;
     }
 
     public async Task RegisterUserAsync()
@@ -51,23 +34,19 @@ public sealed class LoginViewModel
         RegisterMessage = null;
         SuccessMessage = null;
 
-        var fullName = (Register.FullName ?? string.Empty).Trim();
-        var email = (Register.Email ?? string.Empty).Trim();
-
         var request = new RegisterUserRequest
         {
-            FullName = fullName,
-            Email = email
+            FullName = (Register.FullName ?? string.Empty).Trim(),
+            Email = (Register.Email ?? string.Empty).Trim()
         };
 
-        var result = await _registrationService.RegisterUserAsync(request);
+        var result = await registrationService.RegisterUserAsync(request);
 
         switch (result.Type)
         {
             case RegisterUserResultType.Success:
                 SuccessMessage = result.Message;
-                LoginUser = email;
-                SelectedTabIndex = 0;
+                LoginUser = request.Email;
                 break;
             case RegisterUserResultType.AlreadyExists:
             case RegisterUserResultType.NotInActiveDirectory:
