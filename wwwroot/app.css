@@ -1,3 +1,46 @@
+:root {
+    --rz-primary: #466791 !important;
+    --admin-accent: #d00000; /* light por defecto */
+    
+    .rz-group-header {
+        justify-content: end;
+    }
+
+    .rz-link-text {
+        color: #ffffff;
+    }
+}
+
+/* Light theme */
+.rz-layout.rz-material {
+    --admin-accent: #2b3a50;
+}
+
+/* Dark theme */
+.rz-layout.rz-material-dark {
+    --admin-accent: #ffffff;
+}
+
+
+.rz-navigation-item-wrapper-active {
+    color: var(--admin-accent) !important;
+}
+
+    .rz-navigation-item-wrapper-active .rz-navigation-item-icon {
+        color: var(--admin-accent) !important;
+    }
+
+
+.rz-sidebar-toggle:hover {
+    background-color: var(--admin-accent) !important;
+}
+
+.rz-button.rz-dark {
+    background-color: var(--admin-accent) !important;
+}
+
+
+
 /* Estilos de validación para EditForm con DataAnnotationsValidator */
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
@@ -17,6 +60,8 @@
     padding: 1rem 1rem 1rem 3.7rem;
     color: white;
 }
+
+
 
     .blazor-error-boundary::after {
         content: "An error has occurred."

@@ -12,7 +12,7 @@
             <RadzenSidebarToggle Click="@(() => sidebarExpanded = !sidebarExpanded)" />
 
             <!-- Titulo -->
-            <RadzenLabel Text="Administración" Class="rz-ml-2" />
+            <RadzenLink Text="ADMINISTRACIÓN" Path="/admin" Class="rz-ml-2"  />
 
             <!-- Bloque derecho: aplicativos + usuario + logout -->
             <RadzenStack Orientation="Orientation.Horizontal"
@@ -31,6 +31,7 @@
                 {
                     <RadzenLabel Text="@CurrentUserName" />
                 }
+                <RadzenAppearanceToggle />
 
                 @if (_canSubmitLogout && !string.IsNullOrEmpty(_antiforgeryFieldName) && !string.IsNullOrEmpty(_antiforgeryToken))
                 {
@@ -38,7 +39,7 @@
                         <input type="hidden" name="@_antiforgeryFieldName" value="@_antiforgeryToken" />
                         <RadzenButton Icon="logout"
                                       Text="Salir"
-                                      ButtonStyle="ButtonStyle.Secondary"
+                                      ButtonStyle="ButtonStyle.Danger"
                                       ButtonType="ButtonType.Submit" />
                     </form>
                 }
@@ -46,7 +47,7 @@
                 {
                     <RadzenButton Icon="logout"
                                   Text="Salir"
-                                  ButtonStyle="ButtonStyle.Secondary"
+                                  ButtonStyle="ButtonStyle.Danger"
                                   ButtonType="ButtonType.Button"
                                   Disabled="true" />
                 }
