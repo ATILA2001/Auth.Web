@@ -65,7 +65,7 @@
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Context="p" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Title="Acciones">
+                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Context="p" Filterable="false" Sortable="false"  Title="Acciones" Width="150px">
                         <Template Context="p">
                             <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(p))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />
                             <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" class="rz-ml-2" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeletePermission(p.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />

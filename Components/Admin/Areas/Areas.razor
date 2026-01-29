@@ -34,7 +34,7 @@
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="AreaAdminDto" Property="UserCount" Title="Usuarios" />
-                    <RadzenDataGridColumn TItem="AreaAdminDto" Context="a" Filterable="false" Title="Acciones">
+                    <RadzenDataGridColumn TItem="AreaAdminDto" Context="a" Filterable="false" Title="Acciones" Width="150px">
                         <Template Context="a">
                             <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(a))" @onclick:stopPropagation class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />
                             <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeleteArea(a.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />
