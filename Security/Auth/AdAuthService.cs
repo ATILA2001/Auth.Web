@@ -24,7 +24,34 @@ public class AdAuthService : IActiveDirectoryAuthService
         try
         {
             using var context = CreateContext();
+
+            var domain = _options.Domain ?? string.Empty;
             var isValid = context.ValidateCredentials(userNameOrEmail, password, ContextOptions.Negotiate);
+
+            if (!isValid)
+            {
+                if (userNameOrEmail.Contains("@", StringComparison.Ordinal))
+                {
+                    var resolvedUser = TryResolveUserNameByEmail(context, userNameOrEmail);
+                    if (!string.IsNullOrWhiteSpace(resolvedUser))
+                    {
+                        if (!string.IsNullOrWhiteSpace(domain))
+                        {
+                            isValid = context.ValidateCredentials($"{domain}\\{resolvedUser}", password, ContextOptions.Negotiate);
+                        }
+
+                        if (!isValid)
+                        {
+                            isValid = context.ValidateCredentials(resolvedUser, password, ContextOptions.Negotiate);
+                        }
+                    }
+                }
+                else if (!userNameOrEmail.Contains("\\", StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(domain))
+                {
+                    isValid = context.ValidateCredentials($"{domain}\\{userNameOrEmail}", password, ContextOptions.Negotiate);
+                }
+            }
+
             return Task.FromResult(isValid);
         }
         catch (PrincipalServerDownException ex)
@@ -68,7 +95,9 @@ public class AdAuthService : IActiveDirectoryAuthService
         try
         {
             using var context = CreateContext();
-            using var userPrincipal = UserPrincipal.FindByIdentity(context, userNameOrEmail);
+            using var userPrincipal = UserPrincipal.FindByIdentity(context, userNameOrEmail)
+                ?? UserPrincipal.FindByIdentity(context, IdentityType.UserPrincipalName, userNameOrEmail)
+                ?? UserPrincipal.FindByIdentity(context, IdentityType.SamAccountName, userNameOrEmail);
             if (userPrincipal is null)
             {
                 return Task.FromResult<AdUserInfo?>(null);
@@ -88,5 +117,30 @@ public class AdAuthService : IActiveDirectoryAuthService
         }
     }
 
-    private PrincipalContext CreateContext() => new(ContextType.Domain, _options.Domain);
+    private PrincipalContext CreateContext()
+    {
+        var domain = _options.Domain;
+        var container = string.IsNullOrWhiteSpace(_options.Container) ? null : _options.Container;
+        var userName = string.IsNullOrWhiteSpace(_options.UserName) ? null : _options.UserName;
+        var password = string.IsNullOrWhiteSpace(_options.Password) ? null : _options.Password;
+
+        if (!string.IsNullOrWhiteSpace(userName) && !string.IsNullOrWhiteSpace(password))
+        {
+            return new PrincipalContext(ContextType.Domain, domain, container, userName, password);
+        }
+
+        return string.IsNullOrWhiteSpace(container)
+            ? new PrincipalContext(ContextType.Domain, domain)
+            : new PrincipalContext(ContextType.Domain, domain, container);
+    }
+
+    private static string? TryResolveUserNameByEmail(PrincipalContext context, string email)
+    {
+        using var searcher = new PrincipalSearcher(new UserPrincipal(context)
+        {
+            EmailAddress = email
+        });
+        var result = searcher.FindOne() as UserPrincipal;
+        return result?.SamAccountName;
+    }
 }

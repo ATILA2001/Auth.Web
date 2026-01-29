@@ -34,11 +34,21 @@ public sealed class UserPermissionsAssembler
             WriteIndented = false
         });
 
+        var displayName = user.Nombre;
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            displayName = user.UserName;
+            if (!string.IsNullOrWhiteSpace(displayName) && displayName.Contains('@'))
+            {
+                displayName = displayName.Split('@')[0];
+            }
+        }
+
         return new AuthClaimsModel
         {
             UserId = user.Id,
             Email = user.Email,
-            DisplayName = user.Nombre ?? user.UserName,
+            DisplayName = displayName,
             Roles = roles.ToArray(),
             Areas = areaCodes,
             Apps = apps.ToArray(),

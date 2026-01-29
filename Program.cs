@@ -166,8 +166,8 @@ builder.Services.AddAuthorizationBuilder()
 var app = builder.Build();
 
 
-// --- Development helper: delete existing DataProtectionKeys to force regeneration under the new protector (development only) ---
-if (app.Environment.IsDevelopment())
+// Optional: delete DataProtectionKeys to force regeneration under the new protector (disabled by default)
+if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("DataProtection:CleanupKeysOnStartup"))
 {
     try
     {
@@ -192,16 +192,9 @@ if (app.Environment.IsDevelopment())
     }
     catch (Exception ex)
     {
-        // Swallowing exceptions here so startup proceeds; errors will be visible in logs.
         var logger = app.Services.GetService<Microsoft.Extensions.Logging.ILoggerFactory>()?.CreateLogger("DataProtectionStartup");
         logger?.LogWarning(ex, "Failed to clean DataProtectionKeys during startup: {Message}", ex.Message);
     }
-}
-else
-{
-    // Intentionally no-op in non-development environments to avoid invalidating production cookies/SO S.
-    var logger = app.Services.GetService<Microsoft.Extensions.Logging.ILoggerFactory>()?.CreateLogger("DataProtectionStartup");
-    logger?.LogInformation("DataProtectionKeys cleanup skipped in non-development environment.");
 }
 
 if (app.Environment.IsDevelopment())

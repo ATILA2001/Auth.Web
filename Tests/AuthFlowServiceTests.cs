@@ -30,6 +30,7 @@ public class AuthFlowServiceTests
         UserPermissionsAssembler? assembler = null,
         Mock<IAdminSignInService>? adminSignIn = null,
         Mock<IAuthenticationService>? authService = null,
+        Mock<IUserClaimsPrincipalFactory<ApplicationUser>>? claimsFactory = null,
         IHttpContextAccessor? httpContextAccessor = null)
     {
         ad ??= new Mock<IActiveDirectoryAuthService>();
@@ -45,9 +46,13 @@ public class AuthFlowServiceTests
         var ctx = new DefaultHttpContext();
         httpContextAccessor ??= new HttpContextAccessor { HttpContext = ctx };
         authService ??= new Mock<IAuthenticationService>();
+        claimsFactory ??= new Mock<IUserClaimsPrincipalFactory<ApplicationUser>>();
+        claimsFactory
+            .Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(IdentityConstants.ApplicationScheme)));
 
         var options = Microsoft.Extensions.Options.Options.Create(new Auth.Web.Configuration.TestUsersOptions());
-        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, provisioning.Object, assembler, adminSignIn.Object, authService.Object, httpContextAccessor, options);
+        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, provisioning.Object, assembler, adminSignIn.Object, authService.Object, claimsFactory.Object, httpContextAccessor, options);
     }
 
     /// <summary>
@@ -86,12 +91,20 @@ public class AuthFlowServiceTests
         userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
 
         var adminSignIn = new Mock<IAdminSignInService>();
-        var svc = CreateService(ad: ad, userManagement: userManagement, adminSignIn: adminSignIn);
+
+        var perms = new Mock<IPermissionService>();
+        perms.Setup(x => x.GetAsync(userName, It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
+            .ReturnsAsync(new UserPermissionsDto { Areas = new List<int> { 1 }, Version = 1 });
+
+        var authService = new Mock<IAuthenticationService>();
+
+        var svc = CreateService(ad: ad, userManagement: userManagement, adminSignIn: adminSignIn, perms: perms, authService: authService);
         var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = userName, Password = "pwd" });
-        Assert.True(outcome.SignInAdmin);
+        Assert.False(outcome.SignInAdmin);
         Assert.Equal("/admin", outcome.RedirectUrl);
-        Assert.Equal(user.Id, outcome.AdminUserId);
-        adminSignIn.Verify(x => x.SignInAsync(user.Id, It.IsAny<CancellationToken>()), Times.Once);
+        Assert.True(string.IsNullOrWhiteSpace(outcome.AdminUserId));
+        adminSignIn.Verify(x => x.SignInAsync(user.Id, It.IsAny<CancellationToken>()), Times.Never);
+        authService.Verify(x => x.SignInAsync(It.IsAny<HttpContext>(), IdentityConstants.ApplicationScheme, It.IsAny<System.Security.Claims.ClaimsPrincipal>(), It.IsAny<AuthenticationProperties>()), Times.Once);
     }
 
     [Fact]
@@ -115,7 +128,8 @@ public class AuthFlowServiceTests
         clientSvc.Setup(x => x.IsReturnUrlAllowed(client, "https://app/landing")).Returns(true);
 
         var perms = new Mock<IPermissionService>();
-        perms.Setup(x => x.GetAsync(userName)).ReturnsAsync(new UserPermissionsDto { Areas = new List<int> { 1 }, Version = 1 });
+        perms.Setup(x => x.GetAsync(userName, It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
+            .ReturnsAsync(new UserPermissionsDto { Areas = new List<int> { 1 }, Version = 1 });
 
         var authService = new Mock<IAuthenticationService>();
 

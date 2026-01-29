@@ -28,6 +28,7 @@ public sealed class AuthFlowService : IAuthFlowService
     private readonly UserPermissionsAssembler _permissionsAssembler;
     private readonly IAdminSignInService _adminSignInService;
     private readonly IAuthenticationService _authenticationService;
+    private readonly IUserClaimsPrincipalFactory<ApplicationUser> _claimsPrincipalFactory;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly TestUsersOptions _testUsers;
 
@@ -41,6 +42,7 @@ public sealed class AuthFlowService : IAuthFlowService
         UserPermissionsAssembler permissionsAssembler,
         IAdminSignInService adminSignInService,
         IAuthenticationService authenticationService,
+        IUserClaimsPrincipalFactory<ApplicationUser> claimsPrincipalFactory,
         IHttpContextAccessor httpContextAccessor,
         IOptions<TestUsersOptions> testUsersOptions)
     {
@@ -53,6 +55,7 @@ public sealed class AuthFlowService : IAuthFlowService
         _permissionsAssembler = permissionsAssembler;
         _adminSignInService = adminSignInService;
         _authenticationService = authenticationService;
+        _claimsPrincipalFactory = claimsPrincipalFactory;
         _httpContextAccessor = httpContextAccessor;
         _testUsers = testUsersOptions.Value ?? new TestUsersOptions();
     }
@@ -134,18 +137,39 @@ public sealed class AuthFlowService : IAuthFlowService
 
         var rolesList = await _userManagement.GetRolesAsync(user);
         var roles = rolesList.ToArray();
-        var isAdmin = roles.Contains("Admin") || roles.Contains("Administrador");
-        var hasClientRequest = !string.IsNullOrWhiteSpace(dto.ClientId) && !string.IsNullOrWhiteSpace(dto.ReturnUrl);
-        if (isAdmin && !hasClientRequest)
+        var effectiveRoles = roles
+            .Concat(testUser?.Roles ?? Enumerable.Empty<string>())
+            .Where(role => !string.IsNullOrWhiteSpace(role))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var isAdmin = effectiveRoles.Contains("Admin") || effectiveRoles.Contains("Administrador");
+        var hasReturnUrl = !string.IsNullOrWhiteSpace(dto.ReturnUrl);
+        var hasClientId = !string.IsNullOrWhiteSpace(dto.ClientId);
+        var hasClientRequest = hasClientId && hasReturnUrl;
+        int? testAreaId = null;
+        if (testUser is not null && !string.IsNullOrWhiteSpace(testUser.Area) && int.TryParse(testUser.Area, out var parsedArea))
         {
-            return await FinalizeResultAsync(new LoginResult { SignInAdmin = true, AdminUserId = user.Id, RedirectUrl = "/admin" });
+            testAreaId = parsedArea;
+        }
+
+        if (isAdmin && !hasClientRequest && !hasReturnUrl && !hasClientId)
+        {
+            var adminPermissions = await _permissionService.GetAsync(
+                user.UserName!,
+                effectiveRoles,
+                testAreaId.HasValue ? new[] { testAreaId.Value } : null);
+            var adminClaims = _permissionsAssembler.BuildClaims(user, effectiveRoles, adminPermissions, Array.Empty<string>());
+            adminClaims = MergeTestUserClaims(adminClaims, testUser);
+            await SignInAsync(user, adminClaims);
+
+            return await FinalizeResultAsync(new LoginResult { RedirectUrl = "/admin", SignInAdmin = false });
         }
 
         string clientId;
         string returnUrl;
         ApplicationClient? client = null;
 
-        if (!string.IsNullOrWhiteSpace(dto.ClientId) && !string.IsNullOrWhiteSpace(dto.ReturnUrl))
+        if (hasClientRequest)
         {
             client = await _clientService.GetAsync(dto.ClientId);
             if (client is null)
@@ -167,18 +191,39 @@ public sealed class AuthFlowService : IAuthFlowService
                 return await FinalizeResultAsync(BuildLoginRedirect("no_route", "No se encontró una aplicación de destino para el usuario.", dto.ReturnUrl, dto.ClientId));
             }
             clientId = routing.Value.ClientId;
-            returnUrl = routing.Value.ReturnUrl;
             client = await _clientService.GetAsync(clientId);
-            if (client is null || !_clientService.IsReturnUrlAllowed(client, returnUrl))
+            if (client is null)
             {
                 return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "Aplicación o URL de retorno inválida.", dto.ReturnUrl, dto.ClientId));
             }
+
+            if (hasReturnUrl)
+            {
+                if (!_clientService.IsReturnUrlAllowed(client, dto.ReturnUrl))
+                {
+                    return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "URL de retorno inválida.", dto.ReturnUrl, dto.ClientId));
+                }
+
+                returnUrl = dto.ReturnUrl;
+            }
+            else
+            {
+                returnUrl = routing.Value.ReturnUrl;
+                if (string.IsNullOrWhiteSpace(returnUrl) || !_clientService.IsReturnUrlAllowed(client, returnUrl))
+                {
+                    return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "Aplicación o URL de retorno inválida.", dto.ReturnUrl, dto.ClientId));
+                }
+            }
         }
 
-        var rawPermissions = await _permissionService.GetAsync(user.UserName!);
+        var rawPermissions = await _permissionService.GetAsync(
+            user.UserName!,
+            effectiveRoles,
+            testAreaId.HasValue ? new[] { testAreaId.Value } : null);
         var apps = new List<string> { clientId };
-        var claimsModel = _permissionsAssembler.BuildClaims(user, roles, rawPermissions, apps);
-        await SignInAsync(claimsModel);
+        var claimsModel = _permissionsAssembler.BuildClaims(user, effectiveRoles, rawPermissions, apps);
+        claimsModel = MergeTestUserClaims(claimsModel, testUser);
+        await SignInAsync(user, claimsModel);
 
         return await FinalizeResultAsync(new LoginResult { RedirectUrl = returnUrl, SignInAdmin = false });
     }
@@ -206,7 +251,7 @@ public sealed class AuthFlowService : IAuthFlowService
         return result;
     }
 
-    private async Task SignInAsync(AuthClaimsModel claimsModel)
+    private async Task SignInAsync(ApplicationUser user, AuthClaimsModel claimsModel)
     {
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext is null)
@@ -214,10 +259,38 @@ public sealed class AuthFlowService : IAuthFlowService
             throw new InvalidOperationException("HttpContext no disponible para iniciar sesión.");
         }
 
+        var basePrincipal = await _claimsPrincipalFactory.CreateAsync(user);
+        var baseIdentity = basePrincipal.Identity as ClaimsIdentity;
+        var identity = new ClaimsIdentity(
+            basePrincipal.Claims,
+            IdentityConstants.ApplicationScheme,
+            baseIdentity?.NameClaimType ?? ClaimTypes.Name,
+            baseIdentity?.RoleClaimType ?? ClaimTypes.Role);
+
+        RemoveClaimsOfType(identity, ClaimTypes.NameIdentifier);
+        RemoveClaimsOfType(identity, ClaimTypes.Name);
+        RemoveClaimsOfType(identity, ClaimTypes.Email);
+        RemoveClaimsOfType(identity, ClaimTypes.Role);
+        RemoveClaimsOfType(identity, "area");
+        RemoveClaimsOfType(identity, "app");
+        RemoveClaimsOfType(identity, "page");
+        RemoveClaimsOfType(identity, "page_action");
+        RemoveClaimsOfType(identity, "perms_version");
+        RemoveClaimsOfType(identity, "perms_json");
+        RemoveClaimsOfType(identity, "first_page");
+
+        var displayName = claimsModel.DisplayName;
+        if (!string.IsNullOrWhiteSpace(claimsModel.Email)
+            && !string.IsNullOrWhiteSpace(displayName)
+            && displayName.Equals(claimsModel.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            displayName = displayName.Split('@')[0];
+        }
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, claimsModel.UserId),
-            new(ClaimTypes.Name, claimsModel.DisplayName ?? claimsModel.Email ?? claimsModel.UserId)
+            new(ClaimTypes.Name, displayName ?? claimsModel.UserId)
         };
 
         if (!string.IsNullOrWhiteSpace(claimsModel.Email))
@@ -235,11 +308,10 @@ public sealed class AuthFlowService : IAuthFlowService
             claims.Add(new Claim("area", area));
         }
 
-        if (!string.IsNullOrWhiteSpace(claimsModel.PermissionsJson))
-        {
-            claims.Add(new Claim("perms_json", claimsModel.PermissionsJson));
-        }
-
+        var permissionsJson = string.IsNullOrWhiteSpace(claimsModel.PermissionsJson)
+            ? "{\"pages\":[],\"version\":" + claimsModel.PermissionsVersion + "}"
+            : claimsModel.PermissionsJson;
+        claims.Add(new Claim("perms_json", permissionsJson));
         claims.Add(new Claim("perms_version", claimsModel.PermissionsVersion.ToString()));
 
         foreach (var app in claimsModel.Apps)
@@ -272,7 +344,7 @@ public sealed class AuthFlowService : IAuthFlowService
             claims.Add(new Claim("first_page", claimsModel.FirstPageUrl));
         }
 
-        var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
+        identity.AddClaims(claims);
         var principal = new ClaimsPrincipal(identity);
         var authProps = new AuthenticationProperties
         {
@@ -281,6 +353,15 @@ public sealed class AuthFlowService : IAuthFlowService
         };
 
         await _authenticationService.SignInAsync(httpContext, IdentityConstants.ApplicationScheme, principal, authProps);
+    }
+
+    private static void RemoveClaimsOfType(ClaimsIdentity identity, string claimType)
+    {
+        var existing = identity.Claims.Where(c => string.Equals(c.Type, claimType, StringComparison.OrdinalIgnoreCase)).ToList();
+        foreach (var claim in existing)
+        {
+            identity.RemoveClaim(claim);
+        }
     }
 
     private TestUserOptions? TryGetTestUser(string userNameOrEmail)
@@ -313,6 +394,51 @@ public sealed class AuthFlowService : IAuthFlowService
         }
 
         return null;
+    }
+
+    private static AuthClaimsModel MergeTestUserClaims(AuthClaimsModel claimsModel, TestUserOptions? testUser)
+    {
+        if (testUser is null)
+        {
+            return claimsModel;
+        }
+
+        var mergedRoles = claimsModel.Roles
+            .Concat(testUser.Roles ?? new List<string>())
+            .Where(role => !string.IsNullOrWhiteSpace(role))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var mergedAreas = claimsModel.Areas
+            .Concat(string.IsNullOrWhiteSpace(testUser.Area) ? Array.Empty<string>() : new[] { testUser.Area })
+            .Where(area => !string.IsNullOrWhiteSpace(area))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var mergedDisplayName = claimsModel.DisplayName;
+        if (!string.IsNullOrWhiteSpace(testUser.DisplayName))
+        {
+            if (string.IsNullOrWhiteSpace(mergedDisplayName)
+                || mergedDisplayName.Contains('@')
+                || (claimsModel.Email is not null && mergedDisplayName.Equals(claimsModel.Email, StringComparison.OrdinalIgnoreCase)))
+            {
+                mergedDisplayName = testUser.DisplayName;
+            }
+        }
+
+        return new AuthClaimsModel
+        {
+            UserId = claimsModel.UserId,
+            Email = claimsModel.Email,
+            DisplayName = mergedDisplayName,
+            Roles = mergedRoles,
+            Areas = mergedAreas,
+            Apps = claimsModel.Apps,
+            Pages = claimsModel.Pages,
+            PermissionsVersion = claimsModel.PermissionsVersion,
+            PermissionsJson = claimsModel.PermissionsJson,
+            FirstPageUrl = claimsModel.FirstPageUrl
+        };
     }
 
     private static bool PasswordMatches(string inputPassword, string expectedPassword)

@@ -67,7 +67,7 @@ public class PermissionsControllerTests
         var userName = "bob";
         await controller.GetAsync(userName);
 
-        svc.Verify(s => s.GetAsync(userName), Times.Once);
+        svc.Verify(s => s.GetAsync(userName, null, null), Times.Once);
     }
 
     [Fact]

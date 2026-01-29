@@ -5,5 +5,5 @@ namespace Auth.Web.Services.Abstractions.Permissions;
 
 public interface IPermissionService
 {
-    Task<UserPermissionsDto> GetAsync(string userName);
+    Task<UserPermissionsDto> GetAsync(string userName, IReadOnlyCollection<string>? roleNamesOverride = null, IReadOnlyCollection<int>? areaIdsOverride = null);
 }

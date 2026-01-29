@@ -17,11 +17,19 @@ public class PermissionService : IPermissionService
         _userManager = userManager;
     }
 
-    public async Task<UserPermissionsDto> GetAsync(string userName)
+    public async Task<UserPermissionsDto> GetAsync(string userName, IReadOnlyCollection<string>? roleNamesOverride = null, IReadOnlyCollection<int>? areaIdsOverride = null)
     {
         var user = await _userManager.FindByNameAsync(userName);
+        if (user is null && !string.IsNullOrWhiteSpace(userName))
+        {
+            user = await _userManager.FindByEmailAsync(userName);
+        }
+        var resolvedRoleNames = (roleNamesOverride ?? Array.Empty<string>())
+            .Where(role => !string.IsNullOrWhiteSpace(role))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
-        if (user is null)
+        if (resolvedRoleNames.Length == 0 && user is null)
         {
             return new UserPermissionsDto
             {
@@ -31,9 +39,18 @@ public class PermissionService : IPermissionService
             };
         }
 
-        var roleNames = await _userManager.GetRolesAsync(user);
-        var roleIds = await _repository.GetUserRoleIdsAsync(roleNames);
-        var areaIds = await _repository.GetUserAreaIdsAsync(user.Id);
+        if (resolvedRoleNames.Length == 0 && user is not null)
+        {
+            var roleNames = await _userManager.GetRolesAsync(user);
+            resolvedRoleNames = roleNames
+                .Where(role => !string.IsNullOrWhiteSpace(role))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        var roleIds = await _repository.GetUserRoleIdsAsync(resolvedRoleNames);
+        var areaIds = areaIdsOverride?.ToList()
+            ?? (user is not null ? (await _repository.GetUserAreaIdsAsync(user.Id)).ToList() : new List<int>());
         var rolePermissions = await _repository.GetRolePagePermissionsAsync(roleIds);
 
         var pagePermissions = rolePermissions
