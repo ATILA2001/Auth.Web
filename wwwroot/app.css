@@ -1,7 +1,7 @@
 :root {
     --rz-primary: #466791 !important;
     --admin-accent: #d00000; /* light por defecto */
-    
+
     .rz-group-header {
         justify-content: end;
     }
@@ -9,11 +9,16 @@
     .rz-link-text {
         color: #ffffff;
     }
+
+    .rz-datatable{
+        border:none !important;
+    }
 }
 
 /* Light theme */
 .rz-layout.rz-material {
     --admin-accent: #2b3a50;
+    --background: #eeeeee;
 }
 
 /* Dark theme */
@@ -39,7 +44,9 @@
     background-color: var(--admin-accent) !important;
 }
 
-
+.rz-grid-table thead th {
+    background-color: var(--background) !important;
+}
 
 /* Estilos de validación para EditForm con DataAnnotationsValidator */
 .valid.modified:not([type=checkbox]) {

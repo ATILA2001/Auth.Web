@@ -57,7 +57,7 @@
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Context="u" Filterable="false" Title="Acciones">
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Context="u" Filterable="false" Title="Acciones" Width="150px">
                         <Template Context="u">
                             <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(u))" Disabled="@(IsLoading || IsSaving)" />
                         </Template>

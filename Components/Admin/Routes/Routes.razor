@@ -67,7 +67,7 @@
                             <RadzenCheckBox TValue="bool" Value="@GetActiveBuffer(r)" ValueChanged="@(v => SetActiveBuffer(r, v))" Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Context="r" Filterable="false" Title="Acciones">
+                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Context="r" Filterable="false" Title="Acciones" Width="150px">
                         <Template Context="r">
                             <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(r))" @onclick:stopPropagation class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />
                             <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeleteRoute(r.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />
