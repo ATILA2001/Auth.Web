@@ -96,6 +96,14 @@ public sealed class UserAdminService : IAdminUserService
         await _repository.UpdateUserAreasAsync(userId, areaIds, cancellationToken);
     }
 
+    public async Task DeleteUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null) return;
+
+        await _userManager.DeleteAsync(user);
+    }
+
     private static UserAdminDto MapUser(ApplicationUser user, List<string> roles, List<int> areaIds, IReadOnlyDictionary<int, string> areaNameMap)
     {
         var areaNames = areaIds
