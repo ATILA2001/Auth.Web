@@ -24,7 +24,7 @@
                 <HeaderTemplate>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0.5rem">
                         <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle" Text="Agregar" Click="@BeginCreate" Disabled="@(IsLoading || IsSaving || _permissionsToInsert.Count > 0)" />
-                        <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" Disabled="@(IsLoading || IsSaving)" />
+                        <RadzenButton Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" Disabled="@(IsLoading || IsSaving)" />
                     </RadzenStack>
                 </HeaderTemplate>
                 <Columns>
@@ -36,7 +36,6 @@
                                             ValueProperty="Id"
                                             Value="@GetRoleBuffer(p)"
                                             ValueChanged="@(v => SetRoleBuffer(p, v))"
-                                            Style="width: 180px"
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
@@ -48,7 +47,6 @@
                                             ValueProperty="Id"
                                             Value="@GetPageBuffer(p)"
                                             ValueChanged="@(v => SetPageBuffer(p, v))"
-                                            Style="width: 200px"
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
@@ -61,14 +59,13 @@
                                             ValueProperty="Id"
                                             Value="@GetActionBuffer(p)"
                                             ValueChanged="@(v => SetActionBuffer(p, v))"
-                                            Style="width: 160px"
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Context="p" Filterable="false" Sortable="false"  Title="Acciones" Width="150px">
+                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Context="p" Filterable="false" Sortable="false"  Title="Acciones" Width="112px" TextAlign="TextAlign.Center">
                         <Template Context="p">
-                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(p))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />
-                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" class="rz-ml-2" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeletePermission(p.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenButton Icon="edit" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(p))" @onclick:stopPropagation class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeletePermission(p.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />
                         </Template>
                         <EditTemplate Context="p">
                             <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Success" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Guardar" AriaLabel="Guardar" Click="@(args => ValidateAndSave(p))" Disabled="@(IsLoading || IsSaving)" />

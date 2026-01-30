@@ -19,20 +19,28 @@
 .rz-layout.rz-material {
     --admin-accent: #2b3a50;
     --background: #eeeeee;
+    --text: #2b3a50;
+    --hover: rgb(67 64 210 / 12%)
 }
 
 /* Dark theme */
 .rz-layout.rz-material-dark {
-    --admin-accent: #ffffff;
+    --admin-accent: #2b3a50;
+    --text: #ffffff;
+    --hover: var(--admin-accent);
 }
 
 
 .rz-navigation-item-wrapper-active {
-    color: var(--admin-accent) !important;
+    color: var(--text) !important;
+    background-color: var(--hover) !important;
 }
 
     .rz-navigation-item-wrapper-active .rz-navigation-item-icon {
-        color: var(--admin-accent) !important;
+        color: var(--text) !important;
+    }
+    .rz-navigation-item-wrapper-active .rz-navigation-item-text {
+        color: var(--text) !important;
     }
 
 

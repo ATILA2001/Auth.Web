@@ -24,24 +24,24 @@
                 <HeaderTemplate>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0.5rem">
                         <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle" Text="Agregar" Click="@BeginCreate" Disabled="@(IsLoading || IsSaving || _pagesToInsert.Count > 0)" />
-                        <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" Disabled="@(IsLoading || IsSaving)" />
+                        <RadzenButton Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" Disabled="@(IsLoading || IsSaving)" />
                     </RadzenStack>
                 </HeaderTemplate>
                 <Columns>
                     <RadzenDataGridColumn TItem="PageAdminDto" Property="Name" Title="Nombre">
                         <EditTemplate Context="p">
-                            <RadzenTextBox Value="@GetNameBuffer(p)" ValueChanged="@(v => SetNameBuffer(p, v))" Style="width: 240px" Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenTextBox Value="@GetNameBuffer(p)" ValueChanged="@(v => SetNameBuffer(p, v))"  Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="PageAdminDto" Property="Url" Title="URL">
                         <EditTemplate Context="p">
-                            <RadzenTextBox Value="@GetUrlBuffer(p)" ValueChanged="@(v => SetUrlBuffer(p, v))" Style="width: 260px" Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenTextBox Value="@GetUrlBuffer(p)" ValueChanged="@(v => SetUrlBuffer(p, v))"  Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="PageAdminDto" Property="PermissionCount" Title="Permisos"  />
-                    <RadzenDataGridColumn TItem="PageAdminDto" Context="p" Filterable="false" Title="Acciones" Width="150px">
+                    <RadzenDataGridColumn TItem="PageAdminDto" Context="p" Filterable="false" Title="Acciones" Width="112px" TextAlign="TextAlign.Center">
                         <Template Context="p">
-                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(p))" @onclick:stopPropagation class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenButton Icon="edit" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(p))" @onclick:stopPropagation class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />
                             <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeletePage(p.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />
                         </Template>
                         <EditTemplate Context="p">

@@ -23,8 +23,8 @@
                             AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas" EmptyText="Sin registros">
                 <HeaderTemplate>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0.5rem">
-                        <RadzenTextBox @bind-Value="search" Placeholder="Buscar" Style="width: 260px" @oninput="@(args => Filter())" Disabled="@(IsLoading || IsSaving)" />
-                        <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" Disabled="@(IsLoading || IsSaving)" />
+                        <RadzenTextBox @bind-Value="search" Placeholder="Buscar"  @oninput="@(args => Filter())" Disabled="@(IsLoading || IsSaving)" />
+                        <RadzenButton Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" Disabled="@(IsLoading || IsSaving)" />
                     </RadzenStack>
                 </HeaderTemplate>
                 <Columns>
@@ -40,7 +40,7 @@
                                             Multiple="true"
                                             Value="@GetRolesBuffer(u)"
                                             ValueChanged="@(v => SetRolesBuffer(u, v?.ToList() ?? new()))"
-                                            Style="width: 260px"
+                                          
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
@@ -54,13 +54,13 @@
                                             Multiple="true"
                                             Value="@GetAreasBuffer(u)"
                                             ValueChanged="@(v => SetAreasBuffer(u, v?.ToList() ?? new()))"
-                                            Style="width: 260px"
+                                     
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Context="u" Filterable="false" Title="Acciones" Width="150px">
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Context="u" Filterable="false" Title="Acciones" Width="112px" TextAlign="TextAlign.Center">
                         <Template Context="u">
-                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(u))" Disabled="@(IsLoading || IsSaving)" class="rz-mr-2" />
+                            <RadzenButton Icon="edit" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(u))" Disabled="@(IsLoading || IsSaving)" class="rz-mr-2" />
                             <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeleteUser(u.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />
                         </Template>
                         <EditTemplate Context="u">
