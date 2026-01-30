@@ -17,13 +17,12 @@
 <RadzenRow>
     <RadzenColumn Size="12" SizeMd="10" SizeLg="10" OffsetMd="1" OffsetLg="1">
         <RadzenCard Class="rz-shadow-3 rz-p-3">
-            <RadzenDataGrid TItem="Application.Admin.Dtos.UserAdminDto" Data="@filteredUsers" @ref="grid" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
+            <RadzenDataGrid TItem="Application.Admin.Dtos.UserAdminDto" Data="@_vm.Users" @ref="grid" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
                             AllowSorting="true" EditMode="DataGridEditMode.Single" RowUpdate="@OnRowUpdate"
                             FilterMode="FilterMode.CheckBoxList" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
                             AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas" EmptyText="Sin registros">
                 <HeaderTemplate>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0.5rem">
-                        <RadzenTextBox @bind-Value="search" Placeholder="Buscar"  @oninput="@(args => Filter())" Disabled="@(IsLoading || IsSaving)" />
                         <RadzenButton Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" Disabled="@(IsLoading || IsSaving)" />
                     </RadzenStack>
                 </HeaderTemplate>

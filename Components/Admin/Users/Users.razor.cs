@@ -20,12 +20,6 @@ public partial class Users : ComponentBase
     private readonly Dictionary<UserAdminDto, List<string>> _rolesBuffer = new();
     private readonly Dictionary<UserAdminDto, List<int>> _areasBuffer = new();
 
-    private string search
-    {
-        get => _vm.Search;
-        set => _vm.Search = value;
-    }
-    private List<UserAdminDto> filteredUsers => _vm.FilteredUsers;
     private List<RoleAdminDto> AllRoles => _vm.AllRoles;
     private List<AreaAdminDto> AllAreas => _vm.AllAreas;
 
@@ -171,16 +165,6 @@ public partial class Users : ComponentBase
         }
 
         await grid.UpdateRow(user);
-    }
-
-    private void Filter()
-    {
-        if (IsLoading || IsSaving)
-        {
-            return;
-        }
-
-        _vm.Filter();
     }
 
     private void ClearFilters()

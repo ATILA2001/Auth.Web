@@ -32,7 +32,6 @@ public sealed class UsersViewModel
     private readonly IAdminUserService _userService;
     private readonly IAdminRoleService _roleService;
     private readonly IAdminAreaService _areaService;
-    private string _search = string.Empty;
     private List<string> _selectedRoles = new();
     private List<int> _selectedAreaIds = new();
 
@@ -46,14 +45,7 @@ public sealed class UsersViewModel
         _areaService = areaService;
     }
 
-    public string Search
-    {
-        get => _search;
-        set => _search = value?.Trim() ?? string.Empty;
-    }
-
     public List<UserAdminDto> Users { get; private set; } = new();
-    public List<UserAdminDto> FilteredUsers { get; private set; } = new();
     public UserAdminDto? SelectedUser { get; private set; }
     public List<RoleAdminDto> AllRoles { get; private set; } = new();
     public List<AreaAdminDto> AllAreas { get; private set; } = new();
@@ -75,17 +67,6 @@ public sealed class UsersViewModel
         Users = (await _userService.GetUsersAsync()).ToList();
         AllRoles = (await _roleService.GetRolesAsync()).ToList();
         AllAreas = (await _areaService.GetAreasAsync()).ToList();
-        Filter();
-    }
-
-    public void Filter()
-    {
-        var term = Search;
-        FilteredUsers = Users
-            .Where(u => string.IsNullOrWhiteSpace(term)
-                || (u.UserName?.Contains(term, StringComparison.OrdinalIgnoreCase) == true)
-                || (u.Email?.Contains(term, StringComparison.OrdinalIgnoreCase) == true))
-            .ToList();
     }
 
     public void BeginEdit(UserAdminDto user)
