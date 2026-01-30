@@ -110,6 +110,12 @@ public sealed class UsersViewModel
 
     public async Task<UsersVmResult> SaveAsync()
     {
+        var validation = ValidateOnly();
+        if (validation.Outcome != UsersVmOutcome.Success)
+        {
+            return validation;
+        }
+
         if (SelectedUser is null)
         {
             return UsersVmResult.ValidationFailed("Validación", "No hay usuario seleccionado.");
@@ -125,6 +131,30 @@ public sealed class UsersViewModel
         catch (Exception ex)
         {
             return UsersVmResult.Failed("Error al actualizar usuario", ex.Message);
+        }
+    }
+
+    public UsersVmResult ValidateOnly()
+    {
+        if (SelectedRoles.Count == 0)
+        {
+            return UsersVmResult.ValidationFailed("Validación", "Debe seleccionar al menos un rol.");
+        }
+
+        return UsersVmResult.Success("Válido", "", requiresReload: false);
+    }
+
+    public async Task<UsersVmResult> DeleteAsync(string userId)
+    {
+        try
+        {
+            await _userService.DeleteUserAsync(userId);
+            // DELETE: reload required to remove row from grid
+            return UsersVmResult.Success("Usuario eliminado", $"Id {userId} removido.", requiresReload: true);
+        }
+        catch (Exception ex)
+        {
+            return UsersVmResult.Failed("Error al eliminar usuario", ex.Message);
         }
     }
 

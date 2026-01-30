@@ -1,5 +1,6 @@
 @page "/admin/users"
 @using Microsoft.AspNetCore.Authorization
+@using Auth.Web.Application.Admin.Dtos
 @attribute [Authorize(Roles = "Admin")]
 @layout Auth.Web.Components.Admin.AdminLayout
 @namespace Auth.Web.Components.Admin.Users
@@ -59,10 +60,11 @@
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Context="u" Filterable="false" Title="Acciones" Width="150px">
                         <Template Context="u">
-                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(u))" Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(u))" Disabled="@(IsLoading || IsSaving)" class="rz-mr-2" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeleteUser(u.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />
                         </Template>
                         <EditTemplate Context="u">
-                            <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Success" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Guardar" AriaLabel="Guardar" Click="@(args => grid.UpdateRow(u))" Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Success" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Guardar" AriaLabel="Guardar" Click="@(args => ValidateAndSave(u))" Disabled="@(IsLoading || IsSaving)" />
                             <RadzenButton Icon="cancel" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" class="rz-ml-2" Title="Cancelar" AriaLabel="Cancelar" Click="@(args => CancelEditRow(u))" Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>

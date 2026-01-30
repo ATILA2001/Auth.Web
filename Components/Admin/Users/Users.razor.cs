@@ -12,6 +12,7 @@ public partial class Users : ComponentBase
     [Inject] private IAdminRoleService RoleService { get; set; } = null!;
     [Inject] private IAdminAreaService AreaService { get; set; } = null!;
     [Inject] private NotificationService NotificationService { get; set; } = null!;
+    [Inject] private DialogService DialogService { get; set; } = null!;
 
     private UsersViewModel _vm = null!;
     private RadzenDataGrid<UserAdminDto> grid = null!;
@@ -151,6 +152,27 @@ public partial class Users : ComponentBase
         _areasBuffer.Remove(user);
     }
 
+    private async Task ValidateAndSave(UserAdminDto user)
+    {
+        if (IsLoading || IsSaving)
+        {
+            return;
+        }
+
+        _vm.BeginEdit(user);
+        _vm.SelectedRoles = GetRolesBuffer(user).ToList();
+        _vm.SelectedAreaIds = GetAreasBuffer(user).ToList();
+        var validationResult = _vm.ValidateOnly();
+
+        if (validationResult.Outcome != UsersVmOutcome.Success)
+        {
+            NotifyUser(validationResult);
+            return;
+        }
+
+        await grid.UpdateRow(user);
+    }
+
     private void Filter()
     {
         if (IsLoading || IsSaving)
@@ -169,6 +191,37 @@ public partial class Users : ComponentBase
         }
 
         grid.Reset(true);
+    }
+
+    private async Task DeleteUser(string id)
+    {
+        if (IsSaving)
+        {
+            return;
+        }
+
+        var confirm = await DialogService.Confirm("Eliminar el usuario?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
+        if (confirm != true)
+        {
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            var result = await _vm.DeleteAsync(id);
+            NotifyUser(result);
+
+            // Explicit contract: DELETE success requires reload to remove row from grid
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+        }
+        finally
+        {
+            IsSaving = false;
+        }
     }
 
     private void NotifyUser(UsersVmResult result)
