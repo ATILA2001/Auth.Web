@@ -273,11 +273,7 @@ public sealed class AuthFlowService : IAuthFlowService
         RemoveClaimsOfType(identity, ClaimTypes.Role);
         RemoveClaimsOfType(identity, "area");
         RemoveClaimsOfType(identity, "app");
-        RemoveClaimsOfType(identity, "page");
-        RemoveClaimsOfType(identity, "page_action");
-        RemoveClaimsOfType(identity, "perms_version");
         RemoveClaimsOfType(identity, "perms_json");
-        RemoveClaimsOfType(identity, "first_page");
 
         var displayName = claimsModel.DisplayName;
         if (!string.IsNullOrWhiteSpace(claimsModel.Email)
@@ -312,36 +308,10 @@ public sealed class AuthFlowService : IAuthFlowService
             ? "{\"pages\":[],\"version\":" + claimsModel.PermissionsVersion + "}"
             : claimsModel.PermissionsJson;
         claims.Add(new Claim("perms_json", permissionsJson));
-        claims.Add(new Claim("perms_version", claimsModel.PermissionsVersion.ToString()));
 
         foreach (var app in claimsModel.Apps)
         {
             claims.Add(new Claim("app", app));
-        }
-
-        foreach (var page in claimsModel.Pages)
-        {
-            if (string.IsNullOrWhiteSpace(page.Url))
-            {
-                continue;
-            }
-
-            claims.Add(new Claim("page", page.Url));
-
-            foreach (var action in page.Actions?.AsEnumerable() ?? Enumerable.Empty<string>())
-            {
-                if (string.IsNullOrWhiteSpace(action))
-                {
-                    continue;
-                }
-
-                claims.Add(new Claim("page_action", $"{page.Url}|{action}"));
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(claimsModel.FirstPageUrl))
-        {
-            claims.Add(new Claim("first_page", claimsModel.FirstPageUrl));
         }
 
         identity.AddClaims(claims);
