@@ -1,5 +1,6 @@
 using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Routing;
+using Auth.Web.Services.Abstractions.Clients;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Auth.Web.Repositories.Abstractions.Routing;
@@ -11,12 +12,14 @@ public sealed class RoutingService : IRoutingService
     private readonly IRoutingRepository _repository;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<RoutingService> _logger;
+    private readonly IClientService _clientService;
 
-    public RoutingService(IRoutingRepository repository, UserManager<ApplicationUser> userManager, ILogger<RoutingService> logger)
+    public RoutingService(IRoutingRepository repository, UserManager<ApplicationUser> userManager, ILogger<RoutingService> logger, IClientService clientService)
     {
         _repository = repository;
         _userManager = userManager;
         _logger = logger;
+        _clientService = clientService;
     }
 
     public async Task<(string ClientId, string ReturnUrl)?> ResolveForUserAsync(string userId, CancellationToken ct = default)
@@ -43,6 +46,19 @@ public sealed class RoutingService : IRoutingService
             return null;
         }
 
-        return (rule.ClientId, rule.ReturnUrl);
+        if (rule.Client is null || string.IsNullOrWhiteSpace(rule.Client.ClientId))
+        {
+            _logger.LogInformation("Routing: regla sin cliente válido para usuario {UserId}", userId);
+            return null;
+        }
+
+        var returnUrl = _clientService.GetDefaultReturnUrl(rule.Client);
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            _logger.LogInformation("Routing: cliente {ClientId} sin ReturnUrl configurada", rule.Client.ClientId);
+            return null;
+        }
+
+        return (rule.Client.ClientId, returnUrl);
     }
 }

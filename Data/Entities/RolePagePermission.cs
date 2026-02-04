@@ -6,9 +6,9 @@ public class RolePagePermission
 
     public string RoleId { get; set; } = string.Empty;
 
-    public int PageId { get; set; }
+    public int? PageId { get; set; }
 
-    public int ActionPermissionId { get; set; }
+    public int? ActionPermissionId { get; set; }
 
     public Page? Page { get; set; }
 

@@ -61,8 +61,8 @@ public sealed class PermissionsViewModel
     public List<ActionPermissionAdminDto> Actions { get; private set; } = new();
     public RolePagePermissionAdminDto EditModel { get; private set; } = new();
     public string SelectedRoleId { get; set; } = string.Empty;
-    public int SelectedPageId { get; set; }
-    public int SelectedActionId { get; set; }
+    public int? SelectedPageId { get; set; }
+    public int? SelectedActionId { get; set; }
     public string? ValidationError { get; private set; }
 
     public async Task LoadAsync()
@@ -77,8 +77,8 @@ public sealed class PermissionsViewModel
     {
         EditModel = new RolePagePermissionAdminDto { Id = 0 };
         SelectedRoleId = Roles.FirstOrDefault()?.Id ?? string.Empty;
-        SelectedPageId = Pages.FirstOrDefault()?.Id ?? 0;
-        SelectedActionId = Actions.FirstOrDefault()?.Id ?? 0;
+        SelectedPageId = Pages.FirstOrDefault()?.Id;
+        SelectedActionId = Actions.FirstOrDefault()?.Id;
         ValidationError = null;
     }
 
@@ -98,7 +98,7 @@ public sealed class PermissionsViewModel
         ValidationError = null;
     }
 
-    public PermissionsVmResult ValidateOnly(string roleId, int pageId, int actionId, int currentPermissionId = 0)
+    public PermissionsVmResult ValidateOnly(string roleId, int? pageId, int? actionId, int currentPermissionId = 0)
     {
         ValidationError = null;
 
@@ -108,13 +108,13 @@ public sealed class PermissionsViewModel
             return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
         }
 
-        if (pageId <= 0)
+        if (!pageId.HasValue || pageId.Value <= 0)
         {
             ValidationError = "Debe seleccionar una página.";
             return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
         }
 
-        if (actionId <= 0)
+        if (!actionId.HasValue || actionId.Value <= 0)
         {
             ValidationError = "Debe seleccionar una acción.";
             return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
@@ -126,13 +126,13 @@ public sealed class PermissionsViewModel
             return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
         }
 
-        if (!Pages.Any(p => p.Id == pageId))
+        if (!Pages.Any(p => p.Id == pageId.Value))
         {
             ValidationError = "La página seleccionada no existe.";
             return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
         }
 
-        if (!Actions.Any(a => a.Id == actionId))
+        if (!Actions.Any(a => a.Id == actionId.Value))
         {
             ValidationError = "La acción seleccionada no existe.";
             return PermissionsVmResult.ValidationFailed("Validación", ValidationError);
@@ -158,10 +158,13 @@ public sealed class PermissionsViewModel
             return validationResult;
         }
 
+        var pageId = SelectedPageId!.Value;
+        var actionId = SelectedActionId!.Value;
+
         try
         {
             // CREATE only (no UPDATE for permissions - delete and recreate instead)
-            var id = await _permissionService.CreatePermissionAsync(SelectedRoleId, SelectedPageId, SelectedActionId);
+            var id = await _permissionService.CreatePermissionAsync(SelectedRoleId, pageId, actionId);
             if (id != 0)
             {
                 ValidationError = null;
@@ -186,19 +189,22 @@ public sealed class PermissionsViewModel
             return validationResult;
         }
 
+        var pageId = SelectedPageId!.Value;
+        var actionId = SelectedActionId!.Value;
+
         try
         {
             // UPDATE: Check if anything actually changed
             if (EditModel.RoleId == SelectedRoleId && 
-                EditModel.PageId == SelectedPageId && 
-                EditModel.ActionPermissionId == SelectedActionId)
+                EditModel.PageId == pageId && 
+                EditModel.ActionPermissionId == actionId)
             {
                 ValidationError = "No se realizaron cambios.";
                 return PermissionsVmResult.ValidationFailed("Sin cambios", ValidationError);
             }
 
             // Direct update (no delete + create anymore)
-            await _permissionService.UpdatePermissionAsync(EditModel.Id, SelectedRoleId, SelectedPageId, SelectedActionId);
+            await _permissionService.UpdatePermissionAsync(EditModel.Id, SelectedRoleId, pageId, actionId);
             ValidationError = null;
             return PermissionsVmResult.Success("Permiso actualizado", $"Se actualizó el permiso.", requiresReload: false);
         }

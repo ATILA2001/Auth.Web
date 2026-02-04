@@ -93,9 +93,9 @@ public sealed class RolePagePermissionAdminService : IAdminRolePagePermissionSer
         RoleId = p.RoleId,
         RoleName = roleNames.TryGetValue(p.RoleId, out var name) ? name : p.RoleId,
         PageId = p.PageId,
-        PageName = p.Page?.Name ?? string.Empty,
+        PageName = p.Page?.Name ?? "Sin asignar",
         PageUrl = p.Page?.Url ?? string.Empty,
         ActionPermissionId = p.ActionPermissionId,
-        ActionName = p.ActionPermission?.Name ?? string.Empty
+        ActionName = p.ActionPermission?.Name ?? "Sin asignar"
     };
 }

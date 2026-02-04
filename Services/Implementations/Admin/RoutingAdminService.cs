@@ -32,11 +32,11 @@ public sealed class RoutingAdminService : IAdminRoutingService
 
         var areaNames = await _areaRepository.GetAreaNamesAsync(cancellationToken);
         var clients = await _clientAdminRepository.GetClientsAsync(cancellationToken);
-        var clientMap = clients.ToDictionary(c => c.ClientId, c => c, StringComparer.OrdinalIgnoreCase);
+        var clientMap = clients.ToDictionary(c => c.Id, c => c);
 
         return routes.Select(r => MapRoute(r,
-            areaNames.TryGetValue(r.AreaId, out var areaName) ? areaName : null,
-            clientMap.TryGetValue(r.ClientId, out var client) ? client : null)).ToList();
+            r.AreaId.HasValue && areaNames.TryGetValue(r.AreaId.Value, out var areaName) ? areaName : null,
+            r.ClientId.HasValue && clientMap.TryGetValue(r.ClientId.Value, out var client) ? client : null)).ToList();
     }
 
     public async Task<AreaRouteAdminDto?> GetRouteAsync(int id, CancellationToken cancellationToken = default)
@@ -47,12 +47,16 @@ public sealed class RoutingAdminService : IAdminRoutingService
             return null;
         }
 
-        var areaName = await _areaRepository.GetAreaNameAsync(route.AreaId, cancellationToken);
-        var client = await _clientService.GetAsync(route.ClientId);
+        var areaName = route.AreaId.HasValue
+            ? await _areaRepository.GetAreaNameAsync(route.AreaId.Value, cancellationToken)
+            : null;
+        var client = route.ClientId.HasValue
+            ? await _clientAdminRepository.GetClientAsync(route.ClientId.Value, cancellationToken)
+            : null;
         return MapRoute(route, areaName, client);
     }
 
-    public async Task<int> CreateRouteAsync(int areaId, int clientId, string returnUrl, int priority, bool isActive, CancellationToken cancellationToken = default)
+    public async Task<int> CreateRouteAsync(int areaId, int clientId, int priority, bool isActive, CancellationToken cancellationToken = default)
     {
         var clientEntity = await _clientAdminRepository.GetClientAsync(clientId, cancellationToken) ?? throw new InvalidOperationException("Cliente inexistente.");
         var domainClient = await _clientService.GetAsync(clientEntity.ClientId);
@@ -60,14 +64,10 @@ public sealed class RoutingAdminService : IAdminRoutingService
         {
             throw new InvalidOperationException("Cliente inexistente.");
         }
-        if (!_clientService.IsReturnUrlAllowed(domainClient, returnUrl))
-        {
-            throw new InvalidOperationException("ReturnUrl no permitido para el cliente.");
-        }
-        return await _repository.CreateRouteAsync(areaId, clientId, returnUrl, priority, isActive, cancellationToken);
+        return await _repository.CreateRouteAsync(areaId, clientId, priority, isActive, cancellationToken);
     }
 
-    public async Task UpdateRouteAsync(int id, int areaId, int clientId, string returnUrl, int priority, bool isActive, CancellationToken cancellationToken = default)
+    public async Task UpdateRouteAsync(int id, int areaId, int clientId, int priority, bool isActive, CancellationToken cancellationToken = default)
     {
         var clientEntity = await _clientAdminRepository.GetClientAsync(clientId, cancellationToken) ?? throw new InvalidOperationException("Cliente inexistente.");
         var domainClient = await _clientService.GetAsync(clientEntity.ClientId);
@@ -75,11 +75,7 @@ public sealed class RoutingAdminService : IAdminRoutingService
         {
             throw new InvalidOperationException("Cliente inexistente.");
         }
-        if (!_clientService.IsReturnUrlAllowed(domainClient, returnUrl))
-        {
-            throw new InvalidOperationException("ReturnUrl no permitido para el cliente.");
-        }
-        await _repository.UpdateRouteAsync(id, areaId, clientId, returnUrl, priority, isActive, cancellationToken);
+        await _repository.UpdateRouteAsync(id, areaId, clientId, priority, isActive, cancellationToken);
     }
 
     public Task DeleteRouteAsync(int id, CancellationToken cancellationToken = default)
@@ -90,12 +86,11 @@ public sealed class RoutingAdminService : IAdminRoutingService
         {
             Id = route.Id,
             AreaId = route.AreaId,
-            ClientId = client?.Id ?? 0,
-            ClientIdentifier = route.ClientId,
-            ReturnUrl = route.ReturnUrl,
+            ClientId = client?.Id,
+            ClientIdentifier = client?.ClientId ?? string.Empty,
             Priority = route.Priority,
             IsActive = route.IsActive,
-            AreaName = areaName,
-            ApplicationName = client?.ClientId
+            AreaName = areaName ?? "Sin asignar",
+            ApplicationName = client?.ClientId ?? "Sin asignar"
         };
 }

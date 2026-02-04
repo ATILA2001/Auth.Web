@@ -4,13 +4,13 @@ public class AreaRoute
 {
     public int Id { get; set; }
 
-    public int AreaId { get; set; }
+    public int? AreaId { get; set; }
 
-    // ClientId de ApplicationClient (FK lógica por string)
-    public string ClientId { get; set; } = string.Empty;
+    public int? ClientId { get; set; }
 
-    // Debe estar incluida en AllowedReturnUrlsJson del cliente
-    public string ReturnUrl { get; set; } = string.Empty;
+    public Area? Area { get; set; }
+
+    public ApplicationClient? Client { get; set; }
 
     // Menor prioridad => se evalóa primero
     public int Priority { get; set; } = 1;

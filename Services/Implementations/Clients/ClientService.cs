@@ -36,4 +36,22 @@ public class ClientService : IClientService
             return false;
         }
     }
+
+    public string? GetDefaultReturnUrl(ApplicationClient client)
+    {
+        if (string.IsNullOrWhiteSpace(client.AllowedReturnUrlsJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            var urls = JsonSerializer.Deserialize<List<string>>(client.AllowedReturnUrlsJson) ?? [];
+            return urls.FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 }

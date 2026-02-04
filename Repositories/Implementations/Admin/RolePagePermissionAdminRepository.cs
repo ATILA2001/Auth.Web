@@ -22,8 +22,8 @@ public sealed class RolePagePermissionAdminRepository : IRolePagePermissionAdmin
             .Include(rpp => rpp.Page)
             .Include(rpp => rpp.ActionPermission)
             .OrderBy(rpp => rpp.RoleId)
-            .ThenBy(rpp => rpp.Page!.Name)
-            .ThenBy(rpp => rpp.ActionPermission!.Name)
+            .ThenBy(rpp => rpp.Page != null ? rpp.Page.Name : string.Empty)
+            .ThenBy(rpp => rpp.ActionPermission != null ? rpp.ActionPermission.Name : string.Empty)
             .ToListAsync(ct);
     }
 
@@ -35,8 +35,8 @@ public sealed class RolePagePermissionAdminRepository : IRolePagePermissionAdmin
             .Include(rpp => rpp.Page)
             .Include(rpp => rpp.ActionPermission)
             .Where(rpp => rpp.RoleId == roleId)
-            .OrderBy(rpp => rpp.Page!.Name)
-            .ThenBy(rpp => rpp.ActionPermission!.Name)
+            .OrderBy(rpp => rpp.Page != null ? rpp.Page.Name : string.Empty)
+            .ThenBy(rpp => rpp.ActionPermission != null ? rpp.ActionPermission.Name : string.Empty)
             .ToListAsync(ct);
     }
 
@@ -49,7 +49,7 @@ public sealed class RolePagePermissionAdminRepository : IRolePagePermissionAdmin
             .Include(rpp => rpp.ActionPermission)
             .Where(rpp => rpp.PageId == pageId)
             .OrderBy(rpp => rpp.RoleId)
-            .ThenBy(rpp => rpp.ActionPermission!.Name)
+            .ThenBy(rpp => rpp.ActionPermission != null ? rpp.ActionPermission.Name : string.Empty)
             .ToListAsync(ct);
     }
 

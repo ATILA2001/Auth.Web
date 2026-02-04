@@ -63,7 +63,9 @@ public sealed class PageAdminRepository : IPageAdminRepository
             .GroupBy(rpp => rpp.PageId)
             .Select(g => new { g.Key, Count = g.Count() })
             .ToListAsync(ct);
-        return counts.ToDictionary(x => x.Key, x => x.Count);
+        return counts
+            .Where(x => x.Key.HasValue)
+            .ToDictionary(x => x.Key!.Value, x => x.Count);
     }
 
     public async Task<int> GetPagePermissionCountAsync(int pageId, CancellationToken ct = default)

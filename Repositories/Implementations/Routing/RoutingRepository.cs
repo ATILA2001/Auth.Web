@@ -30,7 +30,8 @@ public sealed class RoutingRepository : IRoutingRepository
 
         return await _db.AreaRoutes
             .AsNoTracking()
-            .Where(r => r.IsActive && ids.Contains(r.AreaId))
+            .Where(r => r.IsActive && r.AreaId.HasValue && r.ClientId.HasValue && ids.Contains(r.AreaId.Value))
+            .Include(r => r.Client)
             .OrderBy(r => r.Priority)
             .FirstOrDefaultAsync(ct);
     }

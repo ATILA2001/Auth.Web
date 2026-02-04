@@ -41,7 +41,7 @@
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="PageName" Title="Página">
                         <EditTemplate Context="p">
-                            <RadzenDropDown TValue="int"
+                            <RadzenDropDown TValue="int?"
                                             Data="@pages"
                                             TextProperty="Name"
                                             ValueProperty="Id"
@@ -53,7 +53,7 @@
                     <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="PageUrl" Title="URL" />
                     <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="ActionName" Title="Acción" >
                         <EditTemplate Context="p">
-                            <RadzenDropDown TValue="int"
+                            <RadzenDropDown TValue="int?"
                                             Data="@actions"
                                             TextProperty="Name"
                                             ValueProperty="Id"

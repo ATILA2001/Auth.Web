@@ -51,9 +51,8 @@ public sealed class RoutesViewModel
     public List<AreaAdminDto> Areas { get; private set; } = new();
     public List<ApplicationClientAdminDto> Clients { get; private set; } = new();
     public AreaRouteAdminDto EditModel { get; private set; } = new();
-    public int SelectedAreaId { get; set; }
-    public int SelectedClientId { get; set; }
-    public string EditReturnUrl { get; set; } = string.Empty;
+    public int? SelectedAreaId { get; set; }
+    public int? SelectedClientId { get; set; }
     public int EditPriority { get; set; } = 1;
     public bool EditIsActive { get; set; } = true;
     public string? ValidationError { get; private set; }
@@ -68,9 +67,8 @@ public sealed class RoutesViewModel
     public void BeginCreate()
     {
         EditModel = new AreaRouteAdminDto { Id = 0 };
-        SelectedAreaId = Areas.FirstOrDefault()?.Id ?? 0;
-        SelectedClientId = Clients.FirstOrDefault()?.Id ?? 0;
-        EditReturnUrl = string.Empty;
+        SelectedAreaId = Areas.FirstOrDefault()?.Id;
+        SelectedClientId = Clients.FirstOrDefault()?.Id;
         EditPriority = 1;
         EditIsActive = true;
         ValidationError = null;
@@ -80,34 +78,26 @@ public sealed class RoutesViewModel
     {
         ArgumentNullException.ThrowIfNull(dto);
         EditModel = new AreaRouteAdminDto { Id = dto.Id };
-        SelectedAreaId = dto.AreaId > 0 ? dto.AreaId : Areas.FirstOrDefault()?.Id ?? 0;
-        SelectedClientId = dto.ClientId > 0 ? dto.ClientId : Clients.FirstOrDefault()?.Id ?? 0;
-        EditReturnUrl = dto.ReturnUrl ?? string.Empty;
+        SelectedAreaId = dto.AreaId ?? Areas.FirstOrDefault()?.Id;
+        SelectedClientId = dto.ClientId ?? Clients.FirstOrDefault()?.Id;
         EditPriority = dto.Priority > 0 ? dto.Priority : 1;
         EditIsActive = dto.IsActive;
         ValidationError = null;
     }
 
-    public RoutesVmResult ValidateOnly(int areaId, int clientId, string returnUrl, int priority)
+    public RoutesVmResult ValidateOnly(int? areaId, int? clientId, int priority)
     {
         ValidationError = null;
 
-        if (areaId <= 0)
+        if (!areaId.HasValue || areaId.Value <= 0)
         {
             ValidationError = "Debe seleccionar un área.";
             return RoutesVmResult.ValidationFailed("Validación", ValidationError);
         }
 
-        if (clientId <= 0)
+        if (!clientId.HasValue || clientId.Value <= 0)
         {
             ValidationError = "Debe seleccionar un cliente.";
-            return RoutesVmResult.ValidationFailed("Validación", ValidationError);
-        }
-
-        var normalizedUrl = (returnUrl ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(normalizedUrl))
-        {
-            ValidationError = "La URL de retorno no puede estar vacía.";
             return RoutesVmResult.ValidationFailed("Validación", ValidationError);
         }
 
@@ -117,19 +107,31 @@ public sealed class RoutesViewModel
             return RoutesVmResult.ValidationFailed("Validación", ValidationError);
         }
 
+        if (areaId.HasValue && clientId.HasValue)
+        {
+            var hasDuplicate = Routes.Any(r => r.Id != EditModel.Id && r.AreaId == areaId && r.ClientId == clientId);
+            if (hasDuplicate)
+            {
+                ValidationError = "Ya existe una ruta para el área y cliente seleccionados.";
+                return RoutesVmResult.ValidationFailed("Validación", ValidationError);
+            }
+        }
+
         return RoutesVmResult.Success("Válido", "", requiresReload: false);
     }
 
     public async Task<RoutesVmResult> SaveAsync()
     {
         // Reuse validation logic to avoid duplication and rule drift
-        var validationResult = ValidateOnly(SelectedAreaId, SelectedClientId, EditReturnUrl, EditPriority);
+        var validationResult = ValidateOnly(SelectedAreaId, SelectedClientId, EditPriority);
         if (validationResult.Outcome != RoutesVmOutcome.Success)
         {
             return validationResult;
         }
 
-        var normalizedUrl = EditReturnUrl.Trim();
+        var areaId = SelectedAreaId!.Value;
+        var clientId = SelectedClientId!.Value;
+
         var priority = EditPriority > 0 ? EditPriority : 1;
 
         try
@@ -137,7 +139,7 @@ public sealed class RoutesViewModel
             if (EditModel.Id == 0)
             {
                 // CREATE: return CreatedId so UI can set it locally without reload
-                var id = await _routingService.CreateRouteAsync(SelectedAreaId, SelectedClientId, normalizedUrl, priority, EditIsActive);
+                var id = await _routingService.CreateRouteAsync(areaId, clientId, priority, EditIsActive);
                 if (id != 0)
                 {
                     ValidationError = null;
@@ -148,14 +150,19 @@ public sealed class RoutesViewModel
             }
 
             // UPDATE: no reload required; buffer?DTO sync handles display update
-            await _routingService.UpdateRouteAsync(EditModel.Id, SelectedAreaId, SelectedClientId, normalizedUrl, priority, EditIsActive);
+            await _routingService.UpdateRouteAsync(EditModel.Id, areaId, clientId, priority, EditIsActive);
             ValidationError = null;
             return RoutesVmResult.Success("Ruta actualizada", $"Se actualizó la ruta.", requiresReload: false);
         }
         catch (Exception ex)
         {
-            ValidationError = ex.Message;
-            return RoutesVmResult.Failed("Error al guardar ruta", ex.Message);
+            var message = ex.GetBaseException().Message;
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                message = "Error inesperado al guardar la ruta.";
+            }
+            ValidationError = message;
+            return RoutesVmResult.Failed("Error al guardar ruta", message);
         }
     }
 

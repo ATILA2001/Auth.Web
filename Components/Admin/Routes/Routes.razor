@@ -20,7 +20,7 @@
             <RadzenDataGrid TItem="AreaRouteAdminDto" Data="@routes" @ref="grid" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
                             AllowSorting="true" EditMode="DataGridEditMode.Single" RowCreate="@OnRowCreate" RowUpdate="@OnRowUpdate"
                             FilterMode="FilterMode.CheckBoxList" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
-                            AllowColumnPicking="false" EmptyText="No hay registros para mostrar.">
+                            AllowColumnPicking="false" EmptyText="No hay registros para mostrar." KeyProperty="Id">
                 <HeaderTemplate>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0.5rem">
                         <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle" Text="Agregar" Click="@BeginCreate" Disabled="@(IsLoading || IsSaving || _routesToInsert.Count > 0)" />
@@ -28,9 +28,12 @@
                     </RadzenStack>
                 </HeaderTemplate>
                 <Columns>
-                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="AreaName" Title="Área">
+                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="AreaId" Title="Área">
+                        <Template Context="r">
+                            @(r.AreaName ?? "Sin asignar")
+                        </Template>
                         <EditTemplate Context="r">
-                            <RadzenDropDown TValue="int"
+                            <RadzenDropDown TValue="int?"
                                             Data="@areas"
                                             TextProperty="Name"
                                             ValueProperty="Id"
@@ -39,20 +42,18 @@
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="ApplicationName" Title="Aplicación">
+                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="ClientId" Title="Aplicación">
+                        <Template Context="r">
+                            @(r.ApplicationName ?? "Sin asignar")
+                        </Template>
                         <EditTemplate Context="r">
-                            <RadzenDropDown TValue="int"
+                            <RadzenDropDown TValue="int?"
                                             Data="@clients"
                                             TextProperty="Audience"
                                             ValueProperty="Id"
                                             Value="@GetClientBuffer(r)"
                                             ValueChanged="@(v => SetClientBuffer(r, v))"
                                             Disabled="@(IsLoading || IsSaving)" />
-                        </EditTemplate>
-                    </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="ReturnUrl" Title="ReturnUrl">
-                        <EditTemplate Context="r">
-                            <RadzenText Text="@GetReturnUrlBuffer(r)"  />
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="Priority" Title="Prioridad">

@@ -26,26 +26,25 @@ public sealed class RoutingAdminRepository : IRoutingAdminRepository
         return await db.AreaRoutes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
     }
 
-    public async Task<int> CreateRouteAsync(int areaId, int clientId, string returnUrl, int priority, bool isActive, CancellationToken ct = default)
+    public async Task<int> CreateRouteAsync(int areaId, int clientId, int priority, bool isActive, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         if (!await db.Areas.AnyAsync(a => a.Id == areaId, ct)) throw new InvalidOperationException("Area inexistente.");
         var client = await db.ApplicationClients.FindAsync(new object[] { clientId }, ct) ?? throw new InvalidOperationException("Cliente inexistente.");
-        var entity = new AreaRoute { AreaId = areaId, ClientId = client.ClientId, ReturnUrl = returnUrl, Priority = priority, IsActive = isActive };
+        var entity = new AreaRoute { AreaId = areaId, ClientId = client.Id, Priority = priority, IsActive = isActive };
         db.AreaRoutes.Add(entity);
         await db.SaveChangesAsync(ct);
         return entity.Id;
     }
 
-    public async Task UpdateRouteAsync(int id, int areaId, int clientId, string returnUrl, int priority, bool isActive, CancellationToken ct = default)
+    public async Task UpdateRouteAsync(int id, int areaId, int clientId, int priority, bool isActive, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         var entity = await db.AreaRoutes.FindAsync(new object[] { id }, ct) ?? throw new KeyNotFoundException("Ruta no encontrada.");
         if (!await db.Areas.AnyAsync(a => a.Id == areaId, ct)) throw new InvalidOperationException("Area inexistente.");
         var client = await db.ApplicationClients.FindAsync(new object[] { clientId }, ct) ?? throw new InvalidOperationException("Cliente inexistente.");
         entity.AreaId = areaId;
-        entity.ClientId = client.ClientId;
-        entity.ReturnUrl = returnUrl;
+        entity.ClientId = client.Id;
         entity.Priority = priority;
         entity.IsActive = isActive;
         await db.SaveChangesAsync(ct);

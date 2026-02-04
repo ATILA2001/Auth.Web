@@ -34,21 +34,37 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
             .HasIndex(x => new { x.RoleId, x.PageId, x.ActionPermissionId })
             .IsUnique();
 
+        builder.Entity<RolePagePermission>()
+            .HasOne(x => x.Page)
+            .WithMany(x => x.RolePermissions)
+            .HasForeignKey(x => x.PageId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Entity<RolePagePermission>()
+            .HasOne(x => x.ActionPermission)
+            .WithMany(x => x.RolePermissions)
+            .HasForeignKey(x => x.ActionPermissionId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.Entity<UserArea>()
             .HasIndex(x => new { x.UserId, x.AreaId })
             .IsUnique();
 
         builder.Entity<AreaRoute>()
-            .HasIndex(x => new { x.AreaId, x.ClientId, x.ReturnUrl })
+            .HasIndex(x => new { x.AreaId, x.ClientId })
             .IsUnique();
 
-        // Longitudes para permitir indexar
         builder.Entity<AreaRoute>()
-            .Property(r => r.ClientId)
-            .HasMaxLength(100);
+            .HasOne(x => x.Area)
+            .WithMany()
+            .HasForeignKey(x => x.AreaId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.Entity<AreaRoute>()
-            .Property(r => r.ReturnUrl)
-            .HasMaxLength(450);
+            .HasOne(x => x.Client)
+            .WithMany()
+            .HasForeignKey(x => x.ClientId)
+            .OnDelete(DeleteBehavior.SetNull);
+
     }
 }

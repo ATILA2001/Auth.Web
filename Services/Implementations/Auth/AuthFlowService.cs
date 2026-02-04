@@ -188,7 +188,7 @@ public sealed class AuthFlowService : IAuthFlowService
             var routing = await _routingService.ResolveForUserAsync(user.Id);
             if (routing is null)
             {
-                return await FinalizeResultAsync(BuildLoginRedirect("no_route", "No se encontró una aplicación de destino para el usuario.", dto.ReturnUrl, dto.ClientId));
+                return await FinalizeResultAsync(BuildLoginRedirect("no_route", "No tiene permisos para ver esta página.", dto.ReturnUrl, dto.ClientId));
             }
             clientId = routing.Value.ClientId;
             client = await _clientService.GetAsync(clientId);

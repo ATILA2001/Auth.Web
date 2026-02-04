@@ -18,8 +18,8 @@ public partial class Permissions : ComponentBase
     private PermissionsViewModel _vm = null!;
     private RadzenDataGrid<RolePagePermissionAdminDto> grid = null!;
     private readonly Dictionary<RolePagePermissionAdminDto, string> _roleBuffer = new();
-    private readonly Dictionary<RolePagePermissionAdminDto, int> _pageBuffer = new();
-    private readonly Dictionary<RolePagePermissionAdminDto, int> _actionBuffer = new();
+    private readonly Dictionary<RolePagePermissionAdminDto, int?> _pageBuffer = new();
+    private readonly Dictionary<RolePagePermissionAdminDto, int?> _actionBuffer = new();
     private readonly List<RolePagePermissionAdminDto> _permissionsToInsert = new();
     private readonly List<RolePagePermissionAdminDto> _permissionsToUpdate = new();
 
@@ -92,7 +92,7 @@ public partial class Permissions : ComponentBase
         permission.RoleName = roles.FirstOrDefault(r => r.Id == value)?.Name ?? string.Empty;
     }
 
-    private int GetPageBuffer(RolePagePermissionAdminDto permission)
+    private int? GetPageBuffer(RolePagePermissionAdminDto permission)
     {
         if (!_pageBuffer.TryGetValue(permission, out var value))
         {
@@ -102,15 +102,21 @@ public partial class Permissions : ComponentBase
         return value;
     }
 
-    private void SetPageBuffer(RolePagePermissionAdminDto permission, int value)
+    private void SetPageBuffer(RolePagePermissionAdminDto permission, int? value)
     {
         _pageBuffer[permission] = value;
-        var page = pages.FirstOrDefault(p => p.Id == value);
-        permission.PageName = page?.Name ?? string.Empty;
+        if (!value.HasValue)
+        {
+            permission.PageName = "Sin asignar";
+            permission.PageUrl = string.Empty;
+            return;
+        }
+        var page = pages.FirstOrDefault(p => p.Id == value.Value);
+        permission.PageName = page?.Name ?? "Sin asignar";
         permission.PageUrl = page?.Url ?? string.Empty;
     }
 
-    private int GetActionBuffer(RolePagePermissionAdminDto permission)
+    private int? GetActionBuffer(RolePagePermissionAdminDto permission)
     {
         if (!_actionBuffer.TryGetValue(permission, out var value))
         {
@@ -120,10 +126,15 @@ public partial class Permissions : ComponentBase
         return value;
     }
 
-    private void SetActionBuffer(RolePagePermissionAdminDto permission, int value)
+    private void SetActionBuffer(RolePagePermissionAdminDto permission, int? value)
     {
         _actionBuffer[permission] = value;
-        permission.ActionName = actions.FirstOrDefault(a => a.Id == value)?.Name ?? string.Empty;
+        if (!value.HasValue)
+        {
+            permission.ActionName = "Sin asignar";
+            return;
+        }
+        permission.ActionName = actions.FirstOrDefault(a => a.Id == value.Value)?.Name ?? "Sin asignar";
     }
 
     private async Task BeginCreate()
@@ -146,10 +157,16 @@ public partial class Permissions : ComponentBase
             RoleId = _vm.SelectedRoleId,
             RoleName = roles.FirstOrDefault(r => r.Id == _vm.SelectedRoleId)?.Name ?? string.Empty,
             PageId = _vm.SelectedPageId,
-            PageName = pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId)?.Name ?? string.Empty,
-            PageUrl = pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId)?.Url ?? string.Empty,
+            PageName = _vm.SelectedPageId.HasValue
+                ? pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId.Value)?.Name ?? "Sin asignar"
+                : "Sin asignar",
+            PageUrl = _vm.SelectedPageId.HasValue
+                ? pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId.Value)?.Url ?? string.Empty
+                : string.Empty,
             ActionPermissionId = _vm.SelectedActionId,
-            ActionName = actions.FirstOrDefault(a => a.Id == _vm.SelectedActionId)?.Name ?? string.Empty
+            ActionName = _vm.SelectedActionId.HasValue
+                ? actions.FirstOrDefault(a => a.Id == _vm.SelectedActionId.Value)?.Name ?? "Sin asignar"
+                : "Sin asignar"
         };
         _permissionsToInsert.Add(newPermission);
         permissions.Insert(0, newPermission);
@@ -214,9 +231,15 @@ public partial class Permissions : ComponentBase
                 permission.PageId = _vm.SelectedPageId;
                 permission.ActionPermissionId = _vm.SelectedActionId;
                 permission.RoleName = roles.FirstOrDefault(r => r.Id == _vm.SelectedRoleId)?.Name ?? string.Empty;
-                permission.PageName = pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId)?.Name ?? string.Empty;
-                permission.PageUrl = pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId)?.Url ?? string.Empty;
-                permission.ActionName = actions.FirstOrDefault(a => a.Id == _vm.SelectedActionId)?.Name ?? string.Empty;
+                permission.PageName = _vm.SelectedPageId.HasValue
+                    ? pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId.Value)?.Name ?? "Sin asignar"
+                    : "Sin asignar";
+                permission.PageUrl = _vm.SelectedPageId.HasValue
+                    ? pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId.Value)?.Url ?? string.Empty
+                    : string.Empty;
+                permission.ActionName = _vm.SelectedActionId.HasValue
+                    ? actions.FirstOrDefault(a => a.Id == _vm.SelectedActionId.Value)?.Name ?? "Sin asignar"
+                    : "Sin asignar";
 
                 if (result.CreatedId.HasValue)
                 {
@@ -280,9 +303,15 @@ public partial class Permissions : ComponentBase
                 permission.PageId = _vm.SelectedPageId;
                 permission.ActionPermissionId = _vm.SelectedActionId;
                 permission.RoleName = roles.FirstOrDefault(r => r.Id == _vm.SelectedRoleId)?.Name ?? string.Empty;
-                permission.PageName = pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId)?.Name ?? string.Empty;
-                permission.PageUrl = pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId)?.Url ?? string.Empty;
-                permission.ActionName = actions.FirstOrDefault(a => a.Id == _vm.SelectedActionId)?.Name ?? string.Empty;
+                permission.PageName = _vm.SelectedPageId.HasValue
+                    ? pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId.Value)?.Name ?? "Sin asignar"
+                    : "Sin asignar";
+                permission.PageUrl = _vm.SelectedPageId.HasValue
+                    ? pages.FirstOrDefault(p => p.Id == _vm.SelectedPageId.Value)?.Url ?? string.Empty
+                    : string.Empty;
+                permission.ActionName = _vm.SelectedActionId.HasValue
+                    ? actions.FirstOrDefault(a => a.Id == _vm.SelectedActionId.Value)?.Name ?? "Sin asignar"
+                    : "Sin asignar";
 
                 _permissionsToUpdate.Remove(permission);
                 _roleBuffer.Remove(permission);
