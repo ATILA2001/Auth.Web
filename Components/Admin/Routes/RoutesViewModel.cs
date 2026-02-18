@@ -29,7 +29,9 @@ public sealed class RoutesVmResult
 
     public static RoutesVmResult Failed(string title, string message) =>
         new() { Outcome = RoutesVmOutcome.Error, Title = title, Message = message, RequiresReload = false };
-}
+
+    public static RoutesVmResult FailedWithReload(string title, string message) =>
+        new() { Outcome = RoutesVmOutcome.Error, Title = title, Message = message, RequiresReload = true };}
 
 public sealed class RoutesViewModel
 {
@@ -153,6 +155,12 @@ public sealed class RoutesViewModel
             await _routingService.UpdateRouteAsync(EditModel.Id, areaId, clientId, priority, EditIsActive);
             ValidationError = null;
             return RoutesVmResult.Success("Ruta actualizada", $"Se actualizó la ruta.", requiresReload: false);
+        }
+        catch (KeyNotFoundException knf)
+        {
+            // Entity disappeared on server; force reload
+            ValidationError = knf.Message;
+            return RoutesVmResult.FailedWithReload("Ruta no encontrada", knf.Message);
         }
         catch (Exception ex)
         {

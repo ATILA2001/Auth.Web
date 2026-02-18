@@ -42,6 +42,12 @@
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="ClientIdentifier" Title="Cliente">
+                        <Template Context="r">
+                            @(string.IsNullOrWhiteSpace(r.ClientIdentifier) ? "Sin asignar" : r.ClientIdentifier)
+                        </Template>
+                    </RadzenDataGridColumn>
+
                     <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="ClientId" Title="Aplicación">
                         <Template Context="r">
                             @(r.ApplicationName ?? "Sin asignar")

@@ -151,7 +151,8 @@ public partial class Routes : ComponentBase
             Priority = 1,
             IsActive = true,
             AreaName = areas.FirstOrDefault()?.Name,
-            ApplicationName = firstClient?.Audience
+            ApplicationName = firstClient?.Audience,
+            ClientIdentifier = firstClient?.ClientId
         };
         _routesToInsert.Add(newRoute);
         await grid.InsertRow(newRoute);
@@ -211,6 +212,11 @@ public partial class Routes : ComponentBase
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+            }
+
             if (result.Outcome == RoutesVmOutcome.Success)
             {
                 // CRITICAL: Sync buffers ? DTO
@@ -224,6 +230,10 @@ public partial class Routes : ComponentBase
                 route.ApplicationName = _vm.SelectedClientId.HasValue
                     ? clients.FirstOrDefault(c => c.Id == _vm.SelectedClientId.Value)?.Audience
                     : "Sin asignar";
+
+                route.ClientIdentifier = _vm.SelectedClientId.HasValue
+                    ? clients.FirstOrDefault(c => c.Id == _vm.SelectedClientId.Value)?.ClientId
+                    : null;
 
                 if (result.CreatedId.HasValue)
                 {
@@ -281,6 +291,12 @@ public partial class Routes : ComponentBase
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
+            if (result.RequiresReload)
+            {
+                await LoadAsync(reloadGrid: true);
+                return;
+            }
+
             if (result.Outcome == RoutesVmOutcome.Success)
             {
                 // CRITICAL: Sync buffers ? DTO
@@ -294,6 +310,10 @@ public partial class Routes : ComponentBase
                 route.ApplicationName = _vm.SelectedClientId.HasValue
                     ? clients.FirstOrDefault(c => c.Id == _vm.SelectedClientId.Value)?.Audience
                     : "Sin asignar";
+
+                route.ClientIdentifier = _vm.SelectedClientId.HasValue
+                    ? clients.FirstOrDefault(c => c.Id == _vm.SelectedClientId.Value)?.ClientId
+                    : null;
 
                 _routesToUpdate.Remove(route);
                 _areaBuffer.Remove(route);
