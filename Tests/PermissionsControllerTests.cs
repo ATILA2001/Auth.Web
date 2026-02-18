@@ -39,7 +39,7 @@ public class PermissionsControllerTests
         svc.Setup(s => s.GetAsync("alice"))
             .ReturnsAsync(new UserPermissionsDto
             {
-                Areas = new System.Collections.Generic.List<int> { 1, 2 },
+                AreaNames = new System.Collections.Generic.List<string> { "Area1", "Area2" },
                 Pages = new System.Collections.Generic.List<PagePermissionDto>
                 {
                     new PagePermissionDto { Url = "/home", Actions = new System.Collections.Generic.List<string>{ "View" } }
@@ -52,7 +52,7 @@ public class PermissionsControllerTests
 
         Assert.NotNull(result);
         Assert.Equal(5, result.Version);
-        Assert.Contains(1, result.Areas);
+        Assert.Contains("Area1", result.AreaNames);
         Assert.Single(result.Pages);
         Assert.Equal("/home", result.Pages[0].Url);
     }
@@ -77,7 +77,7 @@ public class PermissionsControllerTests
         svc.Setup(s => s.GetAsync("nonexistent"))
             .ReturnsAsync(new UserPermissionsDto
             {
-                Areas = new System.Collections.Generic.List<int>(),
+                AreaNames = new System.Collections.Generic.List<string>(),
                 Pages = new System.Collections.Generic.List<PagePermissionDto>(),
                 Version = 0
             });
@@ -86,7 +86,7 @@ public class PermissionsControllerTests
         var result = await controller.GetAsync("nonexistent");
 
         Assert.NotNull(result);
-        Assert.Empty(result.Areas);
+        Assert.Empty(result.AreaNames);
         Assert.Empty(result.Pages);
         Assert.Equal(0, result.Version);
     }
@@ -98,7 +98,7 @@ public class PermissionsControllerTests
         svc.Setup(s => s.GetAsync("user"))
             .ReturnsAsync(new UserPermissionsDto
             {
-                Areas = new System.Collections.Generic.List<int> { 1 },
+                AreaNames = new System.Collections.Generic.List<string> { "Area1" },
                 Pages = new System.Collections.Generic.List<PagePermissionDto>
                 {
                     new() { Url = "/dashboard", Actions = new System.Collections.Generic.List<string> { "Read", "Write" } },

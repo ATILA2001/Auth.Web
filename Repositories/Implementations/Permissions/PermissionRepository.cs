@@ -34,6 +34,18 @@ public sealed class PermissionRepository : IPermissionRepository
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyCollection<string>> GetAreaNamesAsync(IEnumerable<int> areaIds, CancellationToken ct = default)
+    {
+        var ids = areaIds?.ToArray() ?? Array.Empty<int>();
+        if (ids.Length == 0) return Array.Empty<string>();
+
+        return await _db.Areas
+            .Where(a => ids.Contains(a.Id))
+            .OrderBy(a => a.Id)
+            .Select(a => a.Name)
+            .ToListAsync(ct);
+    }
+
     public async Task<IReadOnlyCollection<RolePagePermission>> GetRolePagePermissionsAsync(IEnumerable<string> roleIds, CancellationToken ct = default)
     {
         var ids = roleIds?.ToArray() ?? Array.Empty<string>();

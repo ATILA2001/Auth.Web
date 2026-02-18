@@ -34,7 +34,7 @@ public class PermissionService : IPermissionService
             return new UserPermissionsDto
             {
                 Pages = new List<PagePermissionDto>(),
-                Areas = new List<int>(),
+                AreaNames = new List<string>(),
                 Version = 1
             };
         }
@@ -70,10 +70,15 @@ public class PermissionService : IPermissionService
             .OrderBy(dto => dto.Url, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        var areaIdsList = areaIds.ToList();
+        var areaNames = areaIdsList.Count == 0
+            ? new List<string>()
+            : (await _repository.GetAreaNamesAsync(areaIdsList)).ToList();
+
         return new UserPermissionsDto
         {
             Pages = pagePermissions,
-            Areas = areaIds.ToList(),
+            AreaNames = areaNames,
             Version = 1
         };
     }

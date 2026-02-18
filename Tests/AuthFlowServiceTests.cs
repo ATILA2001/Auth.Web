@@ -94,7 +94,7 @@ public class AuthFlowServiceTests
 
         var perms = new Mock<IPermissionService>();
         perms.Setup(x => x.GetAsync(userName, It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
-            .ReturnsAsync(new UserPermissionsDto { Areas = new List<int> { 1 }, Version = 1 });
+            .ReturnsAsync(new UserPermissionsDto { AreaNames = new List<string> { "Area1" }, Version = 1 });
 
         var authService = new Mock<IAuthenticationService>();
 
@@ -129,7 +129,7 @@ public class AuthFlowServiceTests
 
         var perms = new Mock<IPermissionService>();
         perms.Setup(x => x.GetAsync(userName, It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
-            .ReturnsAsync(new UserPermissionsDto { Areas = new List<int> { 1 }, Version = 1 });
+            .ReturnsAsync(new UserPermissionsDto { AreaNames = new List<string> { "Area1" }, Version = 1 });
 
         var authService = new Mock<IAuthenticationService>();
 

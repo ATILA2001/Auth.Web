@@ -31,7 +31,7 @@ public class PermissionServiceTests
         var result = await svc.GetAsync("missing");
         Assert.NotNull(result);
         Assert.Empty(result.Pages);
-        Assert.Empty(result.Areas);
+        Assert.Empty(result.AreaNames);
     }
 
     [Fact]
@@ -49,7 +49,10 @@ public class PermissionServiceTests
         db.ActionPermissions.Add(action);
         await db.SaveChangesAsync();
         db.RolePagePermissions.Add(new RolePagePermission { RoleId = role.Id, PageId = page.Id, ActionPermissionId = action.Id });
-        db.UserAreas.Add(new UserArea { UserId = user.Id, AreaId = 5 });
+        var area = new Area { Name = "Area5" };
+        db.Areas.Add(area);
+        await db.SaveChangesAsync();
+        db.UserAreas.Add(new UserArea { UserId = user.Id, AreaId = area.Id });
         await db.SaveChangesAsync();
 
         var um = new Mock<UserManager<ApplicationUser>>(new Mock<IUserStore<ApplicationUser>>().Object, null!, null!, null!, null!, null!, null!, null!, null!);
@@ -60,7 +63,7 @@ public class PermissionServiceTests
         var result = await svc.GetAsync(user.UserName);
 
         Assert.Single(result.Pages);
-        Assert.Contains(5, result.Areas);
+        Assert.Contains("Area5", result.AreaNames);
         Assert.Equal(1, result.Version);
     }
 }
