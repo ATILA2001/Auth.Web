@@ -52,7 +52,8 @@ public class AuthFlowServiceTests
             .ReturnsAsync(new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(IdentityConstants.ApplicationScheme)));
 
         var options = Microsoft.Extensions.Options.Options.Create(new Auth.Web.Configuration.TestUsersOptions());
-        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, provisioning.Object, assembler, adminSignIn.Object, authService.Object, claimsFactory.Object, httpContextAccessor, options);
+        var featureOptions = Microsoft.Extensions.Options.Options.Create(new Auth.Web.Configuration.FeatureOptions { EnableTestUsers = true });
+        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, provisioning.Object, assembler, adminSignIn.Object, authService.Object, claimsFactory.Object, httpContextAccessor, options, featureOptions);
     }
 
     /// <summary>

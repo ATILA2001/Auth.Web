@@ -31,6 +31,7 @@ public sealed class AuthFlowService : IAuthFlowService
     private readonly IUserClaimsPrincipalFactory<ApplicationUser> _claimsPrincipalFactory;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly TestUsersOptions _testUsers;
+    private readonly FeatureOptions _features;
 
     public AuthFlowService(
         IActiveDirectoryAuthService adAuth,
@@ -44,7 +45,8 @@ public sealed class AuthFlowService : IAuthFlowService
         IAuthenticationService authenticationService,
         IUserClaimsPrincipalFactory<ApplicationUser> claimsPrincipalFactory,
         IHttpContextAccessor httpContextAccessor,
-        IOptions<TestUsersOptions> testUsersOptions)
+        IOptions<TestUsersOptions> testUsersOptions,
+        IOptions<FeatureOptions> featureOptions)
     {
         _adAuth = adAuth;
         _userManagement = userManagement;
@@ -58,6 +60,7 @@ public sealed class AuthFlowService : IAuthFlowService
         _claimsPrincipalFactory = claimsPrincipalFactory;
         _httpContextAccessor = httpContextAccessor;
         _testUsers = testUsersOptions.Value ?? new TestUsersOptions();
+        _features = featureOptions.Value ?? new FeatureOptions();
     }
 
     public async Task<LoginResult> LoginAsync(LoginRequestDto request)
@@ -75,7 +78,7 @@ public sealed class AuthFlowService : IAuthFlowService
             return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña requeridos.", dto.ReturnUrl, dto.ClientId));
         }
 
-        var testUser = TryGetTestUser(dto.UserNameOrEmail);
+        var testUser = _features.EnableTestUsers ? TryGetTestUser(dto.UserNameOrEmail) : null;
 
         // dbAuthUser: user retrieved from DB used for password verification when username ends with .test
         ApplicationUser? dbAuthUser = null;
@@ -152,7 +155,7 @@ public sealed class AuthFlowService : IAuthFlowService
             testAreaId = parsedArea;
         }
 
-        if (isAdmin && !hasClientRequest && !hasReturnUrl && !hasClientId)
+        if (isAdmin)
         {
             var adminPermissions = await _permissionService.GetAsync(
                 user.UserName!,
