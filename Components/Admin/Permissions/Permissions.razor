@@ -5,76 +5,135 @@
 @layout Auth.Web.Components.Admin.AdminLayout
 @namespace Auth.Web.Components.Admin.Permissions
 
-<RadzenHeading Size="HeadingSize.H3"
-               Text="Permisos de página"
-               Class="rz-mb-3" />
+<RadzenHeading Size="HeadingSize.H3" Text="Permisos de área" Class="rz-mb-3" />
 
 @if (IsLoading)
 {
     <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="width: 100%;" />
 }
 
-<RadzenRow>
-    <RadzenColumn Size="12" SizeMd="10" SizeLg="10" OffsetMd="1" OffsetLg="1">
-        <RadzenCard Class="rz-shadow-3 rz-p-3">
-            <RadzenDataGrid TItem="RolePagePermissionAdminDto" Data="@permissions" @ref="grid" AllowPaging="true" PageSize="15" AllowSorting="true" AllowFiltering="true" AllowColumnResize="true"
-                            EditMode="DataGridEditMode.Single" RowCreate="@OnRowCreate" RowUpdate="@OnRowUpdate"
-                            FilterMode="FilterMode.CheckBoxList" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
-                            AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas" EmptyText="No hay registros para mostrar.">
-                <HeaderTemplate>
-                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0.5rem">
-                        <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle" Text="Agregar" Click="@BeginCreate" Disabled="@(IsLoading || IsSaving || _permissionsToInsert.Count > 0)" />
-                        <RadzenButton Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" Disabled="@(IsLoading || IsSaving)" />
-                    </RadzenStack>
-                </HeaderTemplate>
-                <Columns>
-                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="RoleName" Title="Rol" >
-                        <EditTemplate Context="p">
-                            <RadzenDropDown TValue="string"
-                                            Data="@roles"
-                                            TextProperty="Name"
-                                            ValueProperty="Id"
-                                            Value="@GetRoleBuffer(p)"
-                                            ValueChanged="@(v => SetRoleBuffer(p, v))"
-                                            Disabled="@(IsLoading || IsSaving)" />
-                        </EditTemplate>
-                    </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="PageName" Title="Página">
-                        <EditTemplate Context="p">
-                            <RadzenDropDown TValue="int?"
-                                            Data="@pages"
-                                            TextProperty="Name"
-                                            ValueProperty="Id"
-                                            Value="@GetPageBuffer(p)"
-                                            ValueChanged="@(v => SetPageBuffer(p, v))"
-                                            Disabled="@(IsLoading || IsSaving)" />
-                        </EditTemplate>
-                    </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="PageUrl" Title="URL" />
-                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Property="ActionName" Title="Acción" >
-                        <EditTemplate Context="p">
-                            <RadzenDropDown TValue="int?"
-                                            Data="@actions"
-                                            TextProperty="Name"
-                                            ValueProperty="Id"
-                                            Value="@GetActionBuffer(p)"
-                                            ValueChanged="@(v => SetActionBuffer(p, v))"
-                                            Disabled="@(IsLoading || IsSaving)" />
-                        </EditTemplate>
-                    </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="RolePagePermissionAdminDto" Context="p" Filterable="false" Sortable="false"  Title="Acciones" Width="112px" TextAlign="TextAlign.Center">
-                        <Template Context="p">
-                            <RadzenButton Icon="edit" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(p))" @onclick:stopPropagation class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />
-                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeletePermission(p.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />
-                        </Template>
-                        <EditTemplate Context="p">
-                            <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Success" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Guardar" AriaLabel="Guardar" Click="@(args => ValidateAndSave(p))" Disabled="@(IsLoading || IsSaving)" />
-                            <RadzenButton Icon="cancel" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" class="rz-ml-2" Title="Cancelar" AriaLabel="Cancelar" Click="@(args => CancelEditRow(p))" Disabled="@(IsLoading || IsSaving)" />
-                        </EditTemplate>
-                    </RadzenDataGridColumn>
-                </Columns>
-            </RadzenDataGrid>
+<RadzenRow Gap="1rem">
 
+    <!-- Panel izquierdo: lista de áreas -->
+    <RadzenColumn Size="12" SizeMd="3">
+        <RadzenCard Class="rz-shadow-2 rz-p-3">
+            <RadzenText TextStyle="TextStyle.Subtitle2" Class="rz-mb-2">Área</RadzenText>
+            <RadzenListBox TValue="int"
+                           Data="@_vm.Areas"
+                           TextProperty="Name"
+                           ValueProperty="Id"
+                           Value="@_selectedAreaId"
+                           Change="@OnAreaSelected"
+                           Style="width:100%; height:calc(60vh - 60px);"
+                           Class="rz-border-radius" />
         </RadzenCard>
     </RadzenColumn>
+
+    <!-- Panel derecho: matriz de permisos -->
+    <RadzenColumn Size="12" SizeMd="9">
+        <RadzenCard Class="rz-shadow-2 rz-p-3">
+            @if (_selectedAreaId == 0)
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+                    Seleccione un área para ver y editar sus permisos.
+                </RadzenAlert>
+            }
+            else if (IsLoadingMatrix)
+            {
+                <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="width:100%" />
+            }
+            else if (!_selectedAreaHasClient)
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+                        <RadzenIcon Icon="link_off" />
+                        <span>
+                            El área <strong>@_selectedAreaName</strong> no tiene una aplicación asignada.
+                            Para poder configurar sus permisos, primero asígnale una aplicación desde la sección correspondiente.
+                        </span>
+                        <a href="/admin/routes" style="color:var(--rz-warning-dark); font-weight:600; text-decoration:underline;">Ir a Rutas →</a>
+                    </RadzenStack>
+                </RadzenAlert>
+            }
+            else
+            {
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.Center"
+                             JustifyContent="JustifyContent.SpaceBetween"
+                             Class="rz-mb-3">
+                    <RadzenText TextStyle="TextStyle.H6">@_selectedAreaName</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-text-disabled-color)">
+                        Los cambios se guardan automáticamente.
+                    </RadzenText>
+                </RadzenStack>
+
+                @if (!_vm.MatrixRows.Any())
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
+                        No hay páginas registradas en el sistema.
+                    </RadzenAlert>
+                }
+                else
+                {
+                    @foreach (var group in _vm.MatrixRows.GroupBy(r => r.ClientName).OrderBy(g => g.Key))
+                    {
+                        <RadzenText TextStyle="TextStyle.Overline"
+                                    Class="rz-mt-3 rz-mb-1"
+                                    Style="color:var(--rz-text-secondary-color)">
+                            Aplicación: <strong>@group.Key</strong>
+                        </RadzenText>
+
+                        <div class="rz-mb-4" style="overflow-x:auto">
+                            <table class="rz-grid-table rz-grid-table-striped"
+                                   style="width:100%; border-collapse:collapse">
+                                <thead>
+                                    <tr>
+                                        <th class="rz-text-align-left rz-p-2"
+                                            style="min-width:160px; border-bottom:2px solid var(--rz-grid-header-border-color)">
+                                            Página
+                                        </th>
+                                        <th class="rz-text-align-left rz-p-2"
+                                            style="min-width:180px; border-bottom:2px solid var(--rz-grid-header-border-color)">
+                                            URL
+                                        </th>
+                                        @foreach (var action in _vm.Actions)
+                                        {
+                                            <th class="rz-text-align-center rz-p-2"
+                                                style="width:90px; border-bottom:2px solid var(--rz-grid-header-border-color)">
+                                                @action.Name
+                                            </th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in group)
+                                    {
+                                        <tr>
+                                            <td class="rz-p-2">@row.PageName</td>
+                                            <td class="rz-p-2"
+                                                style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap"
+                                                title="@row.PageUrl">
+                                                @row.PageUrl
+                                            </td>
+                                            @foreach (var action in _vm.Actions)
+                                            {
+                                                <td class="rz-text-align-center rz-p-2">
+                                                    <RadzenCheckBox TValue="bool"
+                                                                    Value="@row.IsEnabled(action.Id)"
+                                                                    Change="@(v => TogglePermissionAsync(row, action.Id, v))"
+                                                                    Disabled="@IsSaving" />
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                }
+            }
+        </RadzenCard>
+    </RadzenColumn>
+
 </RadzenRow>
+

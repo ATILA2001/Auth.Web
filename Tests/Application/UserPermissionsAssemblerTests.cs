@@ -21,7 +21,7 @@ public class UserPermissionsAssemblerTests
         var roles = new List<string> { "Admin", "User" };
         var permissions = new UserPermissionsDto
         {
-            AreaNames = new List<string> { "Ventas", "IT", "Admin" },
+            AreaIds = new List<int> { 25, 30, 1 },
             Version = 5
         };
         var apps = new List<string> { "App1", "App2" };
@@ -35,16 +35,15 @@ public class UserPermissionsAssemblerTests
         Assert.Contains("Admin", result.Roles);
         Assert.Contains("User", result.Roles);
         Assert.Equal(3, result.Areas.Count);
-        Assert.Contains("Ventas", result.Areas);
-        Assert.Contains("IT", result.Areas);
-        Assert.Contains("Admin", result.Areas);
+        // Areas emitidas como strings de ID entero
+        Assert.Contains("25", result.Areas);
+        Assert.Contains("30", result.Areas);
+        Assert.Contains("1", result.Areas);
         Assert.Equal(2, result.Apps.Count);
         Assert.Contains("App1", result.Apps);
         Assert.Contains("App2", result.Apps);
         Assert.Equal(5, result.PermissionsVersion);
     }
-
-
 
     [Fact]
     public void BuildClaims_Uses_DisplayName_When_Nombre_Present()
@@ -57,7 +56,7 @@ public class UserPermissionsAssemblerTests
             UserName = "username",
             Nombre = "Display Name"
         };
-        var permissions = new UserPermissionsDto { AreaNames = new List<string>(), Version = 1 };
+        var permissions = new UserPermissionsDto { AreaIds = new List<int>(), Version = 1 };
 
         var result = assembler.BuildClaims(user, Array.Empty<string>(), permissions, Array.Empty<string>());
 
@@ -75,7 +74,7 @@ public class UserPermissionsAssemblerTests
             UserName = "fallbackname",
             Nombre = null
         };
-        var permissions = new UserPermissionsDto { AreaNames = new List<string>(), Version = 1 };
+        var permissions = new UserPermissionsDto { AreaIds = new List<int>(), Version = 1 };
 
         var result = assembler.BuildClaims(user, Array.Empty<string>(), permissions, Array.Empty<string>());
 
@@ -87,7 +86,7 @@ public class UserPermissionsAssemblerTests
     {
         var assembler = new UserPermissionsAssembler();
         var user = new ApplicationUser { Id = "u1", Email = "e@e.com", UserName = "u" };
-        var permissions = new UserPermissionsDto { AreaNames = new List<string>(), Version = 0 };
+        var permissions = new UserPermissionsDto { AreaIds = new List<int>(), Version = 0 };
 
         var result = assembler.BuildClaims(user, Array.Empty<string>(), permissions, Array.Empty<string>());
 
@@ -102,7 +101,7 @@ public class UserPermissionsAssemblerTests
     {
         var assembler = new UserPermissionsAssembler();
         var user = new ApplicationUser { Id = "u1", Email = "e@e.com", UserName = "u" };
-        var permissions = new UserPermissionsDto { AreaNames = new List<string>(), Version = 42 };
+        var permissions = new UserPermissionsDto { AreaIds = new List<int>(), Version = 42 };
 
         var result = assembler.BuildClaims(user, Array.Empty<string>(), permissions, Array.Empty<string>());
 

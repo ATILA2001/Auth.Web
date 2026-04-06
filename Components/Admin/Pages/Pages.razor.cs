@@ -9,6 +9,7 @@ namespace Auth.Web.Components.Admin.Pages;
 public partial class Pages : ComponentBase
 {
     [Inject] private IAdminPageService AdminPageService { get; set; } = null!;
+    [Inject] private IAdminClientService AdminClientService { get; set; } = null!;
     [Inject] private NotificationService NotificationService { get; set; } = null!;
     [Inject] private DialogService DialogService { get; set; } = null!;
 
@@ -16,27 +17,19 @@ public partial class Pages : ComponentBase
     private RadzenDataGrid<PageAdminDto> grid = null!;
     private readonly Dictionary<PageAdminDto, string> _nameBuffer = new();
     private readonly Dictionary<PageAdminDto, string> _urlBuffer = new();
+    private readonly Dictionary<PageAdminDto, int?> _clientBuffer = new();
     private readonly List<PageAdminDto> _pagesToInsert = new();
     private readonly List<PageAdminDto> _pagesToUpdate = new();
 
     private List<PageAdminDto> pages => _vm.Pages;
-    private string editName
-    {
-        get => _vm.EditName;
-        set => _vm.EditName = value;
-    }
-    private string editUrl
-    {
-        get => _vm.EditUrl;
-        set => _vm.EditUrl = value;
-    }
+    private List<ApplicationClientAdminDto> clients => _vm.Clients;
 
     private bool IsLoading { get; set; }
     private bool IsSaving { get; set; }
 
     protected override void OnInitialized()
     {
-        _vm = new PagesViewModel(AdminPageService);
+        _vm = new PagesViewModel(AdminPageService, AdminClientService);
     }
 
     protected override async Task OnInitializedAsync()
@@ -55,13 +48,13 @@ public partial class Pages : ComponentBase
         try
         {
             await _vm.LoadAsync();
-            
-            // Clear tracking lists after reload to avoid stale references
+
             _nameBuffer.Clear();
             _urlBuffer.Clear();
+            _clientBuffer.Clear();
             _pagesToInsert.Clear();
             _pagesToUpdate.Clear();
-            
+
             if (reloadGrid && grid is not null)
             {
                 await grid.Reload();
@@ -69,7 +62,7 @@ public partial class Pages : ComponentBase
         }
         catch (Exception ex)
         {
-            NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar las Páginas.", ex.Message);
+            NotificationService.Notify(NotificationSeverity.Error, "No se pudieron cargar las páginas.", ex.Message);
         }
         finally
         {
@@ -108,6 +101,24 @@ public partial class Pages : ComponentBase
         _urlBuffer[page] = value;
     }
 
+    private int? GetClientBuffer(PageAdminDto page)
+    {
+        if (!_clientBuffer.TryGetValue(page, out var value))
+        {
+            value = page.ClientId;
+            _clientBuffer[page] = value;
+        }
+        return value;
+    }
+
+    private void SetClientBuffer(PageAdminDto page, int? value)
+    {
+        _clientBuffer[page] = value;
+        page.ClientName = value.HasValue
+            ? clients.FirstOrDefault(c => c.Id == value.Value)?.ClientId ?? string.Empty
+            : string.Empty;
+    }
+
     private async Task BeginCreate()
     {
         if (IsLoading || IsSaving)
@@ -115,7 +126,6 @@ public partial class Pages : ComponentBase
             return;
         }
 
-        // Prevent multiple pending CREATE rows (single-create-at-a-time)
         if (_pagesToInsert.Count > 0)
         {
             return;
@@ -135,16 +145,15 @@ public partial class Pages : ComponentBase
             return;
         }
 
-        // Set VM context for validation: for EDIT set BeginEdit; for CREATE EditFields already set from buffer
         if (page.Id != 0)
         {
             _vm.BeginEdit(page);
         }
         else
         {
-            // For CREATE: ensure EditFields are synced from buffer for pre-validation
             _vm.EditName = GetNameBuffer(page);
             _vm.EditUrl = GetUrlBuffer(page);
+            _vm.EditClientId = GetClientBuffer(page);
         }
 
         var name = GetNameBuffer(page);
@@ -154,8 +163,6 @@ public partial class Pages : ComponentBase
         if (validationResult.Outcome != PagesVmOutcome.Success)
         {
             NotifyUser(validationResult);
-            // For CREATE: Do NOT call grid.UpdateRow - validation failed before persistence
-            // Keep the row in edit mode by not exiting; grid is already in edit mode
             return;
         }
 
@@ -172,36 +179,36 @@ public partial class Pages : ComponentBase
         IsSaving = true;
         try
         {
-            // EditFields already set from ValidateAndSave; just call SaveAsync
-            editName = GetNameBuffer(page);
-            editUrl = GetUrlBuffer(page);
+            _vm.EditName = GetNameBuffer(page);
+            _vm.EditUrl = GetUrlBuffer(page);
+            _vm.EditClientId = GetClientBuffer(page);
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
             if (result.Outcome == PagesVmOutcome.Success)
             {
-                // CRITICAL: Sync buffer ? DTO so grid displays the new values in view mode
-                page.Name = editName.Trim();
-                page.Url = editUrl.Trim();
-                
-                // Apply CreatedId from service (no reload needed)
+                page.Name = _vm.EditName.Trim();
+                page.Url = _vm.EditUrl.Trim();
+                page.ClientId = _vm.EditClientId;
+                page.ClientName = _vm.EditClientId.HasValue
+                    ? clients.FirstOrDefault(c => c.Id == _vm.EditClientId.Value)?.ClientId ?? string.Empty
+                    : string.Empty;
+
                 if (result.CreatedId.HasValue)
                 {
                     page.Id = result.CreatedId.Value;
                 }
-                
+
                 _pagesToInsert.Remove(page);
                 _nameBuffer.Remove(page);
                 _urlBuffer.Remove(page);
-                
-                // Only reload if CreatedId is missing (fallback)
+                _clientBuffer.Remove(page);
+
                 if (!result.CreatedId.HasValue && result.RequiresReload)
                 {
                     await LoadAsync(reloadGrid: true);
                 }
             }
-            // Note: ValidationError case removed - pre-validation in ValidateAndSave prevents reaching this point
-            // If SaveAsync returns ValidationError here, it's a service-layer issue, not UI validation
         }
         finally
         {
@@ -234,27 +241,28 @@ public partial class Pages : ComponentBase
         try
         {
             _vm.BeginEdit(page);
-            editName = GetNameBuffer(page);
-            editUrl = GetUrlBuffer(page);
+            _vm.EditName = GetNameBuffer(page);
+            _vm.EditUrl = GetUrlBuffer(page);
+            _vm.EditClientId = GetClientBuffer(page);
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
             if (result.Outcome == PagesVmOutcome.Success)
             {
-                // CRITICAL: Sync buffer ? DTO so grid displays the updated values in view mode
-                page.Name = editName.Trim();
-                page.Url = editUrl.Trim();
-                
+                page.Name = _vm.EditName.Trim();
+                page.Url = _vm.EditUrl.Trim();
+                page.ClientId = _vm.EditClientId;
+                page.ClientName = _vm.EditClientId.HasValue
+                    ? clients.FirstOrDefault(c => c.Id == _vm.EditClientId.Value)?.ClientId ?? string.Empty
+                    : string.Empty;
+
                 _pagesToUpdate.Remove(page);
                 _nameBuffer.Remove(page);
                 _urlBuffer.Remove(page);
-                
-                // Explicit contract: UPDATE success does NOT require reload (RequiresReload=false)
-                // Filters/pagination/sorting preserved via local update
+                _clientBuffer.Remove(page);
+
                 await InvokeAsync(StateHasChanged);
             }
-            // Note: ValidationError case removed - pre-validation in ValidateAndSave prevents reaching this point
-            // If SaveAsync returns ValidationError here, it's a service-layer issue, not UI validation
         }
         finally
         {
@@ -269,7 +277,7 @@ public partial class Pages : ComponentBase
             return;
         }
 
-        var confirm = await DialogService.Confirm("Eliminar la página?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
+        var confirm = await DialogService.Confirm("¿Eliminar la página?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar", Icon = "warning" });
         if (confirm != true)
         {
             return;
@@ -281,7 +289,6 @@ public partial class Pages : ComponentBase
             var result = await _vm.DeleteAsync(id);
             NotifyUser(result);
 
-            // Explicit contract: DELETE success requires reload to remove row from grid
             if (result.RequiresReload)
             {
                 await LoadAsync(reloadGrid: true);
@@ -303,9 +310,10 @@ public partial class Pages : ComponentBase
         grid.CancelEditRow(page);
         _nameBuffer.Remove(page);
         _urlBuffer.Remove(page);
+        _clientBuffer.Remove(page);
         _pagesToInsert.Remove(page);
         _pagesToUpdate.Remove(page);
-        
+
         if (page.Id == 0)
         {
             pages.Remove(page);

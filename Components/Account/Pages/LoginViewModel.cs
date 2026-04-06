@@ -5,8 +5,15 @@ using Microsoft.AspNetCore.WebUtilities;
 
 namespace Auth.Web.Components.Account.Pages;
 
-public sealed class LoginViewModel(IUserRegistrationService registrationService)
+public sealed class LoginViewModel
 {
+    private readonly IUserRegistrationService _registrationService;
+
+    public LoginViewModel(IUserRegistrationService registrationService)
+    {
+        _registrationService = registrationService ?? throw new ArgumentNullException(nameof(registrationService));
+    }
+
     public string? ErrorMessage { get; private set; }
     public string? ReturnUrl { get; private set; }
     public string? ClientId { get; private set; }
@@ -40,7 +47,7 @@ public sealed class LoginViewModel(IUserRegistrationService registrationService)
             Email = (Register.Email ?? string.Empty).Trim()
         };
 
-        var result = await registrationService.RegisterUserAsync(request);
+        var result = await _registrationService.RegisterUserAsync(request);
 
         switch (result.Type)
         {

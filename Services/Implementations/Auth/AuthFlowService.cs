@@ -159,8 +159,8 @@ public sealed class AuthFlowService : IAuthFlowService
         {
             var adminPermissions = await _permissionService.GetAsync(
                 user.UserName!,
-                effectiveRoles,
-                testAreaId.HasValue ? new[] { testAreaId.Value } : null);
+                roleNamesOverride: effectiveRoles,
+                areaIdsOverride: testAreaId.HasValue ? new[] { testAreaId.Value } : null);
             var adminClaims = _permissionsAssembler.BuildClaims(user, effectiveRoles, adminPermissions, Array.Empty<string>());
             adminClaims = MergeTestUserClaims(adminClaims, testUser);
             await SignInAsync(user, adminClaims);
@@ -221,8 +221,9 @@ public sealed class AuthFlowService : IAuthFlowService
 
         var rawPermissions = await _permissionService.GetAsync(
             user.UserName!,
-            effectiveRoles,
-            testAreaId.HasValue ? new[] { testAreaId.Value } : null);
+            clientId: client?.Id,
+            roleNamesOverride: effectiveRoles,
+            areaIdsOverride: testAreaId.HasValue ? new[] { testAreaId.Value } : null);
         var apps = new List<string> { clientId };
         var claimsModel = _permissionsAssembler.BuildClaims(user, effectiveRoles, rawPermissions, apps);
         claimsModel = MergeTestUserClaims(claimsModel, testUser);
@@ -277,6 +278,7 @@ public sealed class AuthFlowService : IAuthFlowService
         RemoveClaimsOfType(identity, "area");
         RemoveClaimsOfType(identity, "app");
         RemoveClaimsOfType(identity, "perms_json");
+        RemoveClaimsOfType(identity, "perms_version");
 
         var displayName = claimsModel.DisplayName;
         if (!string.IsNullOrWhiteSpace(claimsModel.Email)
@@ -306,6 +308,8 @@ public sealed class AuthFlowService : IAuthFlowService
         {
             claims.Add(new Claim("area", area));
         }
+
+        claims.Add(new Claim("perms_version", claimsModel.PermissionsVersion.ToString()));
 
         var permissionsJson = string.IsNullOrWhiteSpace(claimsModel.PermissionsJson)
             ? "{\"pages\":[],\"version\":" + claimsModel.PermissionsVersion + "}"

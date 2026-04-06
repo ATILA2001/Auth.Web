@@ -20,7 +20,8 @@
             <RadzenDataGrid TItem="Application.Admin.Dtos.UserAdminDto" Data="@_vm.Users" @ref="grid" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
                             AllowSorting="true" EditMode="DataGridEditMode.Single" RowUpdate="@OnRowUpdate"
                             FilterMode="FilterMode.CheckBoxList" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
-                            AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas" EmptyText="Sin registros">
+                            AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas" EmptyText="Sin registros"
+                            AllowRowSelectOnRowClick="false">
                 <HeaderTemplate>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0.5rem">
                         <RadzenButton Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" Disabled="@(IsLoading || IsSaving)" />
@@ -39,7 +40,6 @@
                                             Multiple="true"
                                             Value="@GetRolesBuffer(u)"
                                             ValueChanged="@(v => SetRolesBuffer(u, v?.ToList() ?? new()))"
-                                          
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
@@ -53,13 +53,14 @@
                                             Multiple="true"
                                             Value="@GetAreasBuffer(u)"
                                             ValueChanged="@(v => SetAreasBuffer(u, v?.ToList() ?? new()))"
-                                     
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Context="u" Filterable="false" Title="Acciones" Width="112px" TextAlign="TextAlign.Center">
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="PermissionVersion" Title="Ver. Permisos" Width="120px" TextAlign="TextAlign.Center" Filterable="false" />
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Context="u" Filterable="false" Title="Acciones" Width="148px" TextAlign="TextAlign.Center">
                         <Template Context="u">
-                            <RadzenButton Icon="edit" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(u))" Disabled="@(IsLoading || IsSaving)" class="rz-mr-2" />
+                            <RadzenButton Icon="edit" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar roles/áreas" AriaLabel="Editar" Click="@(args => EditRow(u))" Disabled="@(IsLoading || IsSaving)" class="rz-mr-1" />
+                            <RadzenButton Icon="manage_accounts" ButtonStyle="ButtonStyle.Info" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Overrides" AriaLabel="Overrides" Click="@(args => OpenUserOverridesDialog(u))" Disabled="@(IsLoading || IsSaving)" class="rz-mr-1" />
                             <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Eliminar" AriaLabel="Eliminar" Click="@(args => DeleteUser(u.Id))" @onclick:stopPropagation Disabled="@(IsLoading || IsSaving)" />
                         </Template>
                         <EditTemplate Context="u">

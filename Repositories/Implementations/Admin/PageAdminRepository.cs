@@ -17,31 +17,39 @@ public sealed class PageAdminRepository : IPageAdminRepository
     public async Task<List<Page>> GetPagesAsync(CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
-        return await db.Pages.AsNoTracking().OrderBy(p => p.Name).ToListAsync(ct);
+        return await db.Pages
+            .AsNoTracking()
+            .Include(p => p.Client)
+            .OrderBy(p => p.Name)
+            .ToListAsync(ct);
     }
 
     public async Task<Page?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
-        return await db.Pages.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
+        return await db.Pages
+            .AsNoTracking()
+            .Include(p => p.Client)
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
     }
 
-    public async Task<Page> CreateAsync(string name, string url, CancellationToken ct = default)
+    public async Task<Page> CreateAsync(string name, string url, int? clientId, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
-        var page = new Page { Name = name.Trim(), Url = url.Trim() };
+        var page = new Page { Name = name.Trim(), Url = url.Trim(), ClientId = clientId };
         db.Pages.Add(page);
         await db.SaveChangesAsync(ct);
         return page;
     }
 
-    public async Task<bool> UpdateAsync(int id, string name, string url, CancellationToken ct = default)
+    public async Task<bool> UpdateAsync(int id, string name, string url, int? clientId, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         var page = await db.Pages.FindAsync(new object[] { id }, ct);
         if (page is null) return false;
         page.Name = name.Trim();
         page.Url = url.Trim();
+        page.ClientId = clientId;
         await db.SaveChangesAsync(ct);
         return true;
     }
@@ -59,8 +67,8 @@ public sealed class PageAdminRepository : IPageAdminRepository
     public async Task<IReadOnlyDictionary<int, int>> GetPagePermissionCountsAsync(CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
-        var counts = await db.RolePagePermissions.AsNoTracking()
-            .GroupBy(rpp => rpp.PageId)
+        var counts = await db.AreaPagePermissions.AsNoTracking()
+            .GroupBy(a => a.PageId)
             .Select(g => new { g.Key, Count = g.Count() })
             .ToListAsync(ct);
         return counts
@@ -71,6 +79,6 @@ public sealed class PageAdminRepository : IPageAdminRepository
     public async Task<int> GetPagePermissionCountAsync(int pageId, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
-        return await db.RolePagePermissions.CountAsync(rpp => rpp.PageId == pageId, ct);
+        return await db.AreaPagePermissions.CountAsync(a => a.PageId == pageId, ct);
     }
 }

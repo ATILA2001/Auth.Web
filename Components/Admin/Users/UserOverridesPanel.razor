@@ -1,0 +1,183 @@
+@using Auth.Web.Application.Admin.Dtos
+@using Auth.Web.Services.Abstractions.Admin
+@namespace Auth.Web.Components.Admin.Users
+
+<RadzenCard Class="rz-mx-4 rz-my-2 rz-p-3 rz-shadow-2">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Class="rz-mb-2">
+        <RadzenText TextStyle="TextStyle.Subtitle2">Overrides de permisos — @UserName</RadzenText>
+        <RadzenButton Icon="add_circle" ButtonStyle="ButtonStyle.Success" ButtonSize="ButtonSize.Small"
+                      Text="Agregar override" Click="@BeginAdd" Disabled="@(_isAdding || _isSaving || _isLoading)" />
+    </RadzenStack>
+
+    @if (_isLoading)
+    {
+        <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="width:100%" />
+    }
+
+    @if (_isAdding)
+    {
+        <RadzenCard Class="rz-p-2 rz-mb-2 rz-shadow-1">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.End" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+                <RadzenStack Gap="0.25rem">
+                    <RadzenLabel Text="Página" />
+                    <RadzenDropDown TValue="int?" Data="@_allPages" TextProperty="Name" ValueProperty="Id"
+                                    Placeholder="Sin asignar" @bind-Value="_newPageId" AllowClear="true" Style="min-width:200px" />
+                </RadzenStack>
+                <RadzenStack Gap="0.25rem">
+                    <RadzenLabel Text="Acción" />
+                    <RadzenDropDown TValue="int?" Data="@_allActions" TextProperty="Name" ValueProperty="Id"
+                                    Placeholder="Sin asignar" @bind-Value="_newActionId" AllowClear="true" Style="min-width:160px" />
+                </RadzenStack>
+                <RadzenStack Gap="0.25rem">
+                    <RadzenLabel Text="Tipo" />
+                    <RadzenDropDown TValue="string" Data="@_typeOptions" @bind-Value="_newType" Style="min-width:100px" />
+                </RadzenStack>
+                <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Success" ButtonSize="ButtonSize.Small"
+                              Text="Guardar" Click="@SaveAdd" Disabled="@_isSaving" />
+                <RadzenButton Icon="cancel" ButtonStyle="ButtonStyle.Light" ButtonSize="ButtonSize.Small"
+                              Text="Cancelar" Click="@CancelAdd" Disabled="@_isSaving" />
+            </RadzenStack>
+        </RadzenCard>
+    }
+
+    <RadzenDataGrid TItem="UserPageOverrideAdminDto" Data="@_overrides"
+                    AllowPaging="false" AllowSorting="false" AllowFiltering="false"
+                    GridLines="DataGridGridLines.Horizontal"
+                    EmptyText="Sin overrides configurados.">
+        <Columns>
+            <RadzenDataGridColumn TItem="UserPageOverrideAdminDto" Property="PageName" Title="Página" />
+            <RadzenDataGridColumn TItem="UserPageOverrideAdminDto" Property="PageUrl" Title="URL" />
+            <RadzenDataGridColumn TItem="UserPageOverrideAdminDto" Property="ActionName" Title="Acción" />
+            <RadzenDataGridColumn TItem="UserPageOverrideAdminDto" Property="Type" Title="Tipo" Width="80px" TextAlign="TextAlign.Center">
+                <Template Context="o">
+                    @if (o.Type == "GRANT")
+                    {
+                        <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="GRANT" />
+                    }
+                    else
+                    {
+                        <RadzenBadge BadgeStyle="BadgeStyle.Danger" Text="DENY" />
+                    }
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="UserPageOverrideAdminDto" Context="o" Filterable="false" Title="" Width="60px" TextAlign="TextAlign.Center">
+                <Template Context="o">
+                    <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" ButtonSize="ButtonSize.Small"
+                                  Title="Eliminar override" AriaLabel="Eliminar override"
+                                  Click="@(args => DeleteOverride(o.Id))" Disabled="@_isSaving" />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</RadzenCard>
+
+@code {
+    [Parameter] public string UserId { get; set; } = string.Empty;
+    [Parameter] public string UserName { get; set; } = string.Empty;
+    [Parameter] public IAdminUserPageOverrideService OverrideService { get; set; } = null!;
+    [Parameter] public IAdminPageService PageService { get; set; } = null!;
+    [Parameter] public IAdminActionPermissionService ActionService { get; set; } = null!;
+    [Parameter] public NotificationService NotificationService { get; set; } = null!;
+    [Parameter] public DialogService DialogService { get; set; } = null!;
+
+    private bool _isLoading;
+    private bool _isAdding;
+    private bool _isSaving;
+
+    private List<UserPageOverrideAdminDto> _overrides = new();
+    private List<PageAdminDto> _allPages = new();
+    private List<ActionPermissionAdminDto> _allActions = new();
+    private List<string> _typeOptions = new() { "GRANT", "DENY" };
+
+    private int? _newPageId;
+    private int? _newActionId;
+    private string _newType = "GRANT";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            _allPages = (await PageService.GetPagesAsync()).ToList();
+            _allActions = (await ActionService.GetActionsAsync()).ToList();
+            _overrides = (await OverrideService.GetOverridesByUserAsync(UserId)).ToList();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Error", ex.Message);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void BeginAdd()
+    {
+        _isAdding = true;
+        _newPageId = null;
+        _newActionId = null;
+        _newType = "GRANT";
+    }
+
+    private void CancelAdd()
+    {
+        _isAdding = false;
+    }
+
+    private async Task SaveAdd()
+    {
+        if (_newPageId is null || _newActionId is null)
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Validación", "Debe seleccionar página y acción.");
+            return;
+        }
+
+        _isSaving = true;
+        try
+        {
+            await OverrideService.CreateOverrideAsync(UserId, _newPageId, _newActionId, _newType);
+            await LoadDataAsync();
+            _isAdding = false;
+            NotificationService.Notify(NotificationSeverity.Success, "Éxito", "Override creado.");
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Error", ex.Message);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task DeleteOverride(int id)
+    {
+        var confirm = await DialogService.Confirm("Eliminar override?", "Confirmar", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar" });
+        if (confirm != true)
+        {
+            return;
+        }
+
+        _isSaving = true;
+        try
+        {
+            await OverrideService.DeleteOverrideAsync(id);
+            await LoadDataAsync();
+            NotificationService.Notify(NotificationSeverity.Success, "Éxito", "Override eliminado.");
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Error", ex.Message);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

@@ -14,7 +14,7 @@ public class PermissionsControllerTests
     private static PermissionsController CreateController(IPermissionService service, bool setUser = false)
     {
         var controller = new PermissionsController(service);
-        
+
         if (setUser)
         {
             var httpContext = new DefaultHttpContext();
@@ -22,13 +22,13 @@ public class PermissionsControllerTests
                 new System.Security.Claims.ClaimsIdentity(
                     new[] { new System.Security.Claims.Claim("sub", "testuser") },
                     "TestAuth"));
-            
+
             controller.ControllerContext = new ControllerContext
             {
                 HttpContext = httpContext
             };
         }
-        
+
         return controller;
     }
 
@@ -36,10 +36,10 @@ public class PermissionsControllerTests
     public async Task GetAsync_ForExistingUser_Returns_PermissionsDto()
     {
         var svc = new Mock<IPermissionService>();
-        svc.Setup(s => s.GetAsync("alice"))
+        svc.Setup(s => s.GetAsync("alice", null, null, null))
             .ReturnsAsync(new UserPermissionsDto
             {
-                AreaNames = new System.Collections.Generic.List<string> { "Area1", "Area2" },
+                AreaIds = new System.Collections.Generic.List<int> { 1, 2 },
                 Pages = new System.Collections.Generic.List<PagePermissionDto>
                 {
                     new PagePermissionDto { Url = "/home", Actions = new System.Collections.Generic.List<string>{ "View" } }
@@ -52,7 +52,7 @@ public class PermissionsControllerTests
 
         Assert.NotNull(result);
         Assert.Equal(5, result.Version);
-        Assert.Contains("Area1", result.AreaNames);
+        Assert.Contains(1, result.AreaIds);
         Assert.Single(result.Pages);
         Assert.Equal("/home", result.Pages[0].Url);
     }
@@ -61,23 +61,23 @@ public class PermissionsControllerTests
     public async Task GetAsync_Delegates_To_Service_With_Provided_UserName()
     {
         var svc = new Mock<IPermissionService>();
-        svc.Setup(s => s.GetAsync(It.IsAny<string>())).ReturnsAsync(new UserPermissionsDto());
+        svc.Setup(s => s.GetAsync(It.IsAny<string>(), null, null, null)).ReturnsAsync(new UserPermissionsDto());
 
         var controller = CreateController(svc.Object);
         var userName = "bob";
         await controller.GetAsync(userName);
 
-        svc.Verify(s => s.GetAsync(userName, null, null), Times.Once);
+        svc.Verify(s => s.GetAsync(userName, null, null, null), Times.Once);
     }
 
     [Fact]
     public async Task GetAsync_Returns_Empty_Permissions_When_User_Not_Found()
     {
         var svc = new Mock<IPermissionService>();
-        svc.Setup(s => s.GetAsync("nonexistent"))
+        svc.Setup(s => s.GetAsync("nonexistent", null, null, null))
             .ReturnsAsync(new UserPermissionsDto
             {
-                AreaNames = new System.Collections.Generic.List<string>(),
+                AreaIds = new System.Collections.Generic.List<int>(),
                 Pages = new System.Collections.Generic.List<PagePermissionDto>(),
                 Version = 0
             });
@@ -86,7 +86,7 @@ public class PermissionsControllerTests
         var result = await controller.GetAsync("nonexistent");
 
         Assert.NotNull(result);
-        Assert.Empty(result.AreaNames);
+        Assert.Empty(result.AreaIds);
         Assert.Empty(result.Pages);
         Assert.Equal(0, result.Version);
     }
@@ -95,10 +95,10 @@ public class PermissionsControllerTests
     public async Task GetAsync_Returns_Multiple_Pages_With_Actions()
     {
         var svc = new Mock<IPermissionService>();
-        svc.Setup(s => s.GetAsync("user"))
+        svc.Setup(s => s.GetAsync("user", null, null, null))
             .ReturnsAsync(new UserPermissionsDto
             {
-                AreaNames = new System.Collections.Generic.List<string> { "Area1" },
+                AreaIds = new System.Collections.Generic.List<int> { 1 },
                 Pages = new System.Collections.Generic.List<PagePermissionDto>
                 {
                     new() { Url = "/dashboard", Actions = new System.Collections.Generic.List<string> { "Read", "Write" } },
@@ -119,7 +119,7 @@ public class PermissionsControllerTests
     public async Task GetAsync_Preserves_Version_Number()
     {
         var svc = new Mock<IPermissionService>();
-        svc.Setup(s => s.GetAsync(It.IsAny<string>()))
+        svc.Setup(s => s.GetAsync(It.IsAny<string>(), null, null, null))
             .ReturnsAsync(new UserPermissionsDto { Version = 42 });
 
         var controller = CreateController(svc.Object);
@@ -132,13 +132,13 @@ public class PermissionsControllerTests
     public async Task GetAsync_Handles_Special_Characters_In_UserName()
     {
         var svc = new Mock<IPermissionService>();
-        svc.Setup(s => s.GetAsync("user@domain.com"))
+        svc.Setup(s => s.GetAsync("user@domain.com", null, null, null))
             .ReturnsAsync(new UserPermissionsDto { Version = 1 });
 
         var controller = CreateController(svc.Object);
         await controller.GetAsync("user@domain.com");
 
-        svc.Verify(s => s.GetAsync("user@domain.com"), Times.Once);
+        svc.Verify(s => s.GetAsync("user@domain.com", null, null, null), Times.Once);
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class PermissionsControllerTests
     {
         var controllerType = typeof(PermissionsController);
         var authorizeAttribute = controllerType.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), false);
-        
+
         Assert.NotEmpty(authorizeAttribute);
     }
 
@@ -155,7 +155,7 @@ public class PermissionsControllerTests
     {
         var controllerType = typeof(PermissionsController);
         var apiControllerAttribute = controllerType.GetCustomAttributes(typeof(ApiControllerAttribute), false);
-        
+
         Assert.NotEmpty(apiControllerAttribute);
     }
 }

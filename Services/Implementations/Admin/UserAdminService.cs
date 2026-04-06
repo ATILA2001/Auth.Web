@@ -121,7 +121,8 @@ public sealed class UserAdminService : IAdminUserService
             Email = user.Email,
             Roles = roles,
             Areas = areaNames,
-            AreaIds = areaIds
+            AreaIds = areaIds,
+            PermissionVersion = user.PermissionVersion
         };
     }
 }

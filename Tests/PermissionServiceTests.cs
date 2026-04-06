@@ -27,43 +27,54 @@ public class PermissionServiceTests
     {
         var db = CreateDb("perm1");
         var um = new Mock<UserManager<ApplicationUser>>(new Mock<IUserStore<ApplicationUser>>().Object, null!, null!, null!, null!, null!, null!, null!, null!);
-        var svc = new Auth.Web.Services.Implementations.Permissions.PermissionService(new PermissionRepository(db), um.Object);
+        var svc = new PermissionService(new PermissionRepository(db), um.Object);
         var result = await svc.GetAsync("missing");
         Assert.NotNull(result);
         Assert.Empty(result.Pages);
-        Assert.Empty(result.AreaNames);
+        Assert.Empty(result.AreaIds);
     }
 
     [Fact]
-    public async Task GetAsync_Returns_Pages_And_Areas_For_User_With_Roles()
+    public async Task GetAsync_Returns_Empty_Pages_For_Admin_User()
     {
-        var dbName = "perm2" + System.Guid.NewGuid();
+        // Admin bypass: sin importar qué AreaPagePermission exista, Admin recibe vacío
+        var dbName = "perm_admin_" + System.Guid.NewGuid();
         using var db = CreateDb(dbName);
-        var user = new ApplicationUser { Id = "u1", UserName = "user1" };
+        var user = new ApplicationUser { Id = "u1", UserName = "admin@corp" };
         db.Users.Add(user);
-        var role = new IdentityRole("Admin") { Id = "r1" };
-        db.Roles.Add(role);
-        var page = new Page { Name = "Home", Url = "/home" };
-        db.Pages.Add(page);
-        var action = new ActionPermission { Name = "View" };
-        db.ActionPermissions.Add(action);
         await db.SaveChangesAsync();
-        db.RolePagePermissions.Add(new RolePagePermission { RoleId = role.Id, PageId = page.Id, ActionPermissionId = action.Id });
-        var area = new Area { Name = "Area5" };
+
+        var um = new Mock<UserManager<ApplicationUser>>(new Mock<IUserStore<ApplicationUser>>().Object, null!, null!, null!, null!, null!, null!, null!, null!);
+        um.Setup(x => x.FindByNameAsync(user.UserName!)).ReturnsAsync(user);
+        um.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
+
+        var svc = new PermissionService(new PermissionRepository(db), um.Object);
+        var result = await svc.GetAsync(user.UserName!);
+
+        Assert.Empty(result.Pages);
+        Assert.Empty(result.AreaIds);
+    }
+
+    [Fact]
+    public async Task GetAsync_Returns_AreaIds_For_User()
+    {
+        var dbName = "perm_area_" + System.Guid.NewGuid();
+        using var db = CreateDb(dbName);
+        var user = new ApplicationUser { Id = "u2", UserName = "user@corp" };
+        db.Users.Add(user);
+        var area = new Area { Name = "Redeterminaciones" };
         db.Areas.Add(area);
         await db.SaveChangesAsync();
         db.UserAreas.Add(new UserArea { UserId = user.Id, AreaId = area.Id });
         await db.SaveChangesAsync();
 
         var um = new Mock<UserManager<ApplicationUser>>(new Mock<IUserStore<ApplicationUser>>().Object, null!, null!, null!, null!, null!, null!, null!, null!);
-        um.Setup(x => x.FindByNameAsync(user.UserName)).ReturnsAsync(user);
-        um.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
+        um.Setup(x => x.FindByNameAsync(user.UserName!)).ReturnsAsync(user);
+        um.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Usuario" });
 
-        var svc = new Auth.Web.Services.Implementations.Permissions.PermissionService(new PermissionRepository(db), um.Object);
-        var result = await svc.GetAsync(user.UserName);
+        var svc = new PermissionService(new PermissionRepository(db), um.Object);
+        var result = await svc.GetAsync(user.UserName!);
 
-        Assert.Single(result.Pages);
-        Assert.Contains("Area5", result.AreaNames);
-        Assert.Equal(1, result.Version);
+        Assert.Contains(area.Id, result.AreaIds);
     }
 }

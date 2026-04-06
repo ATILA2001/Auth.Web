@@ -11,6 +11,9 @@ public partial class Users : ComponentBase
     [Inject] private IAdminUserService UserService { get; set; } = null!;
     [Inject] private IAdminRoleService RoleService { get; set; } = null!;
     [Inject] private IAdminAreaService AreaService { get; set; } = null!;
+    [Inject] private IAdminUserPageOverrideService OverrideService { get; set; } = null!;
+    [Inject] private IAdminPageService PageService { get; set; } = null!;
+    [Inject] private IAdminActionPermissionService ActionService { get; set; } = null!;
     [Inject] private NotificationService NotificationService { get; set; } = null!;
     [Inject] private DialogService DialogService { get; set; } = null!;
 
@@ -19,6 +22,9 @@ public partial class Users : ComponentBase
 
     private readonly Dictionary<UserAdminDto, List<string>> _rolesBuffer = new();
     private readonly Dictionary<UserAdminDto, List<int>> _areasBuffer = new();
+
+    private string _selectedUserId = string.Empty;
+    private string _selectedUserName = string.Empty;
 
     private List<RoleAdminDto> AllRoles => _vm.AllRoles;
     private List<AreaAdminDto> AllAreas => _vm.AllAreas;
@@ -93,6 +99,33 @@ public partial class Users : ComponentBase
     private void SetAreasBuffer(UserAdminDto user, List<int> areas)
     {
         _areasBuffer[user] = areas;
+    }
+
+    private async Task OpenUserOverridesDialog(UserAdminDto user)
+    {
+        _selectedUserId = user.Id;
+        _selectedUserName = string.IsNullOrWhiteSpace(user.FullName) ? user.UserName : user.FullName;
+
+        var parameters = new Dictionary<string, object?>
+        {
+            ["UserId"] = _selectedUserId,
+            ["UserName"] = _selectedUserName,
+            ["OverrideService"] = OverrideService,
+            ["PageService"] = PageService,
+            ["ActionService"] = ActionService,
+            ["NotificationService"] = NotificationService
+        };
+
+        var options = new DialogOptions
+        {
+            Width = "80%",
+            Height = "80%",
+            CloseDialogOnEsc = true
+        };
+
+        await DialogService.OpenAsync<UserOverridesPanel>($"Overrides de permisos — {_selectedUserName}", parameters, options);
+        _selectedUserId = string.Empty;
+        _selectedUserName = string.Empty;
     }
 
     private async Task EditRow(UserAdminDto user)

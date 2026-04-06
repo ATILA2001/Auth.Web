@@ -36,15 +36,15 @@ public sealed class PageAdminService : IAdminPageService
         return MapPage(page, count);
     }
 
-    public async Task<int> CreatePageAsync(string name, string url, CancellationToken cancellationToken = default)
+    public async Task<int> CreatePageAsync(string name, string url, int? clientId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url)) return 0;
-        var page = await _repository.CreateAsync(name, url, cancellationToken);
+        var page = await _repository.CreateAsync(name, url, clientId, cancellationToken);
         return page.Id;
     }
 
-    public Task UpdatePageAsync(int pageId, string name, string url, CancellationToken cancellationToken = default)
-        => _repository.UpdateAsync(pageId, name, url, cancellationToken);
+    public Task UpdatePageAsync(int pageId, string name, string url, int? clientId, CancellationToken cancellationToken = default)
+        => _repository.UpdateAsync(pageId, name, url, clientId, cancellationToken);
 
     public Task DeletePageAsync(int pageId, CancellationToken cancellationToken = default)
         => _repository.DeleteAsync(pageId, cancellationToken);
@@ -54,6 +54,8 @@ public sealed class PageAdminService : IAdminPageService
         Id = page.Id,
         Name = page.Name,
         Url = page.Url,
+        ClientId = page.ClientId,
+        ClientName = page.Client?.ClientId ?? string.Empty,
         PermissionCount = permissionCount
     };
 }

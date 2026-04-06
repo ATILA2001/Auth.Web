@@ -55,21 +55,21 @@ public class PageAdminServiceTests
             var action = new ActionPermission { Id = 1, Name = "Read" };
             db.ActionPermissions.Add(action);
 
-            var role = new Microsoft.AspNetCore.Identity.IdentityRole { Id = "role1", Name = "User" };
-            db.Roles.Add(role);
+            var area = new Area { Id = 1, Name = "Redeterminaciones" };
+            db.Areas.Add(area);
 
-            db.RolePagePermissions.Add(new RolePagePermission
+            db.AreaPagePermissions.Add(new AreaPagePermission
             {
                 Id = 1,
-                RoleId = role.Id,
+                AreaId = 1,
                 PageId = page.Id,
                 ActionPermissionId = action.Id
             });
 
-            db.RolePagePermissions.Add(new RolePagePermission
+            db.AreaPagePermissions.Add(new AreaPagePermission
             {
                 Id = 2,
-                RoleId = role.Id,
+                AreaId = 1,
                 PageId = page.Id,
                 ActionPermissionId = action.Id
             });
@@ -128,7 +128,7 @@ public class PageAdminServiceTests
         var provider = CreateServiceProvider("CreatePageAsync_Creates_Page_With_Name_And_Url");
         var service = provider.GetRequiredService<IAdminPageService>();
 
-        var id = await service.CreatePageAsync("Reports", "/reports");
+        var id = await service.CreatePageAsync("Reports", "/reports", null);
 
         Assert.True(id > 0);
 
@@ -145,7 +145,7 @@ public class PageAdminServiceTests
         var provider = CreateServiceProvider("CreatePageAsync_Returns_Zero_When_Name_Empty");
         var service = provider.GetRequiredService<IAdminPageService>();
 
-        var id = await service.CreatePageAsync("", "/url");
+        var id = await service.CreatePageAsync("", "/url", null);
 
         Assert.Equal(0, id);
     }
@@ -156,7 +156,7 @@ public class PageAdminServiceTests
         var provider = CreateServiceProvider("CreatePageAsync_Returns_Zero_When_Url_Empty");
         var service = provider.GetRequiredService<IAdminPageService>();
 
-        var id = await service.CreatePageAsync("Name", "");
+        var id = await service.CreatePageAsync("Name", "", null);
 
         Assert.Equal(0, id);
     }
@@ -167,7 +167,7 @@ public class PageAdminServiceTests
         var provider = CreateServiceProvider("CreatePageAsync_Returns_Zero_When_Both_Empty");
         var service = provider.GetRequiredService<IAdminPageService>();
 
-        var id = await service.CreatePageAsync("", "");
+        var id = await service.CreatePageAsync("", "", null);
 
         Assert.Equal(0, id);
     }
@@ -188,7 +188,7 @@ public class PageAdminServiceTests
         }
 
         var service = provider.GetRequiredService<IAdminPageService>();
-        await service.UpdatePageAsync(pageId, "New", "/new");
+        await service.UpdatePageAsync(pageId, "New", "/new", null);
 
         var updated = await service.GetPageByIdAsync(pageId);
         Assert.NotNull(updated);

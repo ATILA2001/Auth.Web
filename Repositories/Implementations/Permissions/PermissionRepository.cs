@@ -14,16 +14,6 @@ public sealed class PermissionRepository : IPermissionRepository
         _db = db;
     }
 
-    public async Task<IReadOnlyCollection<string>> GetUserRoleIdsAsync(IEnumerable<string> roleNames, CancellationToken ct = default)
-    {
-        var names = roleNames?.ToArray() ?? Array.Empty<string>();
-        if (names.Length == 0) return Array.Empty<string>();
-        return await _db.Roles
-            .Where(role => names.Contains(role.Name!))
-            .Select(role => role.Id)
-            .ToListAsync(ct);
-    }
-
     public async Task<IReadOnlyCollection<int>> GetUserAreaIdsAsync(string userId, CancellationToken ct = default)
     {
         return await _db.UserAreas
@@ -34,27 +24,41 @@ public sealed class PermissionRepository : IPermissionRepository
             .ToListAsync(ct);
     }
 
-    public async Task<IReadOnlyCollection<string>> GetAreaNamesAsync(IEnumerable<int> areaIds, CancellationToken ct = default)
+    public async Task<IReadOnlyCollection<AreaPagePermission>> GetAreaPagePermissionsAsync(
+        IList<int> areaIds, int? clientId = null, CancellationToken ct = default)
     {
-        var ids = areaIds?.ToArray() ?? Array.Empty<int>();
-        if (ids.Length == 0) return Array.Empty<string>();
+        if (areaIds.Count == 0) return Array.Empty<AreaPagePermission>();
 
-        return await _db.Areas
-            .Where(a => ids.Contains(a.Id))
-            .OrderBy(a => a.Id)
-            .Select(a => a.Name)
-            .ToListAsync(ct);
+        var query = _db.AreaPagePermissions
+            .Include(ap => ap.Page)
+            .Include(ap => ap.ActionPermission)
+            .Where(ap => areaIds.Contains(ap.AreaId));
+
+        if (clientId.HasValue)
+            query = query.Where(ap => ap.Page != null && ap.Page.ClientId == clientId.Value);
+
+        return await query.ToListAsync(ct);
     }
 
-    public async Task<IReadOnlyCollection<RolePagePermission>> GetRolePagePermissionsAsync(IEnumerable<string> roleIds, CancellationToken ct = default)
+    public async Task<IReadOnlyCollection<UserPageOverride>> GetUserPageOverridesAsync(
+        string userId, int? clientId = null, CancellationToken ct = default)
     {
-        var ids = roleIds?.ToArray() ?? Array.Empty<string>();
-        if (ids.Length == 0) return Array.Empty<RolePagePermission>();
+        var query = _db.UserPageOverrides
+            .Include(o => o.Page)
+            .Include(o => o.ActionPermission)
+            .Where(o => o.UserId == userId);
 
-        return await _db.RolePagePermissions
-            .Where(rpp => ids.Contains(rpp.RoleId))
-            .Include(rpp => rpp.Page)
-            .Include(rpp => rpp.ActionPermission)
-            .ToListAsync(ct);
+        if (clientId.HasValue)
+            query = query.Where(o => o.Page != null && o.Page.ClientId == clientId.Value);
+
+        return await query.ToListAsync(ct);
+    }
+
+    public async Task<int> GetUserPermissionVersionAsync(string userId, CancellationToken ct = default)
+    {
+        return await _db.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.PermissionVersion)
+            .FirstOrDefaultAsync(ct);
     }
 }

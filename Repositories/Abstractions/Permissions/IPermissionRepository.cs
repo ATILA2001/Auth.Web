@@ -4,8 +4,8 @@ namespace Auth.Web.Repositories.Abstractions.Permissions;
 
 public interface IPermissionRepository
 {
-    Task<IReadOnlyCollection<string>> GetUserRoleIdsAsync(IEnumerable<string> roleNames, CancellationToken ct = default);
     Task<IReadOnlyCollection<int>> GetUserAreaIdsAsync(string userId, CancellationToken ct = default);
-    Task<IReadOnlyCollection<string>> GetAreaNamesAsync(IEnumerable<int> areaIds, CancellationToken ct = default);
-    Task<IReadOnlyCollection<RolePagePermission>> GetRolePagePermissionsAsync(IEnumerable<string> roleIds, CancellationToken ct = default);
+    Task<IReadOnlyCollection<AreaPagePermission>> GetAreaPagePermissionsAsync(IList<int> areaIds, int? clientId = null, CancellationToken ct = default);
+    Task<IReadOnlyCollection<UserPageOverride>> GetUserPageOverridesAsync(string userId, int? clientId = null, CancellationToken ct = default);
+    Task<int> GetUserPermissionVersionAsync(string userId, CancellationToken ct = default);
 }

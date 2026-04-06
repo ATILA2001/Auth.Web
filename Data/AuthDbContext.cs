@@ -23,6 +23,12 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
 
     public DbSet<AreaRoute> AreaRoutes => Set<AreaRoute>();
 
+    public DbSet<AreaPagePermission> AreaPagePermissions => Set<AreaPagePermission>();
+
+    public DbSet<UserPageOverride> UserPageOverrides => Set<UserPageOverride>();
+
+    public DbSet<PermissionAuditLog> PermissionAuditLogs => Set<PermissionAuditLog>();
+
     // Data Protection key storage for shared cookie SSO
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
@@ -66,5 +72,52 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
             .HasForeignKey(x => x.ClientId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        // Page.ClientId → ApplicationClient
+        builder.Entity<Page>()
+            .HasOne(x => x.Client)
+            .WithMany()
+            .HasForeignKey(x => x.ClientId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // AreaPagePermission
+        builder.Entity<AreaPagePermission>()
+            .HasIndex(x => new { x.AreaId, x.PageId, x.ActionPermissionId })
+            .IsUnique();
+
+        builder.Entity<AreaPagePermission>()
+            .HasOne(x => x.Area)
+            .WithMany()
+            .HasForeignKey(x => x.AreaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<AreaPagePermission>()
+            .HasOne(x => x.Page)
+            .WithMany(x => x.AreaPermissions)
+            .HasForeignKey(x => x.PageId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Entity<AreaPagePermission>()
+            .HasOne(x => x.ActionPermission)
+            .WithMany()
+            .HasForeignKey(x => x.ActionPermissionId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // UserPageOverride
+        builder.Entity<UserPageOverride>()
+            .HasCheckConstraint(
+                "CK_UserPageOverride_GrantRequiresAction",
+                "Type <> 'GRANT' OR ActionPermissionId IS NOT NULL");
+
+        builder.Entity<UserPageOverride>()
+            .HasOne(x => x.Page)
+            .WithMany()
+            .HasForeignKey(x => x.PageId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Entity<UserPageOverride>()
+            .HasOne(x => x.ActionPermission)
+            .WithMany()
+            .HasForeignKey(x => x.ActionPermissionId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

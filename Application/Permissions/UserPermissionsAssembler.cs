@@ -10,9 +10,9 @@ public sealed class UserPermissionsAssembler
     // Intención: transformar datos crudos (roles, áreas, permisos DTO) en AuthClaimsModel.
     public AuthClaimsModel BuildClaims(ApplicationUser user, IReadOnlyCollection<string> roles, UserPermissionsDto rawPermissions, IReadOnlyCollection<string> apps)
     {
-        // Areas: ahora usamos exclusivamente nombres. Si no hay nombres, devolvemos colección vacía.
-        var areaCodes = (rawPermissions.AreaNames != null && rawPermissions.AreaNames.Count > 0)
-            ? rawPermissions.AreaNames.ToArray()
+        // Areas: IDs enteros emitidos como strings en los claims (convención de contrato).
+        var areaCodes = rawPermissions.AreaIds.Count > 0
+            ? rawPermissions.AreaIds.Select(id => id.ToString()).ToArray()
             : Array.Empty<string>();
 
         // Serializar permisos por página/acción en JSON compacto (camelCase)

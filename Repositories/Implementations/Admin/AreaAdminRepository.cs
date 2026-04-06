@@ -70,4 +70,22 @@ public sealed class AreaAdminRepository : IAreaAdminRepository
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         return await db.UserAreas.CountAsync(ua => ua.AreaId == areaId, ct);
     }
+
+    public async Task<IReadOnlyDictionary<int, (int ClientId, string Audience)>> GetAreaClientMappingAsync(CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var routes = await db.AreaRoutes
+            .AsNoTracking()
+            .Where(r => r.ClientId != null && r.AreaId != null)
+            .Join(db.ApplicationClients,
+                r => r.ClientId,
+                c => c.Id,
+                (r, c) => new { AreaId = r.AreaId!.Value, ClientId = r.ClientId!.Value, c.Audience })
+            .ToListAsync(ct);
+        return routes
+            .GroupBy(r => r.AreaId)
+            .ToDictionary(
+                g => g.Key,
+                g => (g.First().ClientId, g.First().Audience));
+    }
 }

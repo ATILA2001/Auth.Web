@@ -34,7 +34,12 @@ public sealed class AreaAdminService : IAdminAreaService
             return Array.Empty<AreaAdminDto>();
         }
         var counts = await _repository.GetAreaUserCountsAsync(cancellationToken);
-        return areas.Select(area => MapArea(area, counts.TryGetValue(area.Id, out var count) ? count : 0)).ToList();
+        var clientMap = await _repository.GetAreaClientMappingAsync(cancellationToken);
+        return areas.Select(area =>
+        {
+            clientMap.TryGetValue(area.Id, out var client);
+            return MapArea(area, counts.TryGetValue(area.Id, out var count) ? count : 0, client.ClientId == 0 ? null : client.ClientId, client.Audience);
+        }).ToList();
     }
 
     async Task<AreaAdminDto?> IAdminAreaService.GetAreaByIdAsync(int areaId, CancellationToken cancellationToken)
@@ -45,7 +50,9 @@ public sealed class AreaAdminService : IAdminAreaService
             return null;
         }
         var count = await _repository.GetAreaUserCountAsync(areaId, cancellationToken);
-        return MapArea(area, count);
+        var clientMap = await _repository.GetAreaClientMappingAsync(cancellationToken);
+        clientMap.TryGetValue(areaId, out var client);
+        return MapArea(area, count, client.ClientId == 0 ? null : client.ClientId, client.Audience);
     }
 
     async Task<int> IAdminAreaService.CreateAreaAsync(string name, CancellationToken cancellationToken)
@@ -61,10 +68,12 @@ public sealed class AreaAdminService : IAdminAreaService
     Task IAdminAreaService.DeleteAreaAsync(int areaId, CancellationToken cancellationToken)
         => _repository.DeleteAsync(areaId, cancellationToken);
 
-    private static AreaAdminDto MapArea(Area area, int userCount) => new()
+    private static AreaAdminDto MapArea(Area area, int userCount, int? clientId = null, string? clientName = null) => new()
     {
         Id = area.Id,
         Name = area.Name,
-        UserCount = userCount
+        UserCount = userCount,
+        ClientId = clientId,
+        ClientName = clientName
     };
 }

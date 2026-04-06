@@ -29,12 +29,26 @@ public class ClientService : IClientService
         try
         {
             var urls = JsonSerializer.Deserialize<List<string>>(client.AllowedReturnUrlsJson) ?? [];
-            return urls.Any(u => string.Equals(u?.TrimEnd('/'), returnUrl?.TrimEnd('/'), StringComparison.OrdinalIgnoreCase));
+            return urls.Any(u => IsSameOrigin(u, returnUrl));
         }
         catch (JsonException)
         {
             return false;
         }
+    }
+
+    private static bool IsSameOrigin(string? allowedUrl, string? returnUrl)
+    {
+        if (string.IsNullOrWhiteSpace(allowedUrl) || string.IsNullOrWhiteSpace(returnUrl))
+            return false;
+        if (!Uri.TryCreate(allowedUrl, UriKind.Absolute, out var allowed))
+            return false;
+        if (!Uri.TryCreate(returnUrl, UriKind.Absolute, out var ret))
+            return false;
+        return string.Equals(
+            allowed.GetLeftPart(UriPartial.Authority),
+            ret.GetLeftPart(UriPartial.Authority),
+            StringComparison.OrdinalIgnoreCase);
     }
 
     public string? GetDefaultReturnUrl(ApplicationClient client)

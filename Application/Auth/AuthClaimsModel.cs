@@ -8,6 +8,10 @@ public sealed class AuthClaimsModel
     public string? Email { get; init; }
     public string? DisplayName { get; init; }
     public IReadOnlyCollection<string> Roles { get; init; } = Array.Empty<string>();
+    /// <summary>
+    /// IDs de área del usuario como strings (convención: los valores son siempre enteros parseables, ej: "25").
+    /// Los consumidores deben leerlos con int.Parse(). No son nombres de área.
+    /// </summary>
     public IReadOnlyCollection<string> Areas { get; init; } = Array.Empty<string>();
     public IReadOnlyCollection<string> Apps { get; init; } = Array.Empty<string>();
     public IReadOnlyCollection<PagePermissionDto> Pages { get; init; } = Array.Empty<PagePermissionDto>();

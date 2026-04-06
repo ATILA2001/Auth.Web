@@ -11,4 +11,6 @@ public interface IAreaAdminRepository
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
     Task<IReadOnlyDictionary<int, int>> GetAreaUserCountsAsync(CancellationToken ct = default);
     Task<int> GetAreaUserCountAsync(int areaId, CancellationToken ct = default);
+    /// <summary>Returns a mapping of AreaId → (ClientId, ClientAudience) derived from AreaRoutes.</summary>
+    Task<IReadOnlyDictionary<int, (int ClientId, string Audience)>> GetAreaClientMappingAsync(CancellationToken ct = default);
 }

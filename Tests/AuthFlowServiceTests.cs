@@ -56,10 +56,6 @@ public class AuthFlowServiceTests
         return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, provisioning.Object, assembler, adminSignIn.Object, authService.Object, claimsFactory.Object, httpContextAccessor, options, featureOptions);
     }
 
-    /// <summary>
-    /// Creates an ApplicationUser with guaranteed non-null UserName and Email.
-    /// Returns the user along with non-null copies of userName/email for use in test setups.
-    /// </summary>
     private static (ApplicationUser User, string UserName, string Email) MakeUser(string id, string userName, string email)
     {
         ArgumentNullException.ThrowIfNull(userName);
@@ -94,8 +90,8 @@ public class AuthFlowServiceTests
         var adminSignIn = new Mock<IAdminSignInService>();
 
         var perms = new Mock<IPermissionService>();
-        perms.Setup(x => x.GetAsync(userName, It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
-            .ReturnsAsync(new UserPermissionsDto { AreaNames = new List<string> { "Area1" }, Version = 1 });
+        perms.Setup(x => x.GetAsync(userName, It.IsAny<int?>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
+            .ReturnsAsync(new UserPermissionsDto { AreaIds = new List<int>(), Version = 1 });
 
         var authService = new Mock<IAuthenticationService>();
 
@@ -129,11 +125,10 @@ public class AuthFlowServiceTests
         clientSvc.Setup(x => x.IsReturnUrlAllowed(client, "https://app/landing")).Returns(true);
 
         var perms = new Mock<IPermissionService>();
-        perms.Setup(x => x.GetAsync(userName, It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
-            .ReturnsAsync(new UserPermissionsDto { AreaNames = new List<string> { "Area1" }, Version = 1 });
+        perms.Setup(x => x.GetAsync(userName, It.IsAny<int?>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
+            .ReturnsAsync(new UserPermissionsDto { AreaIds = new List<int> { 1 }, Version = 1 });
 
         var authService = new Mock<IAuthenticationService>();
-
         var assembler = new UserPermissionsAssembler();
 
         var svc = CreateService(ad: ad, client: clientSvc, routing: routing, perms: perms, userManagement: userManagement, assembler: assembler, authService: authService);

@@ -30,15 +30,28 @@
                 <Columns>
                     <RadzenDataGridColumn TItem="PageAdminDto" Property="Name" Title="Nombre">
                         <EditTemplate Context="p">
-                            <RadzenTextBox Value="@GetNameBuffer(p)" ValueChanged="@(v => SetNameBuffer(p, v))"  Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenTextBox Value="@GetNameBuffer(p)" ValueChanged="@(v => SetNameBuffer(p, v))" Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="PageAdminDto" Property="Url" Title="URL">
                         <EditTemplate Context="p">
-                            <RadzenTextBox Value="@GetUrlBuffer(p)" ValueChanged="@(v => SetUrlBuffer(p, v))"  Disabled="@(IsLoading || IsSaving)" />
+                            <RadzenTextBox Value="@GetUrlBuffer(p)" ValueChanged="@(v => SetUrlBuffer(p, v))" Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="PageAdminDto" Property="PermissionCount" Title="Permisos"  />
+                    <RadzenDataGridColumn TItem="PageAdminDto" Property="ClientName" Title="Aplicación">
+                        <EditTemplate Context="p">
+                            <RadzenDropDown TValue="int?"
+                                            Data="@clients"
+                                            TextProperty="ClientId"
+                                            ValueProperty="Id"
+                                            Placeholder="Sin asignar"
+                                            Value="@GetClientBuffer(p)"
+                                            ValueChanged="@(v => SetClientBuffer(p, v))"
+                                            Disabled="@(IsLoading || IsSaving)"
+                                            AllowClear="true" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="PageAdminDto" Property="PermissionCount" Title="Permisos" />
                     <RadzenDataGridColumn TItem="PageAdminDto" Context="p" Filterable="false" Title="Acciones" Width="112px" TextAlign="TextAlign.Center">
                         <Template Context="p">
                             <RadzenButton Icon="edit" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(p))" @onclick:stopPropagation class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />

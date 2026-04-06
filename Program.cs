@@ -124,6 +124,7 @@ else
 }
 builder.Services.AddScoped<IAdminSignInService, AdminSignInService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<IPermissionAuditService, PermissionAuditService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IRoutingService, RoutingService>();
 
@@ -143,6 +144,8 @@ builder.Services.AddScoped<IAdminRoutingService, RoutingAdminService>();
 builder.Services.AddScoped<IAdminPageService, PageAdminService>();
 builder.Services.AddScoped<IAdminActionPermissionService, ActionPermissionAdminService>();
 builder.Services.AddScoped<IAdminRolePagePermissionService, RolePagePermissionAdminService>();
+builder.Services.AddScoped<IAdminAreaPagePermissionService, AreaPagePermissionAdminService>();
+builder.Services.AddScoped<IAdminUserPageOverrideService, UserPageOverrideAdminService>();
 
 // Admin repositories
 builder.Services.AddScoped<IAreaAdminRepository, AreaAdminRepository>();
@@ -153,6 +156,8 @@ builder.Services.AddScoped<IUserAdminRepository, UserAdminRepository>();
 builder.Services.AddScoped<IPageAdminRepository, PageAdminRepository>();
 builder.Services.AddScoped<IActionPermissionAdminRepository, ActionPermissionAdminRepository>();
 builder.Services.AddScoped<IRolePagePermissionAdminRepository, RolePagePermissionAdminRepository>();
+builder.Services.AddScoped<IAreaPagePermissionAdminRepository, AreaPagePermissionAdminRepository>();
+builder.Services.AddScoped<IUserPageOverrideAdminRepository, UserPageOverrideAdminRepository>();
 
 // Non-admin repositories
 builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
