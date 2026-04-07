@@ -2,6 +2,7 @@ using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Application.Admin.Dtos;
 using Auth.Web.Repositories.Abstractions.Admin;
 using Auth.Web.Data.Entities;
+using Auth.Web.Services.Abstractions.Permissions;
 using Microsoft.AspNetCore.Identity;
 
 namespace Auth.Web.Services.Implementations.Admin;
@@ -10,11 +11,16 @@ public sealed class UserAdminService : IAdminUserService
 {
     private readonly IUserAdminRepository _repository;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IPermissionAuditService _auditService;
 
-    public UserAdminService(IUserAdminRepository repository, UserManager<ApplicationUser> userManager)
+    public UserAdminService(
+        IUserAdminRepository repository,
+        UserManager<ApplicationUser> userManager,
+        IPermissionAuditService auditService)
     {
         _repository = repository;
         _userManager = userManager;
+        _auditService = auditService;
     }
 
     public async Task<IReadOnlyCollection<UserAdminDto>> GetUsersAsync(CancellationToken cancellationToken = default)
@@ -94,13 +100,13 @@ public sealed class UserAdminService : IAdminUserService
         if (toRemoveRoles.Length > 0) await _userManager.RemoveFromRolesAsync(user, toRemoveRoles);
 
         await _repository.UpdateUserAreasAsync(userId, areaIds, cancellationToken);
+        await _auditService.IncrementUserPermissionVersionAsync(userId, cancellationToken);
     }
 
     public async Task DeleteUserAsync(string userId, CancellationToken cancellationToken = default)
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null) return;
-
         await _userManager.DeleteAsync(user);
     }
 

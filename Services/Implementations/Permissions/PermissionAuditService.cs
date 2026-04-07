@@ -50,4 +50,13 @@ public sealed class PermissionAuditService : IPermissionAuditService
                 s => s.SetProperty(u => u.PermissionVersion, u => u.PermissionVersion + 1),
                 ct);
     }
+
+    public async Task IncrementUserPermissionVersionAsync(string userId, CancellationToken ct = default)
+    {
+        await _db.Users
+            .Where(u => u.Id == userId)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(u => u.PermissionVersion, u => u.PermissionVersion + 1),
+                ct);
+    }
 }

@@ -1,18 +1,23 @@
-using Auth.Web.Application.Admin.Dtos;
+﻿using Auth.Web.Application.Admin.Dtos;
 using Auth.Web.Data.Entities;
 using Auth.Web.Repositories.Abstractions.Admin;
 using Auth.Web.Services.Abstractions.Admin;
+using Auth.Web.Services.Abstractions.Permissions;
 
 namespace Auth.Web.Services.Implementations.Admin;
 
 public sealed class UserPageOverrideAdminService : IAdminUserPageOverrideService
 {
     private readonly IUserPageOverrideAdminRepository _repository;
+    private readonly IPermissionAuditService _auditService;
 
-    public UserPageOverrideAdminService(IUserPageOverrideAdminRepository repository)
+    public UserPageOverrideAdminService(
+        IUserPageOverrideAdminRepository repository,
+        IPermissionAuditService auditService)
     {
         ArgumentNullException.ThrowIfNull(repository);
         _repository = repository;
+        _auditService = auditService;
     }
 
     public async Task<IReadOnlyCollection<UserPageOverrideAdminDto>> GetOverridesByUserAsync(string userId, CancellationToken ct = default)
@@ -38,13 +43,20 @@ public sealed class UserPageOverrideAdminService : IAdminUserPageOverrideService
 
         var existing = await _repository.FindAsync(userId, pageId, actionPermissionId, ct);
         if (existing is not null)
-            throw new InvalidOperationException("Ya existe un override idéntico para este usuario.");
+            throw new InvalidOperationException("Ya existe un override identico para este usuario.");
 
-        return await _repository.CreateAsync(userId, pageId, actionPermissionId, type, ct);
+        var id = await _repository.CreateAsync(userId, pageId, actionPermissionId, type, ct);
+        await _auditService.IncrementUserPermissionVersionAsync(userId, ct);
+        return id;
     }
 
-    public Task DeleteOverrideAsync(int id, CancellationToken ct = default)
-        => _repository.DeleteAsync(id, ct);
+    public async Task DeleteOverrideAsync(int id, CancellationToken ct = default)
+    {
+        var entity = await _repository.GetByIdAsync(id, ct);
+        await _repository.DeleteAsync(id, ct);
+        if (entity is not null)
+            await _auditService.IncrementUserPermissionVersionAsync(entity.UserId, ct);
+    }
 
     private static UserPageOverrideAdminDto Map(UserPageOverride o) => new()
     {

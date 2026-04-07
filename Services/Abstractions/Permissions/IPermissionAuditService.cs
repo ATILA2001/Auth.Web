@@ -15,4 +15,10 @@ public interface IPermissionAuditService
     /// Llamar al cambiar cualquier AreaPagePermission de esa área.
     /// </summary>
     Task IncrementAreaPermissionVersionAsync(int areaId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Incrementa PermissionVersion del usuario indicado.
+    /// Llamar al cambiar roles, áreas o UserPageOverrides de ese usuario.
+    /// </summary>
+    Task IncrementUserPermissionVersionAsync(string userId, CancellationToken ct = default);
 }

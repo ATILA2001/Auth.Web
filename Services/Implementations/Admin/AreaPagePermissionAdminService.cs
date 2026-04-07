@@ -2,6 +2,7 @@ using Auth.Web.Application.Admin.Dtos;
 using Auth.Web.Data.Entities;
 using Auth.Web.Repositories.Abstractions.Admin;
 using Auth.Web.Services.Abstractions.Admin;
+using Auth.Web.Services.Abstractions.Permissions;
 
 namespace Auth.Web.Services.Implementations.Admin;
 
@@ -9,13 +10,16 @@ public sealed class AreaPagePermissionAdminService : IAdminAreaPagePermissionSer
 {
     private readonly IAreaPagePermissionAdminRepository _repository;
     private readonly IAreaAdminRepository _areaRepository;
+    private readonly IPermissionAuditService _auditService;
 
     public AreaPagePermissionAdminService(
         IAreaPagePermissionAdminRepository repository,
-        IAreaAdminRepository areaRepository)
+        IAreaAdminRepository areaRepository,
+        IPermissionAuditService auditService)
     {
         _repository = repository;
         _areaRepository = areaRepository;
+        _auditService = auditService;
     }
 
     public async Task<IReadOnlyCollection<AreaPagePermissionAdminDto>> GetPermissionsAsync(CancellationToken cancellationToken = default)
@@ -39,6 +43,7 @@ public sealed class AreaPagePermissionAdminService : IAdminAreaPagePermissionSer
         }
 
         var entity = await _repository.CreateAsync(areaId, pageId, actionId, cancellationToken);
+        await _auditService.IncrementAreaPermissionVersionAsync(areaId, cancellationToken);
         return entity.Id;
     }
 
@@ -56,11 +61,20 @@ public sealed class AreaPagePermissionAdminService : IAdminAreaPagePermissionSer
             throw new InvalidOperationException("Ya existe este permiso de área.");
         }
 
+        var oldAreaId = entity.AreaId;
         await _repository.UpdateAsync(id, areaId, pageId, actionId, cancellationToken);
+        await _auditService.IncrementAreaPermissionVersionAsync(areaId, cancellationToken);
+        if (oldAreaId != areaId)
+            await _auditService.IncrementAreaPermissionVersionAsync(oldAreaId, cancellationToken);
     }
 
-    public Task DeletePermissionAsync(int id, CancellationToken cancellationToken = default)
-        => _repository.DeleteAsync(id, cancellationToken);
+    public async Task DeletePermissionAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
+        await _repository.DeleteAsync(id, cancellationToken);
+        if (entity is not null)
+            await _auditService.IncrementAreaPermissionVersionAsync(entity.AreaId, cancellationToken);
+    }
 
     private static AreaPagePermissionAdminDto Map(AreaPagePermission e) => new()
     {

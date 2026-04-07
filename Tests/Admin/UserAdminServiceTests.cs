@@ -2,6 +2,7 @@ using Auth.Web.Services.Implementations.Admin;
 using Auth.Web.Data;
 using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Admin;
+using Auth.Web.Services.Abstractions.Permissions;
 using Auth.Web.Repositories.Abstractions.Admin;
 using Auth.Web.Repositories.Implementations.Admin;
 using Microsoft.EntityFrameworkCore;
@@ -63,7 +64,8 @@ public class UserAdminServiceTests
         umMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(userRef);
 
         IUserAdminRepository repo = new UserAdminRepository(factory);
-        IAdminUserService svc = new UserAdminService(repo, umMock.Object);
+        var auditMock = new Mock<IPermissionAuditService>();
+        IAdminUserService svc = new UserAdminService(repo, umMock.Object, auditMock.Object);
         var users = await svc.GetUsersAsync();
         var dto = users.Single();
         Assert.Contains("Admin", dto.Roles);
@@ -101,7 +103,9 @@ public class UserAdminServiceTests
             .ReturnsAsync(IdentityResult.Success);
 
         IUserAdminRepository repo = new UserAdminRepository(factory);
-        IAdminUserService svc = new UserAdminService(repo, umMock.Object);
+        var auditMock = new Mock<IPermissionAuditService>();
+        auditMock.Setup(a => a.IncrementUserPermissionVersionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        IAdminUserService svc = new UserAdminService(repo, umMock.Object, auditMock.Object);
         await svc.UpdateUserRolesAndAreasAsync("user-1", new[] { "RoleB" }, new[] { area2Id });
 
         umMock.Verify(m => m.AddToRolesAsync(It.Is<ApplicationUser>(u => u.Id == "user-1"), It.Is<IEnumerable<string>>(r => r.Single() == "RoleB")), Times.Once);
