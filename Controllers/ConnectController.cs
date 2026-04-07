@@ -24,6 +24,11 @@ public class ConnectController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromForm] LoginRequestDto dto)
     {
+        if (!await TryValidateAntiforgeryAsync())
+        {
+            return BadRequest();
+        }
+
         var result = await _authFlowService.LoginAsync(dto);
         return Redirect(result.RedirectUrl);
     }

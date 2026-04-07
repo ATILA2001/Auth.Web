@@ -425,7 +425,10 @@ public sealed class AuthFlowService : IAuthFlowService
             return false;
         }
 
-        return string.Equals(inputPassword ?? string.Empty, expectedPassword, StringComparison.Ordinal);
+        // Use constant-time comparison to prevent timing oracle attacks.
+        var inputBytes = System.Text.Encoding.UTF8.GetBytes(inputPassword ?? string.Empty);
+        var expectedBytes = System.Text.Encoding.UTF8.GetBytes(expectedPassword);
+        return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(inputBytes, expectedBytes);
     }
 
     private static bool VerifyPasswordHash(string? passwordHash, string inputPassword)

@@ -136,11 +136,48 @@ public class AdAuthService : IActiveDirectoryAuthService
 
     private static string? TryResolveUserNameByEmail(PrincipalContext context, string email)
     {
+        // Validate email format strictly before using as LDAP filter value to prevent filter injection.
+        // Only allow standard email characters; reject anything that could manipulate the LDAP query.
+        if (!IsValidEmailForLdap(email))
+        {
+            return null;
+        }
+
         using var searcher = new PrincipalSearcher(new UserPrincipal(context)
         {
             EmailAddress = email
         });
         var result = searcher.FindOne() as UserPrincipal;
         return result?.SamAccountName;
+    }
+
+    /// <summary>
+    /// Validates that the email contains only characters safe for use as an LDAP filter value.
+    /// LDAP filter special characters (, ), \, *, NUL) are rejected.
+    /// </summary>
+    private static bool IsValidEmailForLdap(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email) || email.Length > 256)
+        {
+            return false;
+        }
+
+        // Reject LDAP filter special characters: ( ) \ * and NUL
+        foreach (var ch in email)
+        {
+            if (ch is '(' or ')' or '\\' or '*' or '\0')
+            {
+                return false;
+            }
+        }
+
+        // Must contain exactly one '@' with non-empty local and domain parts
+        var atIndex = email.IndexOf('@');
+        if (atIndex <= 0 || atIndex == email.Length - 1 || email.IndexOf('@', atIndex + 1) >= 0)
+        {
+            return false;
+        }
+
+        return true;
     }
 }

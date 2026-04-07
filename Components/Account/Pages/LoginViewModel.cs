@@ -66,10 +66,12 @@ public sealed class LoginViewModel
     public sealed class RegisterInputModel
     {
         [Required(ErrorMessage = "Debe ingresar nombre completo.")]
+        [MaxLength(100, ErrorMessage = "El nombre no puede superar 100 caracteres.")]
         public string FullName { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Debe ingresar correo electrónico.")]
         [EmailAddress(ErrorMessage = "El correo electrónico no es válido.")]
+        [MaxLength(254, ErrorMessage = "El correo electrónico no puede superar 254 caracteres.")]
         public string Email { get; set; } = string.Empty;
     }
 }

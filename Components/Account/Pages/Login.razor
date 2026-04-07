@@ -36,6 +36,10 @@
 
                                 <input type="hidden" name="ReturnUrl" value="@(ReturnUrlFromQuery ?? string.Empty)" />
                                 <input type="hidden" name="ClientId" value="@(ClientIdFromQuery ?? string.Empty)" />
+                                @if (!string.IsNullOrEmpty(AntiforgeryFieldName) && !string.IsNullOrEmpty(AntiforgeryToken))
+                                {
+                                    <input type="hidden" name="@AntiforgeryFieldName" value="@AntiforgeryToken" />
+                                }
                             </form>
 
                             @if (!string.IsNullOrWhiteSpace(ErrorMessage))
