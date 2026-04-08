@@ -9,16 +9,13 @@ namespace Auth.Web.Services.Implementations.Admin;
 public sealed class AreaPagePermissionAdminService : IAdminAreaPagePermissionService
 {
     private readonly IAreaPagePermissionAdminRepository _repository;
-    private readonly IAreaAdminRepository _areaRepository;
     private readonly IPermissionAuditService _auditService;
 
     public AreaPagePermissionAdminService(
         IAreaPagePermissionAdminRepository repository,
-        IAreaAdminRepository areaRepository,
         IPermissionAuditService auditService)
     {
         _repository = repository;
-        _areaRepository = areaRepository;
         _auditService = auditService;
     }
 
