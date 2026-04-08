@@ -152,12 +152,13 @@ public class PermissionService : IPermissionService
 
             result.Add(new PagePermissionDto
             {
+                PageId = pageId,
                 Url = NormalizePagePath(pageUrl),
                 Actions = [.. actions.OrderBy(a => a, StringComparer.OrdinalIgnoreCase)]
             });
         }
 
-        return [.. result.OrderBy(p => p.Url, StringComparer.OrdinalIgnoreCase)];
+        return [.. result.OrderBy(p => p.PageId)];
     }
 
     private static string NormalizePagePath(string url)
