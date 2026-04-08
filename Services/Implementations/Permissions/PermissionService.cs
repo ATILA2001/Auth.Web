@@ -94,6 +94,9 @@ public class PermissionService : IPermissionService
         return await _repository.GetUserPermissionVersionAsync(user.Id);
     }
 
+    public Task<int> GetVersionByUserIdAsync(string userId)
+        => _repository.GetUserPermissionVersionAsync(userId);
+
     private static List<PagePermissionDto> ApplyPermissionRules(
         IReadOnlyCollection<AreaPagePermission> areaPermissions,
         IReadOnlyCollection<UserPageOverride> userOverrides)

@@ -20,6 +20,10 @@ public sealed class PermissionMatrixRow
 
     public int? GetPermissionId(int actionId) =>
         ActionMap.TryGetValue(actionId, out var id) ? id : null;
+
+    /// <summary>True when every known action is enabled for this page.</summary>
+    public bool AllActionsEnabled(IReadOnlyList<ActionPermissionAdminDto> actions) =>
+        actions.Count > 0 && actions.All(a => IsEnabled(a.Id));
 }
 
 public sealed class PermissionsViewModel
@@ -50,7 +54,15 @@ public sealed class PermissionsViewModel
     {
         Areas = (await _areaService.GetAreasAsync(ct)).ToList();
         Pages = (await _pageService.GetPagesAsync(ct)).ToList();
-        Actions = (await _actionService.GetActionsAsync(ct)).ToList();
+
+        var actions = (await _actionService.GetActionsAsync(ct)).ToList();
+        var order = new[] { "read", "create", "edit", "delete" };
+        Actions = actions
+            .OrderBy(a => {
+                var idx = Array.IndexOf(order, a.Name);
+                return idx >= 0 ? idx : order.Length;
+            })
+            .ToList();
     }
 
     public async Task LoadMatrixForAreaAsync(int areaId, CancellationToken ct = default)

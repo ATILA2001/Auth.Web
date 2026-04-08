@@ -23,6 +23,7 @@ public sealed class AuthFlowService : IAuthFlowService
     private readonly IUserManagementService _userManagement;
     private readonly IPermissionService _permissionService;
     private readonly IRoutingService _routingService;
+    private readonly ILogger<AuthFlowService> _logger;
     private readonly IClientService _clientService;
     private readonly IUserProvisioningService _userProvisioningService;
     private readonly UserPermissionsAssembler _permissionsAssembler;
@@ -46,7 +47,8 @@ public sealed class AuthFlowService : IAuthFlowService
         IUserClaimsPrincipalFactory<ApplicationUser> claimsPrincipalFactory,
         IHttpContextAccessor httpContextAccessor,
         IOptions<TestUsersOptions> testUsersOptions,
-        IOptions<FeatureOptions> featureOptions)
+        IOptions<FeatureOptions> featureOptions,
+        ILogger<AuthFlowService> logger)
     {
         _adAuth = adAuth;
         _userManagement = userManagement;
@@ -57,6 +59,7 @@ public sealed class AuthFlowService : IAuthFlowService
         _permissionsAssembler = permissionsAssembler;
         _adminSignInService = adminSignInService;
         _authenticationService = authenticationService;
+        _logger = logger;
         _claimsPrincipalFactory = claimsPrincipalFactory;
         _httpContextAccessor = httpContextAccessor;
         _testUsers = testUsersOptions.Value ?? new TestUsersOptions();
@@ -72,6 +75,9 @@ public sealed class AuthFlowService : IAuthFlowService
             ReturnUrl = string.IsNullOrWhiteSpace(request.ReturnUrl) ? null : request.ReturnUrl.Trim(),
             ClientId = string.IsNullOrWhiteSpace(request.ClientId) ? null : request.ClientId.Trim()
         };
+
+        _logger.LogInformation("Login intento: user='{User}' clientId='{ClientId}' returnUrl='{ReturnUrl}'",
+            dto.UserNameOrEmail, dto.ClientId, dto.ReturnUrl);
 
         if (string.IsNullOrWhiteSpace(dto.UserNameOrEmail) || string.IsNullOrWhiteSpace(dto.Password))
         {
@@ -177,10 +183,13 @@ public sealed class AuthFlowService : IAuthFlowService
             client = await _clientService.GetAsync(dto.ClientId);
             if (client is null)
             {
+                _logger.LogWarning("Login: cliente '{ClientId}' no encontrado en DB.", dto.ClientId);
                 return await FinalizeResultAsync(BuildLoginRedirect("invalid_client", "Aplicación destino inválida.", dto.ReturnUrl, dto.ClientId));
             }
             if (!_clientService.IsReturnUrlAllowed(client, dto.ReturnUrl))
             {
+                _logger.LogWarning("Login: returnUrl '{ReturnUrl}' no permitida para cliente '{ClientId}'. AllowedUrls={Allowed}",
+                    dto.ReturnUrl, dto.ClientId, client.AllowedReturnUrlsJson);
                 return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "URL de retorno inválida.", dto.ReturnUrl, dto.ClientId));
             }
             clientId = dto.ClientId;
@@ -191,6 +200,8 @@ public sealed class AuthFlowService : IAuthFlowService
             var routing = await _routingService.ResolveForUserAsync(user.Id);
             if (routing is null)
             {
+                _logger.LogWarning("Login: sin ruta activa para usuario '{UserId}'. hasReturnUrl={HasReturnUrl}, hasClientId={HasClientId}",
+                    user.Id, hasReturnUrl, hasClientId);
                 return await FinalizeResultAsync(BuildLoginRedirect("no_route", "No tiene permisos para ver esta página.", dto.ReturnUrl, dto.ClientId));
             }
             clientId = routing.Value.ClientId;
@@ -228,6 +239,9 @@ public sealed class AuthFlowService : IAuthFlowService
         var claimsModel = _permissionsAssembler.BuildClaims(user, effectiveRoles, rawPermissions, apps);
         claimsModel = MergeTestUserClaims(claimsModel, testUser);
         await SignInAsync(user, claimsModel);
+
+        _logger.LogInformation("Login exitoso: user='{User}' → redirectUrl='{RedirectUrl}' permsVersion={Version}",
+            user.UserName, returnUrl, rawPermissions.Version);
 
         return await FinalizeResultAsync(new LoginResult { RedirectUrl = returnUrl, SignInAdmin = false });
     }

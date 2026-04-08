@@ -53,7 +53,8 @@ public class AuthFlowServiceTests
 
         var options = Microsoft.Extensions.Options.Options.Create(new Auth.Web.Configuration.TestUsersOptions());
         var featureOptions = Microsoft.Extensions.Options.Options.Create(new Auth.Web.Configuration.FeatureOptions { EnableTestUsers = true });
-        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, provisioning.Object, assembler, adminSignIn.Object, authService.Object, claimsFactory.Object, httpContextAccessor, options, featureOptions);
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AuthFlowService>.Instance;
+        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, provisioning.Object, assembler, adminSignIn.Object, authService.Object, claimsFactory.Object, httpContextAccessor, options, featureOptions, logger);
     }
 
     private static (ApplicationUser User, string UserName, string Email) MakeUser(string id, string userName, string email)

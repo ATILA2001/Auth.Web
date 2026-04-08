@@ -2,6 +2,7 @@ using Auth.Web.Application.Permissions.Dtos;
 using Auth.Web.Services.Abstractions.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Auth.Web.Controllers;
 
@@ -27,11 +28,11 @@ public class PermissionsController : ControllerBase
     [HttpGet("version")]
     public async Task<ActionResult<PermissionVersionDto>> GetVersionAsync()
     {
-        var userName = User.Identity?.Name;
-        if (string.IsNullOrWhiteSpace(userName))
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId))
             return Unauthorized();
 
-        var version = await _permissionService.GetVersionAsync(userName);
+        var version = await _permissionService.GetVersionByUserIdAsync(userId);
         return new PermissionVersionDto { Version = version };
     }
 }

@@ -103,6 +103,10 @@
                                                 @action.Name
                                             </th>
                                         }
+                                        <th class="rz-text-align-center rz-p-2"
+                                            style="width:90px; border-bottom:2px solid var(--rz-grid-header-border-color); font-style:italic">
+                                            Todos
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -124,6 +128,12 @@
                                                                     Disabled="@IsSaving" />
                                                 </td>
                                             }
+                                            <td class="rz-text-align-center rz-p-2">
+                                                <RadzenCheckBox TValue="bool"
+                                                                Value="@row.AllActionsEnabled(_vm.Actions)"
+                                                                Change="@(v => ToggleAllAsync(row, v))"
+                                                                Disabled="@IsSaving" />
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>

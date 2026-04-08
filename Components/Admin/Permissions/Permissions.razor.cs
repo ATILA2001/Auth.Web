@@ -108,4 +108,41 @@ public partial class Permissions : ComponentBase
             StateHasChanged();
         }
     }
+
+    private async Task ToggleAllAsync(PermissionMatrixRow row, bool enabled)
+    {
+        if (IsSaving) return;
+
+        IsSaving = true;
+        try
+        {
+            foreach (var action in _vm.Actions)
+            {
+                if (enabled)
+                {
+                    var id = await PermissionService.CreatePermissionAsync(_selectedAreaId, row.PageId, action.Id);
+                    row.ActionMap[action.Id] = id;
+                }
+                else
+                {
+                    var permissionId = row.GetPermissionId(action.Id);
+                    if (permissionId.HasValue)
+                    {
+                        await PermissionService.DeletePermissionAsync(permissionId.Value);
+                        row.ActionMap[action.Id] = null;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Error al guardar permisos", ex.Message);
+            await LoadMatrixAsync();
+        }
+        finally
+        {
+            IsSaving = false;
+            StateHasChanged();
+        }
+    }
 }

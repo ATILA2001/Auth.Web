@@ -11,4 +11,5 @@ public interface IPermissionService
         IReadOnlyCollection<int>? areaIdsOverride = null);
 
     Task<int> GetVersionAsync(string userName);
+    Task<int> GetVersionByUserIdAsync(string userId);
 }
