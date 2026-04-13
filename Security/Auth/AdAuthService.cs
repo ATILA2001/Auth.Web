@@ -102,11 +102,22 @@ public class AdAuthService : IActiveDirectoryAuthService
             {
                 return Task.FromResult<AdUserInfo?>(null);
             }
+            string? employeeId = null;
+            if (userPrincipal.GetUnderlyingObject() is System.DirectoryServices.DirectoryEntry directoryEntry)
+            {
+                employeeId = directoryEntry.Properties["employeeID"]?.Value?.ToString();
+                if (string.IsNullOrWhiteSpace(employeeId))
+                {
+                    employeeId = directoryEntry.Properties["employeeid"]?.Value?.ToString();
+                }
+            }
+
             var info = new AdUserInfo
             {
                 UserName = userPrincipal.SamAccountName ?? userNameOrEmail,
                 Email = userPrincipal.EmailAddress,
-                DisplayName = userPrincipal.DisplayName
+                DisplayName = userPrincipal.DisplayName,
+                EmployeeId = employeeId
             };
             return Task.FromResult<AdUserInfo?>(info);
         }

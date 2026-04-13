@@ -85,6 +85,7 @@ public sealed class AuthFlowService : IAuthFlowService
         }
 
         var testUser = _features.EnableTestUsers ? TryGetTestUser(dto.UserNameOrEmail) : null;
+        AdUserInfo? adUserInfo = null;
 
         // dbAuthUser: user retrieved from DB used for password verification when username ends with .test
         ApplicationUser? dbAuthUser = null;
@@ -99,6 +100,8 @@ public sealed class AuthFlowService : IAuthFlowService
         else
         {
             var isDbTest = dto.UserNameOrEmail.EndsWith(".test", StringComparison.OrdinalIgnoreCase);
+
+            adUserInfo = await _adAuth.GetUserInfoAsync(dto.UserNameOrEmail);
 
             if (isDbTest)
             {
@@ -161,6 +164,10 @@ public sealed class AuthFlowService : IAuthFlowService
             testAreaId = parsedArea;
         }
 
+        string clientId;
+        string returnUrl;
+        ApplicationClient? client = null;
+
         if (isAdmin)
         {
             var adminPermissions = await _permissionService.GetAsync(
@@ -169,14 +176,10 @@ public sealed class AuthFlowService : IAuthFlowService
                 areaIdsOverride: testAreaId.HasValue ? new[] { testAreaId.Value } : null);
             var adminClaims = _permissionsAssembler.BuildClaims(user, effectiveRoles, adminPermissions, Array.Empty<string>());
             adminClaims = MergeTestUserClaims(adminClaims, testUser);
-            await SignInAsync(user, adminClaims);
+            await SignInAsync(user, adminClaims, adUserInfo?.EmployeeId);
 
             return await FinalizeResultAsync(new LoginResult { RedirectUrl = "/admin", SignInAdmin = false });
         }
-
-        string clientId;
-        string returnUrl;
-        ApplicationClient? client = null;
 
         if (hasClientRequest)
         {
@@ -238,7 +241,7 @@ public sealed class AuthFlowService : IAuthFlowService
         var apps = new List<string> { clientId };
         var claimsModel = _permissionsAssembler.BuildClaims(user, effectiveRoles, rawPermissions, apps);
         claimsModel = MergeTestUserClaims(claimsModel, testUser);
-        await SignInAsync(user, claimsModel);
+        await SignInAsync(user, claimsModel, adUserInfo?.EmployeeId);
 
         _logger.LogInformation("Login exitoso: user='{User}' → redirectUrl='{RedirectUrl}' permsVersion={Version}",
             user.UserName, returnUrl, rawPermissions.Version);
@@ -269,7 +272,7 @@ public sealed class AuthFlowService : IAuthFlowService
         return result;
     }
 
-    private async Task SignInAsync(ApplicationUser user, AuthClaimsModel claimsModel)
+    private async Task SignInAsync(ApplicationUser user, AuthClaimsModel claimsModel, string? employeeId = null)
     {
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext is null)
@@ -333,6 +336,11 @@ public sealed class AuthFlowService : IAuthFlowService
         foreach (var app in claimsModel.Apps)
         {
             claims.Add(new Claim("app", app));
+        }
+
+        if (!string.IsNullOrWhiteSpace(employeeId))
+        {
+            claims.Add(new Claim("employee_id", employeeId));
         }
 
         identity.AddClaims(claims);

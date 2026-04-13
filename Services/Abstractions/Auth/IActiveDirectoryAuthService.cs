@@ -12,4 +12,5 @@ public sealed class AdUserInfo
     public string UserName { get; init; } = default!;
     public string? Email { get; init; }
     public string? DisplayName { get; init; }
+    public string? EmployeeId { get; init; }
 }
