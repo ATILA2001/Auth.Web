@@ -75,19 +75,19 @@ public partial class Users : ComponentBase
         }
     }
 
-    private IEnumerable<string> GetRolesBuffer(UserAdminDto user)
+    private string? GetRolesBuffer(UserAdminDto user)
     {
         if (!_rolesBuffer.TryGetValue(user, out var value))
         {
             value = (user.Roles ?? Array.Empty<string>()).ToList();
             _rolesBuffer[user] = value;
         }
-        return value;
+        return value.FirstOrDefault();
     }
 
-    private void SetRolesBuffer(UserAdminDto user, List<string> roles)
+    private void SetRolesBuffer(UserAdminDto user, string? role)
     {
-        _rolesBuffer[user] = roles;
+        _rolesBuffer[user] = role is not null ? new List<string> { role } : new List<string>();
     }
 
     private IEnumerable<int> GetAreasBuffer(UserAdminDto user)
@@ -208,7 +208,8 @@ public partial class Users : ComponentBase
         }
 
         _vm.BeginEdit(user);
-        _vm.SelectedRoles = GetRolesBuffer(user).ToList();
+        var selectedRole = GetRolesBuffer(user);
+        _vm.SelectedRoles = selectedRole is not null ? new List<string> { selectedRole } : new List<string>();
         _vm.SelectedAreaIds = GetAreasBuffer(user).ToList();
         _vm.SelectedClientIds = GetClientsBuffer(user).ToList();
         var validationResult = _vm.ValidateOnly();

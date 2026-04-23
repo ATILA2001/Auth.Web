@@ -34,14 +34,14 @@
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Roles" Filterable="false">
                         <Template Context="u">@string.Join(", ", u.Roles)</Template>
                         <EditTemplate Context="u">
-                            <RadzenDropDown TValue="IEnumerable<string>"
+                            <RadzenDropDown TValue="string?"
                                             Data="@AllRoles"
                                             TextProperty="Name"
                                             ValueProperty="Name"
-                                            Multiple="true"
                                             Value="@GetRolesBuffer(u)"
-                                            ValueChanged="@(v => SetRolesBuffer(u, v?.ToList() ?? new()))"
-                                            Disabled="@(IsLoading || IsSaving)" />
+                                            ValueChanged="@(v => SetRolesBuffer(u, v))"
+                                            Disabled="@(IsLoading || IsSaving)"
+                                            AllowClear="true" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Áreas" Filterable="false">
