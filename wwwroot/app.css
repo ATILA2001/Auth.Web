@@ -1,18 +1,18 @@
 :root {
     --rz-primary: #466791 !important;
     --admin-accent: #d00000; /* light por defecto */
+}
 
-    .rz-group-header {
-        justify-content: end;
-    }
+.rz-group-header {
+    justify-content: end;
+}
 
-    .rz-link-text {
-        color: #ffffff;
-    }
+.rz-link-text {
+    color: #ffffff;
+}
 
-    .rz-datatable{
-        border:none !important;
-    }
+.rz-datatable {
+    border: none !important;
 }
 
 /* Light theme */
@@ -20,14 +20,19 @@
     --admin-accent: #2b3a50;
     --background: #eeeeee;
     --text: #2b3a50;
-    --hover: rgb(67 64 210 / 12%)
+    --hover: rgb(67 64 210 / 12%);
 }
 
 /* Dark theme */
 .rz-layout.rz-material-dark {
     --admin-accent: #2b3a50;
+    --background: #2a2f3f;
     --text: #ffffff;
     --hover: var(--admin-accent);
+}
+
+.rz-grid-table thead th {
+    border-bottom: 1px solid var(--rz-base)!important;
 }
 
 
@@ -50,10 +55,6 @@
 
 .rz-button.rz-dark {
     background-color: var(--admin-accent) !important;
-}
-
-.rz-grid-table thead th {
-    background-color: var(--background) !important;
 }
 
 /* Estilos de validación para EditForm con DataAnnotationsValidator */
