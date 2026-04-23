@@ -31,7 +31,7 @@ namespace Auth.Web.Tests
             var store = CreateUserStoreMock();
             var svc = new UserRegistrationService(ad.Object, um.Object, store.Object, new Mock<ILogger<UserRegistrationService>>().Object);
 
-            var res = await svc.RegisterUserAsync(new RegisterUserRequest { Email = "", FullName = "" });
+            var res = await svc.RegisterUserAsync(new RegisterUserRequest { Email = "", Cuil = "" });
             Assert.Equal("Complete los campos requeridos.", res.Message);
         }
 
@@ -45,7 +45,7 @@ namespace Auth.Web.Tests
             um.Setup(x => x.FindByEmailAsync("a@b.com")).ReturnsAsync(new ApplicationUser { Id = "u1", Email = "a@b.com" });
             var svc = new UserRegistrationService(ad.Object, um.Object, store.Object, new Mock<ILogger<UserRegistrationService>>().Object);
 
-            var res = await svc.RegisterUserAsync(new RegisterUserRequest { Email = "a@b.com", FullName = "Name" });
+            var res = await svc.RegisterUserAsync(new RegisterUserRequest { Email = "a@b.com", Cuil = "20123456789" });
             Assert.Equal("El correo ya está registrado.", res.Message);
         }
 
@@ -58,7 +58,7 @@ namespace Auth.Web.Tests
             var store = CreateUserStoreMock();
 
             var svc = new UserRegistrationService(ad.Object, um.Object, store.Object, new Mock<ILogger<UserRegistrationService>>().Object);
-            var res = await svc.RegisterUserAsync(new RegisterUserRequest { Email = "c@d.com", FullName = "Name" });
+            var res = await svc.RegisterUserAsync(new RegisterUserRequest { Email = "c@d.com", Cuil = "20123456789" });
             Assert.Equal("El correo no pertenece al dominio (AD) o no existe en el directorio.", res.Message);
         }
 
@@ -78,8 +78,10 @@ namespace Auth.Web.Tests
             store.Setup(s => s.SetUserNameAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
             store.Setup(s => s.SetEmailAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
+            ad.Setup(x => x.GetUserInfoAsync("e@d.com")).ReturnsAsync(new Auth.Web.Services.Abstractions.Auth.AdUserInfo { UserName = "euser", DisplayName = "Valid Name" });
+
             var svc = new UserRegistrationService(ad.Object, um.Object, store.Object, new Mock<ILogger<UserRegistrationService>>().Object);
-            var res = await svc.RegisterUserAsync(new RegisterUserRequest { Email = "e@d.com", FullName = "Valid Name" });
+            var res = await svc.RegisterUserAsync(new RegisterUserRequest { Email = "e@d.com", Cuil = "20123456789" });
             Assert.Equal("Cuenta creada correctamente. Inicie sesión.", res.Message);
         }
     }

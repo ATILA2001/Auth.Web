@@ -43,7 +43,7 @@ public sealed class LoginViewModel
 
         var request = new RegisterUserRequest
         {
-            FullName = (Register.FullName ?? string.Empty).Trim(),
+            Cuil = (Register.Cuil ?? string.Empty).Trim(),
             Email = (Register.Email ?? string.Empty).Trim()
         };
 
@@ -65,9 +65,9 @@ public sealed class LoginViewModel
 
     public sealed class RegisterInputModel
     {
-        [Required(ErrorMessage = "Debe ingresar nombre completo.")]
-        [MaxLength(100, ErrorMessage = "El nombre no puede superar 100 caracteres.")]
-        public string FullName { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Debe ingresar el CUIL.")]
+        [RegularExpression(@"^\d{11}$", ErrorMessage = "El CUIL debe contener exactamente 11 dígitos numéricos.")]
+        public string Cuil { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Debe ingresar correo electrónico.")]
         [EmailAddress(ErrorMessage = "El correo electrónico no es válido.")]

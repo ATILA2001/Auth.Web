@@ -33,6 +33,7 @@ public sealed class AuthFlowService : IAuthFlowService
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly TestUsersOptions _testUsers;
     private readonly FeatureOptions _features;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     public AuthFlowService(
         IActiveDirectoryAuthService adAuth,
@@ -48,6 +49,7 @@ public sealed class AuthFlowService : IAuthFlowService
         IHttpContextAccessor httpContextAccessor,
         IOptions<TestUsersOptions> testUsersOptions,
         IOptions<FeatureOptions> featureOptions,
+        UserManager<ApplicationUser> userManager,
         ILogger<AuthFlowService> logger)
     {
         _adAuth = adAuth;
@@ -64,6 +66,7 @@ public sealed class AuthFlowService : IAuthFlowService
         _httpContextAccessor = httpContextAccessor;
         _testUsers = testUsersOptions.Value ?? new TestUsersOptions();
         _features = featureOptions.Value ?? new FeatureOptions();
+        _userManager = userManager;
     }
 
     public async Task<LoginResult> LoginAsync(LoginRequestDto request)
@@ -130,8 +133,23 @@ public sealed class AuthFlowService : IAuthFlowService
             }
         }
 
-        var user = dbAuthUser ?? await _userManagement.FindByNameAsync(dto.UserNameOrEmail)
+        // Buscar por email de AD primero: funciona tanto para usuarios registrados antes (UserName=email)
+        // como después del cambio (UserName=CUIL). El fallback por UserName cubre casos sin email en AD.
+        ApplicationUser? user;
+        if (dbAuthUser is not null)
+        {
+            user = dbAuthUser;
+        }
+        else if (adUserInfo is not null)
+        {
+            user = (adUserInfo.Email is not null ? await _userManagement.FindByEmailAsync(adUserInfo.Email) : null)
+                   ?? await _userManagement.FindByNameAsync(adUserInfo.UserName);
+        }
+        else
+        {
+            user = await _userManagement.FindByNameAsync(dto.UserNameOrEmail)
                    ?? await _userManagement.FindByEmailAsync(dto.UserNameOrEmail);
+        }
 
         if (user is null && testUser is not null)
         {
@@ -145,7 +163,8 @@ public sealed class AuthFlowService : IAuthFlowService
             }
         }
 
-        user ??= await _userProvisioningService.EnsureUserAsync(dto.UserNameOrEmail);
+        var provisionKey = adUserInfo?.UserName ?? dto.UserNameOrEmail;
+        user ??= await _userProvisioningService.EnsureUserAsync(provisionKey, adUserInfo?.Email, adUserInfo?.DisplayName);
 
         var rolesList = await _userManagement.GetRolesAsync(user);
         var roles = rolesList.ToArray();
@@ -176,9 +195,11 @@ public sealed class AuthFlowService : IAuthFlowService
                 areaIdsOverride: testAreaId.HasValue ? new[] { testAreaId.Value } : null);
             var adminClaims = _permissionsAssembler.BuildClaims(user, effectiveRoles, adminPermissions, Array.Empty<string>());
             adminClaims = MergeTestUserClaims(adminClaims, testUser);
-            await SignInAsync(user, adminClaims, adUserInfo?.EmployeeId);
+            var adminRoutes = await _routingService.ResolveAllForUserAsync(user.Id);
+            var adminAppIds = adminRoutes.Select(r => r.ClientId).ToList();
+            await SignInAsync(user, adminClaims, adUserInfo?.EmployeeId, adminAppIds);
 
-            return await FinalizeResultAsync(new LoginResult { RedirectUrl = "/admin", SignInAdmin = false });
+            return new LoginResult { ShowAppPicker = true };
         }
 
         if (hasClientRequest)
@@ -200,14 +221,32 @@ public sealed class AuthFlowService : IAuthFlowService
         }
         else
         {
-            var routing = await _routingService.ResolveForUserAsync(user.Id);
-            if (routing is null)
+            var allRoutes = await _routingService.ResolveAllForUserAsync(user.Id);
+
+            if (allRoutes.Count == 0)
             {
                 _logger.LogWarning("Login: sin ruta activa para usuario '{UserId}'. hasReturnUrl={HasReturnUrl}, hasClientId={HasClientId}",
                     user.Id, hasReturnUrl, hasClientId);
                 return await FinalizeResultAsync(BuildLoginRedirect("no_route", "No tiene permisos para ver esta página.", dto.ReturnUrl, dto.ClientId));
             }
-            clientId = routing.Value.ClientId;
+
+            // Multiple apps available → partial sign-in and show the app picker
+            if (allRoutes.Count > 1)
+            {
+                await PartialSignInAsync(user, adUserInfo?.EmployeeId);
+
+                var availableApps = allRoutes
+                    .Select(r => new AppPickerOption(r.ClientId, r.ReturnUrl, r.ClientId))
+                    .ToList();
+
+                _logger.LogInformation("Login: usuario '{UserId}' tiene {Count} aplicaciones → mostrando selector.",
+                    user.Id, allRoutes.Count);
+
+                return new LoginResult { ShowAppPicker = true, AvailableApps = availableApps };
+            }
+
+            var routing = allRoutes[0];
+            clientId = routing.ClientId;
             client = await _clientService.GetAsync(clientId);
             if (client is null)
             {
@@ -225,7 +264,7 @@ public sealed class AuthFlowService : IAuthFlowService
             }
             else
             {
-                returnUrl = routing.Value.ReturnUrl;
+                returnUrl = routing.ReturnUrl;
                 if (string.IsNullOrWhiteSpace(returnUrl) || !_clientService.IsReturnUrlAllowed(client, returnUrl))
                 {
                     return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "Aplicación o URL de retorno inválida.", dto.ReturnUrl, dto.ClientId));
@@ -241,7 +280,9 @@ public sealed class AuthFlowService : IAuthFlowService
         var apps = new List<string> { clientId };
         var claimsModel = _permissionsAssembler.BuildClaims(user, effectiveRoles, rawPermissions, apps);
         claimsModel = MergeTestUserClaims(claimsModel, testUser);
-        await SignInAsync(user, claimsModel, adUserInfo?.EmployeeId);
+
+        var allAvailableApps = await _routingService.ResolveAllForUserAsync(user.Id);
+        await SignInAsync(user, claimsModel, adUserInfo?.EmployeeId, allAvailableApps.Select(r => r.ClientId).ToList());
 
         _logger.LogInformation("Login exitoso: user='{User}' → redirectUrl='{RedirectUrl}' permsVersion={Version}",
             user.UserName, returnUrl, rawPermissions.Version);
@@ -272,7 +313,70 @@ public sealed class AuthFlowService : IAuthFlowService
         return result;
     }
 
-    private async Task SignInAsync(ApplicationUser user, AuthClaimsModel claimsModel, string? employeeId = null)
+    public async Task<string?> SelectAppAsync(string clientId, CancellationToken ct = default)
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext is null)
+            return null;
+
+        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId))
+            return null;
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+            return null;
+
+        var allRoutes = await _routingService.ResolveAllForUserAsync(userId, ct);
+        var route = allRoutes.FirstOrDefault(r => string.Equals(r.ClientId, clientId, StringComparison.OrdinalIgnoreCase));
+        if (route == default)
+        {
+            _logger.LogWarning("SelectApp: usuario '{UserId}' no tiene acceso a la aplicación '{ClientId}'.", userId, clientId);
+            return null;
+        }
+
+        var client = await _clientService.GetAsync(clientId);
+        if (client is null)
+            return null;
+
+        var returnUrl = route.ReturnUrl;
+        if (string.IsNullOrWhiteSpace(returnUrl) || !_clientService.IsReturnUrlAllowed(client, returnUrl))
+            return null;
+
+        var roles = (IReadOnlyCollection<string>)await _userManagement.GetRolesAsync(user);
+        var rawPermissions = await _permissionService.GetAsync(user.UserName!, clientId: client.Id, roleNamesOverride: roles);
+        var apps = new List<string> { clientId };
+        var claimsModel = _permissionsAssembler.BuildClaims(user, roles, rawPermissions, apps);
+        await SignInAsync(user, claimsModel, null, allRoutes.Select(r => r.ClientId).ToList());
+
+        _logger.LogInformation("SelectApp: usuario '{UserId}' seleccionó '{ClientId}' → '{ReturnUrl}'.", userId, clientId, returnUrl);
+        return returnUrl;
+    }
+
+    private async Task PartialSignInAsync(ApplicationUser user, string? employeeId = null)
+    {
+        var httpContext = _httpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("HttpContext no disponible para iniciar sesión.");
+
+        var basePrincipal = await _claimsPrincipalFactory.CreateAsync(user);
+        var baseIdentity = basePrincipal.Identity as ClaimsIdentity;
+        var identity = new ClaimsIdentity(
+            basePrincipal.Claims,
+            IdentityConstants.ApplicationScheme,
+            baseIdentity?.NameClaimType ?? ClaimTypes.Name,
+            baseIdentity?.RoleClaimType ?? ClaimTypes.Role);
+
+        if (!string.IsNullOrWhiteSpace(employeeId))
+        {
+            identity.AddClaim(new Claim("employee_id", employeeId));
+        }
+
+        var principal = new ClaimsPrincipal(identity);
+        var authProps = new AuthenticationProperties { IsPersistent = false, AllowRefresh = true };
+        await _authenticationService.SignInAsync(httpContext, IdentityConstants.ApplicationScheme, principal, authProps);
+    }
+
+    private async Task SignInAsync(ApplicationUser user, AuthClaimsModel claimsModel, string? employeeId = null, IReadOnlyList<string>? allAvailableApps = null)
     {
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext is null)
@@ -294,6 +398,7 @@ public sealed class AuthFlowService : IAuthFlowService
         RemoveClaimsOfType(identity, ClaimTypes.Role);
         RemoveClaimsOfType(identity, "area");
         RemoveClaimsOfType(identity, "app");
+        RemoveClaimsOfType(identity, "available_app");
         RemoveClaimsOfType(identity, "perms_json");
         RemoveClaimsOfType(identity, "perms_version");
 
@@ -341,6 +446,13 @@ public sealed class AuthFlowService : IAuthFlowService
         if (!string.IsNullOrWhiteSpace(employeeId))
         {
             claims.Add(new Claim("employee_id", employeeId));
+        }
+
+        // Emit available_app claims so client apps can build the app switcher
+        var appsToPublish = allAvailableApps ?? claimsModel.Apps;
+        foreach (var availableApp in appsToPublish.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            claims.Add(new Claim("available_app", availableApp));
         }
 
         identity.AddClaims(claims);

@@ -23,8 +23,8 @@
                         
                             <form method="post" action="/connect/login" id="loginForm">
                                 <div class="login-field">
-                                    <RadzenFormField Text="Correo electrónico o CUIL" Variant="Variant.Outlined" Style="width:100%">
-                                        <RadzenTextBox Name="UserNameOrEmail" Placeholder="Ingrese su correo electrónico" @bind-Value="loginUser" Style="width:100%" />
+                                    <RadzenFormField Text="CUIL o Correo electrónico" Variant="Variant.Outlined" Style="width:100%">
+                                        <RadzenTextBox Name="UserNameOrEmail" Placeholder="Ingrese su CUIL o correo electrónico" @bind-Value="loginUser" Style="width:100%" />
                                     </RadzenFormField>
                                 </div>
 
@@ -61,10 +61,10 @@
                                 <DataAnnotationsValidator />
                                 
                                 <div class="login-field">
-                                    <RadzenFormField Text="Nombre completo" Variant="Variant.Outlined" Style="width:100%">
-                                        <RadzenTextBox @bind-Value="RegInput.FullName" Placeholder="Nombre y Apellido" Style="width:100%" />
+                                    <RadzenFormField Text="CUIL" Variant="Variant.Outlined" Style="width:100%">
+                                        <RadzenTextBox @bind-Value="RegInput.Cuil" Placeholder="Ej: 20123456789" Style="width:100%" />
                                     </RadzenFormField>
-                                    <ValidationMessage For="@(() => RegInput.FullName)" />
+                                    <ValidationMessage For="@(() => RegInput.Cuil)" />
                                 </div>
 
                                 <div class="login-field">

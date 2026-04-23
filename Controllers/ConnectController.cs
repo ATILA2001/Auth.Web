@@ -30,12 +30,59 @@ public class ConnectController : ControllerBase
         }
 
         var result = await _authFlowService.LoginAsync(dto);
+
+        if (result.ShowAppPicker)
+        {
+            return Redirect("/Account/SelectApp");
+        }
+
         return Redirect(result.RedirectUrl);
     }
 
     [HttpPost("portal-login")]
     public Task<IActionResult> PortalLogin([FromForm] LoginRequestDto dto)
         => Login(dto);
+
+    [Authorize]
+    [HttpGet("switch-app")]
+    public async Task<IActionResult> SwitchApp([FromQuery] string? clientId)
+    {
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            return Redirect("/Account/SelectApp");
+        }
+
+        var redirectUrl = await _authFlowService.SelectAppAsync(clientId);
+        if (string.IsNullOrWhiteSpace(redirectUrl))
+        {
+            return Redirect("/Account/SelectApp?error=access_denied");
+        }
+
+        return Redirect(redirectUrl);
+    }
+
+    [Authorize]
+    [HttpPost("select-app")]
+    public async Task<IActionResult> SelectApp([FromForm] string clientId)
+    {
+        if (!await TryValidateAntiforgeryAsync())
+        {
+            return BadRequest();
+        }
+
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            return Redirect("/Account/SelectApp");
+        }
+
+        var redirectUrl = await _authFlowService.SelectAppAsync(clientId);
+        if (string.IsNullOrWhiteSpace(redirectUrl))
+        {
+            return Redirect("/Account/SelectApp?error=access_denied");
+        }
+
+        return Redirect(redirectUrl);
+    }
 
     [HttpGet("logout")]
     public IActionResult Logout()

@@ -9,5 +9,6 @@ public sealed class UserAdminDto
     public IReadOnlyCollection<string> Roles { get; set; } = Array.Empty<string>();
     public IReadOnlyCollection<string> Areas { get; set; } = Array.Empty<string>();
     public IReadOnlyCollection<int> AreaIds { get; set; } = Array.Empty<int>();
+    public IReadOnlyCollection<string> ClientIds { get; set; } = Array.Empty<string>();
     public int PermissionVersion { get; set; }
 }

@@ -2,7 +2,7 @@ namespace Auth.Web.Application.Users.Registration;
 
 public sealed class RegisterUserRequest
 {
-    public string FullName { get; init; } = string.Empty;
+    public string Cuil { get; init; } = string.Empty;
     public string Email { get; init; } = string.Empty;
 }
 

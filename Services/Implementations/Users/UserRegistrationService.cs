@@ -29,9 +29,9 @@ public sealed class UserRegistrationService : IUserRegistrationService
     public async Task<RegisterUserResult> RegisterUserAsync(RegisterUserRequest request, CancellationToken cancellationToken = default)
     {
         var email = request.Email?.Trim() ?? string.Empty;
-        var fullName = request.FullName?.Trim() ?? string.Empty;
+        var cuil = request.Cuil?.Trim() ?? string.Empty;
 
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(fullName))
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(cuil))
         {
             return RegisterUserResult.ValidationError("Complete los campos requeridos.");
         }
@@ -48,8 +48,11 @@ public sealed class UserRegistrationService : IUserRegistrationService
             return RegisterUserResult.NotInActiveDirectory("El correo no pertenece al dominio (AD) o no existe en el directorio.");
         }
 
-        var user = new ApplicationUser { Nombre = fullName };
-        await _userStore.SetUserNameAsync(user, email, cancellationToken);
+        var adInfo = await _adAuth.GetUserInfoAsync(email);
+        var displayName = adInfo?.DisplayName ?? email;
+
+        var user = new ApplicationUser { Nombre = displayName };
+        await _userStore.SetUserNameAsync(user, cuil, cancellationToken);
         var emailStore = GetEmailStore();
         await emailStore.SetEmailAsync(user, email, cancellationToken);
 

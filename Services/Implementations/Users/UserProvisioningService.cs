@@ -16,24 +16,24 @@ public sealed class UserProvisioningService : IUserProvisioningService
         _logger = logger;
     }
 
-    public async Task<ApplicationUser> EnsureUserAsync(string userNameOrEmail, CancellationToken ct = default)
+    public async Task<ApplicationUser> EnsureUserAsync(string userName, string? email = null, string? nombre = null, CancellationToken ct = default)
     {
-        var user = await _userManager.FindByNameAsync(userNameOrEmail)
-                   ?? await _userManager.FindByEmailAsync(userNameOrEmail);
+        var user = await _userManager.FindByNameAsync(userName)
+                   ?? (email is not null ? await _userManager.FindByEmailAsync(email) : null);
 
         if (user == null)
         {
             user = new ApplicationUser
             {
-                UserName = userNameOrEmail,
-                Email = userNameOrEmail.Contains('@') ? userNameOrEmail : string.Empty,
-                Nombre = userNameOrEmail
+                UserName = userName,
+                Email = email ?? string.Empty,
+                Nombre = nombre ?? userName
             };
             var create = await _userManager.CreateAsync(user);
             if (!create.Succeeded)
             {
                 var errors = string.Join(",", create.Errors.Select(e => e.Description));
-                _logger.LogError("No se pudo crear usuario {User}: {Errors}", userNameOrEmail, errors);
+                _logger.LogError("No se pudo crear usuario {User}: {Errors}", userName, errors);
                 throw new InvalidOperationException($"No se pudo crear usuario: {errors}");
             }
         }
@@ -44,7 +44,7 @@ public sealed class UserProvisioningService : IUserProvisioningService
             if (!add.Succeeded)
             {
                 var errors = string.Join(",", add.Errors.Select(e => e.Description));
-                _logger.LogWarning("No se pudo asignar rol Usuario a {User}: {Errors}", userNameOrEmail, errors);
+                _logger.LogWarning("No se pudo asignar rol Usuario a {User}: {Errors}", userName, errors);
             }
         }
 

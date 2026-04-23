@@ -32,23 +32,28 @@ public sealed class UsersViewModel
     private readonly IAdminUserService _userService;
     private readonly IAdminRoleService _roleService;
     private readonly IAdminAreaService _areaService;
+    private readonly IAdminClientService _clientService;
     private List<string> _selectedRoles = new();
     private List<int> _selectedAreaIds = new();
+    private List<string> _selectedClientIds = new();
 
-    public UsersViewModel(IAdminUserService userService, IAdminRoleService roleService, IAdminAreaService areaService)
+    public UsersViewModel(IAdminUserService userService, IAdminRoleService roleService, IAdminAreaService areaService, IAdminClientService clientService)
     {
         ArgumentNullException.ThrowIfNull(userService);
         ArgumentNullException.ThrowIfNull(roleService);
         ArgumentNullException.ThrowIfNull(areaService);
+        ArgumentNullException.ThrowIfNull(clientService);
         _userService = userService;
         _roleService = roleService;
         _areaService = areaService;
+        _clientService = clientService;
     }
 
     public List<UserAdminDto> Users { get; private set; } = new();
     public UserAdminDto? SelectedUser { get; private set; }
     public List<RoleAdminDto> AllRoles { get; private set; } = new();
     public List<AreaAdminDto> AllAreas { get; private set; } = new();
+    public List<ApplicationClientAdminDto> AllClients { get; private set; } = new();
 
     public List<string> SelectedRoles
     {
@@ -62,11 +67,18 @@ public sealed class UsersViewModel
         set => _selectedAreaIds = value ?? new();
     }
 
+    public List<string> SelectedClientIds
+    {
+        get => _selectedClientIds;
+        set => _selectedClientIds = value ?? new();
+    }
+
     public async Task LoadAsync()
     {
         Users = (await _userService.GetUsersAsync()).ToList();
         AllRoles = (await _roleService.GetRolesAsync()).ToList();
         AllAreas = (await _areaService.GetAreasAsync()).ToList();
+        AllClients = (await _clientService.GetClientsAsync()).ToList();
     }
 
     public void BeginEdit(UserAdminDto user)
@@ -83,10 +95,12 @@ public sealed class UsersViewModel
             Email = user.Email,
             Roles = roles.ToArray(),
             Areas = areas.ToArray(),
-            AreaIds = areaIds.ToArray()
+            AreaIds = areaIds.ToArray(),
+            ClientIds = (user.ClientIds ?? Array.Empty<string>()).ToArray()
         };
         SelectedRoles = roles.ToList();
         SelectedAreaIds = areaIds.ToList();
+        SelectedClientIds = (user.ClientIds ?? Array.Empty<string>()).ToList();
     }
 
     public async Task<UsersVmResult> SaveAsync()
@@ -105,9 +119,9 @@ public sealed class UsersViewModel
         try
         {
             var userName = string.IsNullOrWhiteSpace(SelectedUser.UserName) ? "(sin nombre)" : SelectedUser.UserName;
-            await _userService.UpdateUserRolesAndAreasAsync(SelectedUser.Id, SelectedRoles, SelectedAreaIds);
+            await _userService.UpdateUserRolesAndClientAppsAsync(SelectedUser.Id, SelectedRoles, SelectedClientIds);
             SelectedUser = null;
-            return UsersVmResult.Success("Usuario actualizado", $"Se actualizaron roles/áreas de {userName}.");
+            return UsersVmResult.Success("Usuario actualizado", $"Se actualizaron roles/aplicaciones de {userName}.");
         }
         catch (Exception ex)
         {

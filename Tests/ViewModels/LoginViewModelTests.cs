@@ -106,7 +106,7 @@ public class LoginViewModelTests
             });
 
         var vm = new LoginViewModel(service.Object);
-        vm.Register.FullName = "John Doe";
+        vm.Register.Cuil = "20123456789";
         vm.Register.Email = "john@example.com";
 
         await vm.RegisterUserAsync();
@@ -128,7 +128,7 @@ public class LoginViewModelTests
             });
 
         var vm = new LoginViewModel(service.Object);
-        vm.Register.FullName = "Jane Doe";
+        vm.Register.Cuil = "20123456789";
         vm.Register.Email = "jane@example.com";
 
         await vm.RegisterUserAsync();
@@ -149,7 +149,7 @@ public class LoginViewModelTests
             });
 
         var vm = new LoginViewModel(service.Object);
-        vm.Register.FullName = "Bob Smith";
+        vm.Register.Cuil = "20123456789";
         vm.Register.Email = "bob@external.com";
 
         await vm.RegisterUserAsync();
@@ -166,16 +166,16 @@ public class LoginViewModelTests
             .ReturnsAsync(new RegisterUserResult
             {
                 Type = RegisterUserResultType.ValidationError,
-                Message = "Datos inválidos"
+                Message = "Datos invï¿½lidos"
             });
 
         var vm = new LoginViewModel(service.Object);
-        vm.Register.FullName = "";
+        vm.Register.Cuil = "";
         vm.Register.Email = "";
 
         await vm.RegisterUserAsync();
 
-        Assert.Equal("Datos inválidos", vm.RegisterMessage);
+        Assert.Equal("Datos invï¿½lidos", vm.RegisterMessage);
         Assert.Null(vm.SuccessMessage);
     }
 
@@ -190,13 +190,13 @@ public class LoginViewModelTests
             .ReturnsAsync(new RegisterUserResult { Type = RegisterUserResultType.Success, Message = "OK" });
 
         var vm = new LoginViewModel(service.Object);
-        vm.Register.FullName = "  Alice Wonder  ";
+        vm.Register.Cuil = "  20123456789  ";
         vm.Register.Email = "  alice@example.com  ";
 
         await vm.RegisterUserAsync();
 
         Assert.NotNull(capturedRequest);
-        Assert.Equal("Alice Wonder", capturedRequest.FullName);
+        Assert.Equal("20123456789", capturedRequest.Cuil);
         Assert.Equal("alice@example.com", capturedRequest.Email);
     }
 
@@ -208,7 +208,7 @@ public class LoginViewModelTests
             .ReturnsAsync(new RegisterUserResult { Type = RegisterUserResultType.Success, Message = "OK" });
 
         var vm = new LoginViewModel(service.Object);
-        vm.Register.FullName = "Test User";
+        vm.Register.Cuil = "20123456789";
         vm.Register.Email = "test@example.com";
 
         await vm.RegisterUserAsync();
@@ -217,20 +217,20 @@ public class LoginViewModelTests
     }
 
     [Fact]
-    public void RegisterInputModel_Has_Required_Validation_For_FullName()
+    public void RegisterInputModel_Has_Required_Validation_For_Cuil()
     {
         var model = new LoginViewModel.RegisterInputModel();
         var validationResults = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
         var context = new System.ComponentModel.DataAnnotations.ValidationContext(model);
 
         model.Email = "valid@email.com";
-        model.FullName = "";
+        model.Cuil = "";
 
         var isValid = System.ComponentModel.DataAnnotations.Validator.TryValidateObject(
             model, context, validationResults, true);
 
         Assert.False(isValid);
-        Assert.Contains(validationResults, v => v.MemberNames.Contains("FullName"));
+        Assert.Contains(validationResults, v => v.MemberNames.Contains("Cuil"));
     }
 
     [Fact]
@@ -240,7 +240,7 @@ public class LoginViewModelTests
         var validationResults = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
         var context = new System.ComponentModel.DataAnnotations.ValidationContext(model);
 
-        model.FullName = "Test User";
+        model.Cuil = "20123456789";
         model.Email = "invalid-email";
 
         var isValid = System.ComponentModel.DataAnnotations.Validator.TryValidateObject(

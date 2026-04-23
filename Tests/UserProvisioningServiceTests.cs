@@ -21,10 +21,10 @@ namespace Auth.Web.Tests
         public async Task EnsureUserAsync_CreatesUser_When_NotExists_And_Assigns_Role()
         {
             var um = CreateUserManagerMock();
-            um.Setup(x => x.FindByNameAsync("newuser")).ReturnsAsync((ApplicationUser?)null);
-            um.Setup(x => x.FindByEmailAsync("newuser")).ReturnsAsync((ApplicationUser?)null);
+            um.Setup(x => x.FindByNameAsync("20123456789")).ReturnsAsync((ApplicationUser?)null);
+            um.Setup(x => x.FindByEmailAsync("user@corp.com")).ReturnsAsync((ApplicationUser?)null);
 
-            var createdUser = new ApplicationUser { Id = "u-created", UserName = "newuser", Email = "newuser" };
+            var createdUser = new ApplicationUser { Id = "u-created", UserName = "20123456789", Email = "user@corp.com" };
             um.Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(IdentityResult.Success)
               .Callback<ApplicationUser>(u => { u.Id = createdUser.Id; });
 
@@ -34,7 +34,7 @@ namespace Auth.Web.Tests
             var logger = new Mock<ILogger<UserProvisioningService>>();
             var svc = new UserProvisioningService(um.Object, logger.Object);
 
-            var user = await svc.EnsureUserAsync("newuser");
+            var user = await svc.EnsureUserAsync("20123456789", "user@corp.com", "Nombre Apellido");
             Assert.NotNull(user);
             Assert.Equal(createdUser.Id, user.Id);
             um.Verify(x => x.CreateAsync(It.IsAny<ApplicationUser>()), Times.Once);

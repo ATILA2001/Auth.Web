@@ -4,5 +4,5 @@ namespace Auth.Web.Services.Abstractions.Users;
 
 public interface IUserProvisioningService
 {
-    Task<ApplicationUser> EnsureUserAsync(string userNameOrEmail, CancellationToken ct = default);
+    Task<ApplicationUser> EnsureUserAsync(string userName, string? email = null, string? nombre = null, CancellationToken ct = default);
 }

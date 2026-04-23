@@ -11,6 +11,7 @@ public partial class Users : ComponentBase
     [Inject] private IAdminUserService UserService { get; set; } = null!;
     [Inject] private IAdminRoleService RoleService { get; set; } = null!;
     [Inject] private IAdminAreaService AreaService { get; set; } = null!;
+    [Inject] private IAdminClientService ClientService { get; set; } = null!;
     [Inject] private IAdminUserPageOverrideService OverrideService { get; set; } = null!;
     [Inject] private IAdminPageService PageService { get; set; } = null!;
     [Inject] private IAdminActionPermissionService ActionService { get; set; } = null!;
@@ -22,19 +23,21 @@ public partial class Users : ComponentBase
 
     private readonly Dictionary<UserAdminDto, List<string>> _rolesBuffer = new();
     private readonly Dictionary<UserAdminDto, List<int>> _areasBuffer = new();
+    private readonly Dictionary<UserAdminDto, List<string>> _clientsBuffer = new();
 
     private string _selectedUserId = string.Empty;
     private string _selectedUserName = string.Empty;
 
     private List<RoleAdminDto> AllRoles => _vm.AllRoles;
     private List<AreaAdminDto> AllAreas => _vm.AllAreas;
+    private List<ApplicationClientAdminDto> AllClients => _vm.AllClients;
 
     private bool IsLoading { get; set; }
     private bool IsSaving { get; set; }
 
     protected override void OnInitialized()
     {
-        _vm = new UsersViewModel(UserService, RoleService, AreaService);
+        _vm = new UsersViewModel(UserService, RoleService, AreaService, ClientService);
     }
 
     protected override async Task OnInitializedAsync()
@@ -55,6 +58,7 @@ public partial class Users : ComponentBase
             await _vm.LoadAsync();
             _rolesBuffer.Clear();
             _areasBuffer.Clear();
+            _clientsBuffer.Clear();
             if (reloadGrid && grid is not null)
             {
                 await grid.Reload();
@@ -99,6 +103,21 @@ public partial class Users : ComponentBase
     private void SetAreasBuffer(UserAdminDto user, List<int> areas)
     {
         _areasBuffer[user] = areas;
+    }
+
+    private IEnumerable<string> GetClientsBuffer(UserAdminDto user)
+    {
+        if (!_clientsBuffer.TryGetValue(user, out var value))
+        {
+            value = (user.ClientIds ?? Array.Empty<string>()).ToList();
+            _clientsBuffer[user] = value;
+        }
+        return value;
+    }
+
+    private void SetClientsBuffer(UserAdminDto user, List<string> clients)
+    {
+        _clientsBuffer[user] = clients;
     }
 
     private async Task OpenUserOverridesDialog(UserAdminDto user)
@@ -152,6 +171,7 @@ public partial class Users : ComponentBase
             _vm.BeginEdit(user);
             _vm.SelectedRoles = _rolesBuffer.TryGetValue(user, out var roles) ? roles : new List<string>();
             _vm.SelectedAreaIds = _areasBuffer.TryGetValue(user, out var areas) ? areas : new List<int>();
+            _vm.SelectedClientIds = _clientsBuffer.TryGetValue(user, out var clients) ? clients : new List<string>();
 
             var result = await _vm.SaveAsync();
             NotifyUser(result);
@@ -177,6 +197,7 @@ public partial class Users : ComponentBase
         grid.CancelEditRow(user);
         _rolesBuffer.Remove(user);
         _areasBuffer.Remove(user);
+        _clientsBuffer.Remove(user);
     }
 
     private async Task ValidateAndSave(UserAdminDto user)
@@ -189,6 +210,7 @@ public partial class Users : ComponentBase
         _vm.BeginEdit(user);
         _vm.SelectedRoles = GetRolesBuffer(user).ToList();
         _vm.SelectedAreaIds = GetAreasBuffer(user).ToList();
+        _vm.SelectedClientIds = GetClientsBuffer(user).ToList();
         var validationResult = _vm.ValidateOnly();
 
         if (validationResult.Outcome != UsersVmOutcome.Success)

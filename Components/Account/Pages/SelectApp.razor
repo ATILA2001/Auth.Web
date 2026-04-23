@@ -1,0 +1,77 @@
+@page "/Account/SelectApp"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<RadzenTheme Theme="material-dark" />
+<PageTitle>Seleccionar aplicación</PageTitle>
+
+<link href="css/login.css" rel="stylesheet" />
+
+<div class="login-background" style="background: #121212; min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+    <div style="width: 100%; max-width: 480px; padding: 1.5rem;">
+        <RadzenCard Style="background: #1e1e1e; border: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem; padding: 2rem;">
+            <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Gap="1.5rem">
+
+                <RadzenImage Path="images/IVC-Blanco.png" Style="height: 64px; object-fit: contain;" />
+
+                <RadzenText TextStyle="TextStyle.H5" Style="color: #fff; margin: 0;">Seleccioná una aplicación</RadzenText>
+
+                @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" AllowClose="false" Style="width:100%">
+                        @ErrorMessage
+                    </RadzenAlert>
+                }
+
+                @if (_apps.Count == 0 && !IsAdmin)
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" AllowClose="false" Style="width:100%">
+                        No tiene acceso a ninguna aplicación. Contacte al administrador.
+                    </RadzenAlert>
+                }
+                else
+                {
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="0.75rem" Style="width: 100%;">
+                        @foreach (var app in _apps)
+                        {
+                            <form method="post" action="/connect/select-app">
+                                <input type="hidden" name="clientId" value="@app.ClientId" />
+                                @if (!string.IsNullOrEmpty(AntiforgeryFieldName) && !string.IsNullOrEmpty(AntiforgeryToken))
+                                {
+                                    <input type="hidden" name="@AntiforgeryFieldName" value="@AntiforgeryToken" />
+                                }
+                                <RadzenButton Text="@app.DisplayName"
+                                              Icon="launch"
+                                              ButtonType="ButtonType.Submit"
+                                              ButtonStyle="ButtonStyle.Primary"
+                                              Style="width: 100%; background: #1976D2;" />
+                            </form>
+                        }
+
+                        @if (IsAdmin)
+                        {
+                            <RadzenButton Text="Panel de Administración"
+                                          Icon="admin_panel_settings"
+                                          ButtonStyle="ButtonStyle.Secondary"
+                                          Style="width: 100%;"
+                                          Click="@(() => NavigationManager.NavigateTo("/admin"))" />
+                        }
+                    </RadzenStack>
+                }
+
+                <form method="post" action="/connect/logout" style="width:100%">
+                    @if (!string.IsNullOrEmpty(AntiforgeryFieldName) && !string.IsNullOrEmpty(AntiforgeryToken))
+                    {
+                        <input type="hidden" name="@AntiforgeryFieldName" value="@AntiforgeryToken" />
+                    }
+                    <RadzenButton Text="Cerrar sesión"
+                                  Icon="logout"
+                                  ButtonType="ButtonType.Submit"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Variant="Variant.Text"
+                                  Style="width: 100%; color: rgba(255,255,255,0.6);" />
+                </form>
+            </RadzenStack>
+        </RadzenCard>
+    </div>
+</div>

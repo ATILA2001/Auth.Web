@@ -29,6 +29,7 @@
                 </HeaderTemplate>
                 <Columns>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="FullName" Title="Usuario" />
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="UserName" Title="CUIL" Width="130px" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="Email" Title="Correo" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Roles" Filterable="false">
                         <Template Context="u">@string.Join(", ", u.Roles)</Template>
@@ -45,14 +46,17 @@
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Áreas" Filterable="false">
                         <Template Context="u">@string.Join(", ", u.Areas)</Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Aplicaciones" Filterable="false">
+                        <Template Context="u">@string.Join(", ", u.ClientIds)</Template>
                         <EditTemplate Context="u">
-                            <RadzenDropDown TValue="IEnumerable<int>"
-                                            Data="@AllAreas"
-                                            TextProperty="Name"
-                                            ValueProperty="Id"
+                            <RadzenDropDown TValue="IEnumerable<string>"
+                                            Data="@AllClients"
+                                            TextProperty="ClientId"
+                                            ValueProperty="ClientId"
                                             Multiple="true"
-                                            Value="@GetAreasBuffer(u)"
-                                            ValueChanged="@(v => SetAreasBuffer(u, v?.ToList() ?? new()))"
+                                            Value="@GetClientsBuffer(u)"
+                                            ValueChanged="@(v => SetClientsBuffer(u, v?.ToList() ?? new()))"
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>

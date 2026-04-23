@@ -61,4 +61,32 @@ public sealed class RoutingService : IRoutingService
 
         return (rule.Client.ClientId, returnUrl);
     }
+
+    public async Task<IReadOnlyList<(string ClientId, string ReturnUrl)>> ResolveAllForUserAsync(string userId, CancellationToken ct = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user != null && await _userManager.IsInRoleAsync(user, "Admin"))
+            return [];
+
+        var areaIds = await _repository.GetUserAreaIdsAsync(userId, ct);
+        if (areaIds.Count == 0)
+            return [];
+
+        var routes = await _repository.GetDistinctActiveRoutesForAreasAsync(areaIds, ct);
+
+        var result = new List<(string ClientId, string ReturnUrl)>();
+        foreach (var route in routes)
+        {
+            if (route.Client is null || string.IsNullOrWhiteSpace(route.Client.ClientId))
+                continue;
+
+            var returnUrl = _clientService.GetDefaultReturnUrl(route.Client);
+            if (string.IsNullOrWhiteSpace(returnUrl))
+                continue;
+
+            result.Add((route.Client.ClientId, returnUrl));
+        }
+
+        return result;
+    }
 }

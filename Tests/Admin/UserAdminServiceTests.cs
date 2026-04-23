@@ -4,6 +4,7 @@ using Auth.Web.Data.Entities;
 using Auth.Web.Services.Abstractions.Admin;
 using Auth.Web.Services.Abstractions.Permissions;
 using Auth.Web.Repositories.Abstractions.Admin;
+using Auth.Web.Repositories.Abstractions.Routing;
 using Auth.Web.Repositories.Implementations.Admin;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -65,7 +66,10 @@ public class UserAdminServiceTests
 
         IUserAdminRepository repo = new UserAdminRepository(factory);
         var auditMock = new Mock<IPermissionAuditService>();
-        IAdminUserService svc = new UserAdminService(repo, umMock.Object, auditMock.Object);
+        var routingMock = new Mock<IRoutingRepository>();
+        routingMock.Setup(r => r.GetClientIdByAreaIdAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, string>());
+        IAdminUserService svc = new UserAdminService(repo, routingMock.Object, umMock.Object, auditMock.Object);
         var users = await svc.GetUsersAsync();
         var dto = users.Single();
         Assert.Contains("Admin", dto.Roles);
@@ -105,7 +109,10 @@ public class UserAdminServiceTests
         IUserAdminRepository repo = new UserAdminRepository(factory);
         var auditMock = new Mock<IPermissionAuditService>();
         auditMock.Setup(a => a.IncrementUserPermissionVersionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        IAdminUserService svc = new UserAdminService(repo, umMock.Object, auditMock.Object);
+        var routingMock = new Mock<IRoutingRepository>();
+        routingMock.Setup(r => r.GetDefaultAreaIdPerClientAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, int>());
+        IAdminUserService svc = new UserAdminService(repo, routingMock.Object, umMock.Object, auditMock.Object);
         await svc.UpdateUserRolesAndAreasAsync("user-1", new[] { "RoleB" }, new[] { area2Id });
 
         umMock.Verify(m => m.AddToRolesAsync(It.Is<ApplicationUser>(u => u.Id == "user-1"), It.Is<IEnumerable<string>>(r => r.Single() == "RoleB")), Times.Once);
