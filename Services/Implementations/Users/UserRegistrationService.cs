@@ -36,10 +36,10 @@ public sealed class UserRegistrationService : IUserRegistrationService
             return RegisterUserResult.ValidationError("Complete los campos requeridos.");
         }
 
-        var existing = await _userManager.FindByEmailAsync(email);
+        var existing = await _userManager.FindByNameAsync(cuil);
         if (existing is not null)
         {
-            return RegisterUserResult.AlreadyExists("El correo ya está registrado.");
+            return RegisterUserResult.AlreadyExists("El CUIL ya está registrado.");
         }
 
         var existsInAd = await _adAuth.ExistsByEmailAsync(email);
