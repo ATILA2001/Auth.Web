@@ -145,4 +145,13 @@ public partial class Permissions : ComponentBase
             StateHasChanged();
         }
     }
+
+    private static string TranslateAction(string name) => name.ToLowerInvariant() switch
+    {
+        "read"   => "Ver",
+        "create" => "Agregar",
+        "edit"   => "Modificar",
+        "delete" => "Eliminar",
+        _        => name
+    };
 }

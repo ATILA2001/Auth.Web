@@ -83,62 +83,58 @@
                             Aplicación: <strong>@group.Key</strong>
                         </RadzenText>
 
-                        <div class="rz-mb-4" style="overflow-x:auto">
-                            <table class="rz-grid-table rz-grid-table-striped"
-                                   style="width:100%; border-collapse:collapse">
-                                <thead>
-                                    <tr>
-                                        <th class="rz-text-align-left rz-p-2"
-                                            style="min-width:160px; border-bottom:2px solid var(--rz-grid-header-border-color)">
-                                            Página
-                                        </th>
-                                        <th class="rz-text-align-left rz-p-2"
-                                            style="min-width:180px; border-bottom:2px solid var(--rz-grid-header-border-color)">
-                                            URL
-                                        </th>
-                                        @foreach (var action in _vm.Actions)
-                                        {
-                                            <th class="rz-text-align-center rz-p-2"
-                                                style="width:90px; border-bottom:2px solid var(--rz-grid-header-border-color)">
-                                                @action.Name
-                                            </th>
-                                        }
-                                        <th class="rz-text-align-center rz-p-2"
-                                            style="width:90px; border-bottom:2px solid var(--rz-grid-header-border-color); font-style:italic">
-                                            Todos
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var row in group)
-                                    {
-                                        <tr>
-                                            <td class="rz-p-2">@row.PageName</td>
-                                            <td class="rz-p-2"
-                                                style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap"
-                                                title="@row.PageUrl">
-                                                @row.PageUrl
-                                            </td>
-                                            @foreach (var action in _vm.Actions)
-                                            {
-                                                <td class="rz-text-align-center rz-p-2">
-                                                    <RadzenCheckBox TValue="bool"
-                                                                    Value="@row.IsEnabled(action.Id)"
-                                                                    Change="@(v => TogglePermissionAsync(row, action.Id, v))"
-                                                                    Disabled="@IsSaving" />
-                                                </td>
-                                            }
-                                            <td class="rz-text-align-center rz-p-2">
-                                                <RadzenCheckBox TValue="bool"
-                                                                Value="@row.AllActionsEnabled(_vm.Actions)"
-                                                                Change="@(v => ToggleAllAsync(row, v))"
-                                                                Disabled="@IsSaving" />
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
+                        <RadzenDataGrid TItem="PermissionMatrixRow"
+                                        Data="@group"
+                                        AllowSorting="false"
+                                        AllowPaging="false"
+                                        AllowFiltering="false"
+                                        Class="rz-mb-4">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="PermissionMatrixRow"
+                                                      Property="PageName"
+                                                      Title="Página"
+                                                      MinWidth="160px" />
+                                <RadzenDataGridColumn TItem="PermissionMatrixRow"
+                                                      Property="PageUrl"
+                                                      Title="URL"
+                                                      MinWidth="180px">
+                                    <Template Context="row">
+                                        <span title="@row.PageUrl"
+                                              style="display:block; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">
+                                            @row.PageUrl
+                                        </span>
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                @foreach (var action in _vm.Actions)
+                                {
+                                    var a = action;
+                                    <RadzenDataGridColumn TItem="PermissionMatrixRow"
+                                                          Title="@TranslateAction(a.Name)"
+                                                          TextAlign="TextAlign.Center"
+                                                          Width="100px"
+                                                          Sortable="false">
+                                        <Template Context="row">
+                                            <RadzenCheckBox TValue="bool"
+                                                            Value="@row.IsEnabled(a.Id)"
+                                                            Change="@(v => TogglePermissionAsync(row, a.Id, v))"
+                                                            Disabled="@IsSaving" />
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                }
+                                <RadzenDataGridColumn TItem="PermissionMatrixRow"
+                                                      Title="Todos"
+                                                      TextAlign="TextAlign.Center"
+                                                      Width="100px"
+                                                      Sortable="false">
+                                    <Template Context="row">
+                                        <RadzenCheckBox TValue="bool"
+                                                        Value="@row.AllActionsEnabled(_vm.Actions)"
+                                                        Change="@(v => ToggleAllAsync(row, v))"
+                                                        Disabled="@IsSaving" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
                     }
                 }
             }
