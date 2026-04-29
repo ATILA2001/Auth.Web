@@ -87,11 +87,13 @@ public sealed class AuthFlowService : IAuthFlowService
             return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña requeridos.", dto.ReturnUrl, dto.ClientId));
         }
 
-        var testUser = _features.EnableTestUsers ? TryGetTestUser(dto.UserNameOrEmail) : null;
         AdUserInfo? adUserInfo = null;
-
-        // dbAuthUser: user retrieved from DB used for password verification when username ends with .test
         ApplicationUser? dbAuthUser = null;
+
+#if DEBUG
+        // .test users: DB-only auth, never touch AD. Development environment only.
+        var testUser = _features.EnableTestUsers ? TryGetTestUser(dto.UserNameOrEmail) : null;
+        var isDbTest = dto.UserNameOrEmail.EndsWith(".test", StringComparison.OrdinalIgnoreCase);
 
         if (testUser is not null)
         {
@@ -100,36 +102,27 @@ public sealed class AuthFlowService : IAuthFlowService
                 return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
             }
         }
+        else if (isDbTest)
+        {
+            dbAuthUser = await _userManagement.FindByNameAsync(dto.UserNameOrEmail)
+                         ?? await _userManagement.FindByEmailAsync(dto.UserNameOrEmail);
+
+            if (dbAuthUser is null || !VerifyPasswordHash(dbAuthUser.PasswordHash, dto.Password))
+            {
+                return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
+            }
+        }
         else
         {
-            var isDbTest = dto.UserNameOrEmail.EndsWith(".test", StringComparison.OrdinalIgnoreCase);
-
+#else
+        var testUser = (TestUserOptions?)null;
+        {
+#endif
             adUserInfo = await _adAuth.GetUserInfoAsync(dto.UserNameOrEmail);
-
-            if (isDbTest)
+            var adOk = await _adAuth.ValidateCredentialsAsync(dto.UserNameOrEmail, dto.Password);
+            if (!adOk)
             {
-                dbAuthUser = await _userManagement.FindByNameAsync(dto.UserNameOrEmail)
-                             ?? await _userManagement.FindByEmailAsync(dto.UserNameOrEmail);
-
-                var dbPasswordOk = dbAuthUser is not null && VerifyPasswordHash(dbAuthUser.PasswordHash, dto.Password);
-
-                if (!dbPasswordOk)
-                {
-                    // Fallback to AD if DB check fails for .test users
-                    var adOkFallback = await _adAuth.ValidateCredentialsAsync(dto.UserNameOrEmail, dto.Password);
-                    if (!adOkFallback)
-                    {
-                        return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
-                    }
-                }
-            }
-            else
-            {
-                var adOk = await _adAuth.ValidateCredentialsAsync(dto.UserNameOrEmail, dto.Password);
-                if (!adOk)
-                {
-                    return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
-                }
+                return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
             }
         }
 
