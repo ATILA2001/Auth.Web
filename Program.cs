@@ -183,37 +183,6 @@ builder.Services.AddHttpsRedirection(options =>
 var app = builder.Build();
 
 
-// Optional: delete DataProtectionKeys to force regeneration under the new protector (disabled by default)
-if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("DataProtection:CleanupKeysOnStartup"))
-{
-    try
-    {
-        using (var scope = app.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-            var loggerFactory = scope.ServiceProvider.GetService<Microsoft.Extensions.Logging.ILoggerFactory>();
-            var logger = loggerFactory?.CreateLogger("DataProtectionStartup");
-
-            var keys = db.DataProtectionKeys.ToList();
-            if (keys.Count > 0)
-            {
-                db.DataProtectionKeys.RemoveRange(keys);
-                db.SaveChanges();
-                logger?.LogInformation("Deleted {Count} existing DataProtectionKeys to force regeneration under machine DPAPI.", keys.Count);
-            }
-            else
-            {
-                logger?.LogInformation("No DataProtectionKeys found to delete.");
-            }
-        }
-    }
-    catch (Exception ex)
-    {
-        var logger = app.Services.GetService<Microsoft.Extensions.Logging.ILoggerFactory>()?.CreateLogger("DataProtectionStartup");
-        logger?.LogWarning(ex, "Failed to clean DataProtectionKeys during startup: {Message}", ex.Message);
-    }
-}
-
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
