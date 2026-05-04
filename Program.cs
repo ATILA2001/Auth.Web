@@ -49,9 +49,9 @@ builder.Services.Configure<AdOptions>(builder.Configuration.GetSection("ActiveDi
 builder.Services.Configure<FeatureOptions>(builder.Configuration.GetSection("Features"));
 builder.Services.Configure<TestUsersOptions>(builder.Configuration.GetSection("TestUsers"));
 
-var sharedCookieName = builder.Configuration["SharedCookie:Name"] ?? ".Auth.Shared";
+var sharedCookieName = builder.Configuration["SharedCookie:Name"];
 var sharedCookieDomain = builder.Configuration["SharedCookie:Domain"];
-var dataProtectionAppName = builder.Configuration["SharedCookie:ApplicationName"] ?? "Auth.SharedCookie";
+var dataProtectionAppName = builder.Configuration["SharedCookie:ApplicationName"];
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
