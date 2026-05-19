@@ -119,9 +119,9 @@ public sealed class UsersViewModel
         try
         {
             var userName = string.IsNullOrWhiteSpace(SelectedUser.UserName) ? "(sin nombre)" : SelectedUser.UserName;
-            await _userService.UpdateUserRolesAndClientAppsAsync(SelectedUser.Id, SelectedRoles, SelectedClientIds);
+            await _userService.UpdateUserRolesAndAreasAsync(SelectedUser.Id, SelectedRoles, SelectedAreaIds);
             SelectedUser = null;
-            return UsersVmResult.Success("Usuario actualizado", $"Se actualizaron roles/aplicaciones de {userName}.");
+            return UsersVmResult.Success("Usuario actualizado", $"Se actualizaron roles/áreas de {userName}.");
         }
         catch (Exception ex)
         {

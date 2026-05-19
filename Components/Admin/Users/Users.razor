@@ -21,17 +21,17 @@
                             AllowSorting="true" EditMode="DataGridEditMode.Single" RowUpdate="@OnRowUpdate"
                             FilterMode="FilterMode.CheckBoxList" ClearFilterText="Limpiar" ApplyFilterText="Aplicar" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
                             AllowColumnPicking="false" ColumnsText="Columnas" ColumnsShowingText="columnas mostradas" AllColumnsText="Todas" EmptyText="Sin registros"
-                            AllowRowSelectOnRowClick="false">
+                            AllowRowSelectOnRowClick="false" class="users-grid">
                 <HeaderTemplate>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0.5rem">
                         <RadzenButton Icon="filter_alt_off" Text="Limpiar filtros" Click="@ClearFilters" Disabled="@(IsLoading || IsSaving)" />
                     </RadzenStack>
                 </HeaderTemplate>
                 <Columns>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="FullName" Title="Usuario" />
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="UserName" Title="CUIL" Width="130px" />
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="Email" Title="Correo" />
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Roles" Filterable="false">
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="FullName" Title="Usuario" Width="240px" />
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="UserName" Title="CUIL" Width="140px" />
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="Email" Title="Correo" Width="280px" />
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Roles" Filterable="false" Width="180px">
                         <Template Context="u">@string.Join(", ", u.Roles)</Template>
                         <EditTemplate Context="u">
                             <RadzenDropDown TValue="string?"
@@ -44,10 +44,25 @@
                                             AllowClear="true" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Áreas" Filterable="false">
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Áreas" Filterable="false" Width="300px">
                         <Template Context="u">@string.Join(", ", u.Areas)</Template>
+                        <EditTemplate Context="u">
+                            <RadzenDropDown TValue="IEnumerable<int>"
+                                            Data="@AllAreas"
+                                            TextProperty="Name"
+                                            ValueProperty="Id"
+                                            Multiple="true"
+                                            Value="@GetAreasBuffer(u)"
+                                            ValueChanged="@(v => SetAreasBuffer(u, v?.ToList() ?? new()))"
+                                            Disabled="@(IsLoading || IsSaving)"
+                                            AllowClear="true"
+                                            AllowFiltering="true"
+                                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                            Placeholder="Seleccionar áreas..."
+                                            Style="width: 100%;" />
+                        </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Aplicaciones" Filterable="false">
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Aplicaciones" Filterable="false" Width="180px">
                         <Template Context="u">@string.Join(", ", u.ClientIds)</Template>
                         <EditTemplate Context="u">
                             <RadzenDropDown TValue="IEnumerable<string>"
@@ -77,3 +92,10 @@
         </RadzenCard>
     </RadzenColumn>
 </RadzenRow>
+
+<style>
+    .users-grid .rz-grid-table {
+        width: max-content;
+        min-width: 100%;
+    }
+</style>
