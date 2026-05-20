@@ -273,12 +273,15 @@ public sealed class AuthFlowService : IAuthFlowService
         var apps = new List<string> { clientId };
         var claimsModel = _permissionsAssembler.BuildClaims(user, effectiveRoles, rawPermissions, apps);
         claimsModel = MergeTestUserClaims(claimsModel, testUser);
+        var activeAppId = GetActiveAppId(claimsModel, clientId);
 
         var allAvailableApps = await _routingService.ResolveAllForUserAsync(user.Id);
         await SignInAsync(user, claimsModel, adUserInfo?.EmployeeId, allAvailableApps.Select(r => r.ClientId).ToList());
 
-        _logger.LogInformation("Login exitoso: user='{User}' → redirectUrl='{RedirectUrl}' permsVersion={Version}",
-            user.UserName, returnUrl, rawPermissions.Version);
+        returnUrl = _clientService.ResolveReturnUrlForCurrentEnvironment(client, returnUrl, activeAppId);
+
+        _logger.LogInformation("Login exitoso: user='{User}' app='{App}' clientId='{ClientId}' audience='{Audience}' → redirectUrl='{RedirectUrl}' permsVersion={Version}",
+            user.UserName, activeAppId, client?.ClientId, client?.Audience, returnUrl, rawPermissions.Version);
 
         return await FinalizeResultAsync(new LoginResult { RedirectUrl = returnUrl, SignInAdmin = false });
     }
@@ -320,30 +323,59 @@ public sealed class AuthFlowService : IAuthFlowService
         if (user is null)
             return null;
 
-        var allRoutes = await _routingService.ResolveAllForUserAsync(userId, ct);
-        var route = allRoutes.FirstOrDefault(r => string.Equals(r.ClientId, clientId, StringComparison.OrdinalIgnoreCase));
-        if (route == default)
-        {
-            _logger.LogWarning("SelectApp: usuario '{UserId}' no tiene acceso a la aplicación '{ClientId}'.", userId, clientId);
-            return null;
-        }
+        var roles = (IReadOnlyCollection<string>)await _userManagement.GetRolesAsync(user);
+        var isAdmin = roles.Contains("Admin", StringComparer.OrdinalIgnoreCase) ||
+                      roles.Contains("Administrador", StringComparer.OrdinalIgnoreCase);
 
         var client = await _clientService.GetAsync(clientId);
         if (client is null)
             return null;
 
-        var returnUrl = route.ReturnUrl;
-        if (string.IsNullOrWhiteSpace(returnUrl) || !_clientService.IsReturnUrlAllowed(client, returnUrl))
-            return null;
+        string returnUrl;
+        IReadOnlyList<string> allAvailableAppIds;
 
-        var roles = (IReadOnlyCollection<string>)await _userManagement.GetRolesAsync(user);
+        if (isAdmin)
+        {
+            // Admin bypass: no requiere AreaRoute, tiene acceso a todas las apps
+            var defaultUrl = _clientService.GetDefaultReturnUrl(client);
+            if (string.IsNullOrWhiteSpace(defaultUrl))
+                return null;
+            returnUrl = defaultUrl;
+            allAvailableAppIds = [];
+        }
+        else
+        {
+            var allRoutes = await _routingService.ResolveAllForUserAsync(userId, ct);
+            var route = allRoutes.FirstOrDefault(r => string.Equals(r.ClientId, clientId, StringComparison.OrdinalIgnoreCase));
+            if (route == default)
+            {
+                _logger.LogWarning("SelectApp: usuario '{UserId}' no tiene acceso a la aplicación '{ClientId}'.", userId, clientId);
+                return null;
+            }
+
+            returnUrl = route.ReturnUrl;
+            if (string.IsNullOrWhiteSpace(returnUrl) || !_clientService.IsReturnUrlAllowed(client, returnUrl))
+                return null;
+
+            allAvailableAppIds = allRoutes.Select(r => r.ClientId).ToList();
+        }
+
         var rawPermissions = await _permissionService.GetAsync(user.UserName!, clientId: client.Id, roleNamesOverride: roles);
         var apps = new List<string> { clientId };
         var claimsModel = _permissionsAssembler.BuildClaims(user, roles, rawPermissions, apps);
-        await SignInAsync(user, claimsModel, null, allRoutes.Select(r => r.ClientId).ToList());
+        var activeAppId = GetActiveAppId(claimsModel, clientId);
+        await SignInAsync(user, claimsModel, null, allAvailableAppIds);
+
+        returnUrl = _clientService.ResolveReturnUrlForCurrentEnvironment(client, returnUrl, activeAppId);
 
         _logger.LogInformation("SelectApp: usuario '{UserId}' seleccionó '{ClientId}' → '{ReturnUrl}'.", userId, clientId, returnUrl);
         return returnUrl;
+    }
+
+    private static string GetActiveAppId(AuthClaimsModel claimsModel, string fallbackClientId)
+    {
+        return claimsModel.Apps.FirstOrDefault(app => !string.IsNullOrWhiteSpace(app))
+            ?? fallbackClientId;
     }
 
     private async Task PartialSignInAsync(ApplicationUser user, string? employeeId = null)
