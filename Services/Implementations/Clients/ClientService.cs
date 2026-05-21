@@ -36,6 +36,11 @@ public class ClientService : IClientService
         return _repository.GetAsync(clientId);
     }
 
+    public Task<IReadOnlyList<ApplicationClient>> GetAllAsync(CancellationToken ct = default)
+    {
+        return _repository.GetAllAsync(ct);
+    }
+
     public bool IsReturnUrlAllowed(ApplicationClient client, string returnUrl)
     {
         if (IsLocalAuthWebRequest() && IsLocalhostUrl(returnUrl))
@@ -74,24 +79,47 @@ public class ClientService : IClientService
     }
 
     public string? GetDefaultReturnUrl(ApplicationClient client)
+        => GetLandingUrl(client);
+
+    public string? GetLandingUrl(ApplicationClient client, bool useClientDefaultLandingPage = true)
     {
         if (string.IsNullOrWhiteSpace(client.AllowedReturnUrlsJson))
-        {
             return null;
-        }
 
         try
         {
             var urls = JsonSerializer.Deserialize<List<string>>(client.AllowedReturnUrlsJson) ?? [];
-            var configuredReturnUrl = urls.FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
-            return string.IsNullOrWhiteSpace(configuredReturnUrl)
-                ? null
-                : ResolveReturnUrlForCurrentEnvironment(client, configuredReturnUrl);
+            var baseUrl = urls.FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
+            if (string.IsNullOrWhiteSpace(baseUrl))
+                return null;
+
+            // Area routes pass useClientDefaultLandingPage=false so apps can
+            // resolve their own first permitted page when no client fallback is needed.
+            var landingPath = useClientDefaultLandingPage && !string.IsNullOrWhiteSpace(client.DefaultLandingPage) ? client.DefaultLandingPage
+                            : null;
+
+            var url = landingPath is null
+                ? baseUrl
+                : AppendPath(baseUrl, landingPath);
+
+            return ResolveReturnUrlForCurrentEnvironment(client, url);
         }
         catch (JsonException)
         {
             return null;
         }
+    }
+
+    private static string AppendPath(string baseUrl, string path)
+    {
+        if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri))
+            return baseUrl;
+
+        var builder = new UriBuilder(uri)
+        {
+            Path = "/" + path.TrimStart('/')
+        };
+        return builder.Uri.ToString();
     }
 
     public string ResolveReturnUrlForCurrentEnvironment(ApplicationClient client, string returnUrl, string? appId = null)

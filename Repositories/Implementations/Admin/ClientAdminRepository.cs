@@ -27,7 +27,7 @@ public sealed class ClientAdminRepository : IClientAdminRepository
         return await db.ApplicationClients.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
     }
 
-    public async Task<int> CreateClientAsync(string clientId, string audience, IEnumerable<string> allowedUrls, CancellationToken ct = default)
+    public async Task<int> CreateClientAsync(string clientId, string audience, IEnumerable<string> allowedUrls, string? defaultLandingPage, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         clientId = clientId.Trim();
@@ -39,14 +39,15 @@ public sealed class ClientAdminRepository : IClientAdminRepository
         {
             ClientId = clientId,
             Audience = audience,
-            AllowedReturnUrlsJson = JsonSerializer.Serialize(list)
+            AllowedReturnUrlsJson = JsonSerializer.Serialize(list),
+            DefaultLandingPage = NormalizePath(defaultLandingPage)
         };
         db.ApplicationClients.Add(entity);
         await db.SaveChangesAsync(ct);
         return entity.Id;
     }
 
-    public async Task UpdateClientAsync(int id, string clientId, string audience, IEnumerable<string> allowedUrls, CancellationToken ct = default)
+    public async Task UpdateClientAsync(int id, string clientId, string audience, IEnumerable<string> allowedUrls, string? defaultLandingPage, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         var entity = await db.ApplicationClients.FindAsync(new object[] { id }, ct) ?? throw new KeyNotFoundException("Cliente no encontrado.");
@@ -58,6 +59,7 @@ public sealed class ClientAdminRepository : IClientAdminRepository
         entity.ClientId = clientId;
         entity.Audience = audience;
         entity.AllowedReturnUrlsJson = JsonSerializer.Serialize(list);
+        entity.DefaultLandingPage = NormalizePath(defaultLandingPage);
         await db.SaveChangesAsync(ct);
     }
 
@@ -72,4 +74,7 @@ public sealed class ClientAdminRepository : IClientAdminRepository
 
     private static List<string> NormalizeUrls(IEnumerable<string> urls)
         => urls.Where(u => !string.IsNullOrWhiteSpace(u)).Select(u => u.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+    private static string? NormalizePath(string? path)
+        => string.IsNullOrWhiteSpace(path) ? null : "/" + path.Trim().TrimStart('/');
 }

@@ -30,11 +30,11 @@ public sealed class ClientAdminService : IAdminClientService
         return entity is null ? null : MapToDto(entity);
     }
 
-    public Task<int> CreateClientAsync(string clientId, string audience, IEnumerable<string> allowedUrls, CancellationToken cancellationToken = default)
-        => _repository.CreateClientAsync(clientId, audience, allowedUrls, cancellationToken);
+    public Task<int> CreateClientAsync(string clientId, string audience, IEnumerable<string> allowedUrls, string? defaultLandingPage, CancellationToken cancellationToken = default)
+        => _repository.CreateClientAsync(clientId, audience, allowedUrls, defaultLandingPage, cancellationToken);
 
-    public Task UpdateClientAsync(int id, string clientId, string audience, IEnumerable<string> allowedUrls, CancellationToken cancellationToken = default)
-        => _repository.UpdateClientAsync(id, clientId, audience, allowedUrls, cancellationToken);
+    public Task UpdateClientAsync(int id, string clientId, string audience, IEnumerable<string> allowedUrls, string? defaultLandingPage, CancellationToken cancellationToken = default)
+        => _repository.UpdateClientAsync(id, clientId, audience, allowedUrls, defaultLandingPage, cancellationToken);
 
     public Task DeleteClientAsync(int id, CancellationToken cancellationToken = default)
         => _repository.DeleteClientAsync(id, cancellationToken);
@@ -45,7 +45,8 @@ public sealed class ClientAdminService : IAdminClientService
             Id = client.Id,
             ClientId = client.ClientId,
             Audience = client.Audience,
-            AllowedReturnUrls = DeserializeAllowedUrls(client.AllowedReturnUrlsJson)
+            AllowedReturnUrls = DeserializeAllowedUrls(client.AllowedReturnUrlsJson),
+            DefaultLandingPage = client.DefaultLandingPage
         };
 
     private static List<string> DeserializeAllowedUrls(string? json)

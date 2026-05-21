@@ -52,7 +52,7 @@ public sealed class RoutingService : IRoutingService
             return null;
         }
 
-        var returnUrl = _clientService.GetDefaultReturnUrl(rule.Client);
+        var returnUrl = _clientService.GetLandingUrl(rule.Client);
         if (string.IsNullOrWhiteSpace(returnUrl))
         {
             _logger.LogInformation("Routing: cliente {ClientId} sin ReturnUrl configurada", rule.Client.ClientId);
@@ -80,7 +80,7 @@ public sealed class RoutingService : IRoutingService
             if (route.Client is null || string.IsNullOrWhiteSpace(route.Client.ClientId))
                 continue;
 
-            var returnUrl = _clientService.GetDefaultReturnUrl(route.Client);
+            var returnUrl = _clientService.GetLandingUrl(route.Client);
             if (string.IsNullOrWhiteSpace(returnUrl))
                 continue;
 

@@ -18,4 +18,12 @@ public sealed class ClientRepository : IClientRepository
     {
         return _db.ApplicationClients.SingleOrDefaultAsync(c => c.ClientId == clientId, ct);
     }
+
+    public async Task<IReadOnlyList<ApplicationClient>> GetAllAsync(CancellationToken ct = default)
+    {
+        return await _db.ApplicationClients
+            .AsNoTracking()
+            .OrderBy(c => c.ClientId)
+            .ToListAsync(ct);
+    }
 }

@@ -341,7 +341,10 @@ public sealed class AuthFlowService : IAuthFlowService
             if (string.IsNullOrWhiteSpace(defaultUrl))
                 return null;
             returnUrl = defaultUrl;
-            allAvailableAppIds = [];
+            allAvailableAppIds = (await _clientService.GetAllAsync(ct))
+                .Select(c => c.ClientId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .ToList();
         }
         else
         {

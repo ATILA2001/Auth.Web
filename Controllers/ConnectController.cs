@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.Extensions.Logging;
 
 namespace Auth.Web.Controllers;
 
@@ -14,11 +15,13 @@ public class ConnectController : ControllerBase
 {
     private readonly IAuthFlowService _authFlowService;
     private readonly IAntiforgery _antiforgery;
+    private readonly ILogger<ConnectController> _logger;
 
-    public ConnectController(IAuthFlowService authFlowService, IAntiforgery antiforgery)
+    public ConnectController(IAuthFlowService authFlowService, IAntiforgery antiforgery, ILogger<ConnectController> logger)
     {
         _authFlowService = authFlowService;
         _antiforgery = antiforgery;
+        _logger = logger;
     }
 
     [HttpPost("login")]
@@ -84,9 +87,13 @@ public class ConnectController : ControllerBase
         return Redirect(redirectUrl);
     }
 
+    [Authorize]
     [HttpGet("logout")]
-    public IActionResult Logout()
-        => StatusCode(StatusCodes.Status405MethodNotAllowed);
+    public async Task<IActionResult> Logout()
+    {
+        await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+        return Redirect("/Account/Login");
+    }
 
     [Authorize]
     [HttpPost("logout")]
