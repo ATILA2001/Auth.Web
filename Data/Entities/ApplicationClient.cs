@@ -9,4 +9,6 @@ public class ApplicationClient
     public string Audience { get; set; } = string.Empty;
 
     public string AllowedReturnUrlsJson { get; set; } = string.Empty;
+
+    public string? DefaultLandingPage { get; set; }
 }
