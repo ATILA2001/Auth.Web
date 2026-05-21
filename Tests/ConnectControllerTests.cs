@@ -1,3 +1,4 @@
+using System.Threading;
 using Auth.Web.Controllers;
 using Auth.Web.Services.Abstractions.Auth;
 using Auth.Web.Contracts.Auth;
@@ -5,6 +6,7 @@ using Auth.Web.Services.Abstractions.Auth.Models;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -19,7 +21,8 @@ public class ConnectControllerTests
     {
         var controller = new ConnectController(
             authFlow,
-            antiforgery ?? Mock.Of<IAntiforgery>());
+            antiforgery ?? Mock.Of<IAntiforgery>(),
+            NullLogger<ConnectController>.Instance);
 
         if (httpContext != null)
         {
@@ -84,6 +87,35 @@ public class ConnectControllerTests
         var redirect = Assert.IsType<RedirectResult>(result);
         Assert.Equal("/portal", redirect.Url);
         authFlow.Verify(x => x.LoginAsync(dto), Times.Once);
+    }
+
+    [Fact]
+    public async Task SwitchApp_Redirects_To_Selected_App()
+    {
+        var authFlow = new Mock<IAuthFlowService>();
+        authFlow.Setup(x => x.SelectAppAsync("SAI", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("https://sai.local/home");
+
+        var controller = CreateController(authFlow.Object);
+
+        var result = await controller.SwitchApp("SAI");
+
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.Equal("https://sai.local/home", redirect.Url);
+        authFlow.Verify(x => x.SelectAppAsync("SAI", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SwitchApp_Redirects_To_SelectApp_When_ClientId_Is_Missing()
+    {
+        var authFlow = new Mock<IAuthFlowService>();
+        var controller = CreateController(authFlow.Object);
+
+        var result = await controller.SwitchApp(null);
+
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.Equal("/Account/SelectApp", redirect.Url);
+        authFlow.Verify(x => x.SelectAppAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

@@ -17,6 +17,7 @@ public partial class Clients : ComponentBase
     private readonly Dictionary<ApplicationClientAdminDto, string> _urlsBuffer = new();
     private readonly Dictionary<ApplicationClientAdminDto, string> _clientIdBuffer = new();
     private readonly Dictionary<ApplicationClientAdminDto, string> _audienceBuffer = new();
+    private readonly Dictionary<ApplicationClientAdminDto, string?> _landingPageBuffer = new();
     private readonly List<ApplicationClientAdminDto> _clientsToInsert = new();
     private readonly List<ApplicationClientAdminDto> _clientsToUpdate = new();
 
@@ -66,6 +67,7 @@ public partial class Clients : ComponentBase
             _urlsBuffer.Clear();
             _clientIdBuffer.Clear();
             _audienceBuffer.Clear();
+            _landingPageBuffer.Clear();
             _clientsToInsert.Clear();
             _clientsToUpdate.Clear();
             
@@ -130,6 +132,21 @@ public partial class Clients : ComponentBase
         _urlsBuffer[client] = value;
     }
 
+    private string? GetLandingPageBuffer(ApplicationClientAdminDto client)
+    {
+        if (!_landingPageBuffer.TryGetValue(client, out var value))
+        {
+            value = client.DefaultLandingPage;
+            _landingPageBuffer[client] = value;
+        }
+        return value;
+    }
+
+    private void SetLandingPageBuffer(ApplicationClientAdminDto client, string? value)
+    {
+        _landingPageBuffer[client] = value;
+    }
+
     private async Task BeginCreate()
     {
         if (IsLoading || IsSaving)
@@ -149,7 +166,8 @@ public partial class Clients : ComponentBase
             Id = 0,
             ClientId = string.Empty,
             Audience = string.Empty,
-            AllowedReturnUrls = Array.Empty<string>()
+            AllowedReturnUrls = Array.Empty<string>(),
+            DefaultLandingPage = null
         };
         _clientsToInsert.Add(newClient);
         clients.Insert(0, newClient);
@@ -206,6 +224,7 @@ public partial class Clients : ComponentBase
             editClientId = GetClientIdBuffer(client);
             editAudience = GetAudienceBuffer(client);
             allowedUrlsText = GetUrlsBuffer(client);
+            _vm.EditDefaultLandingPage = GetLandingPageBuffer(client);
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
@@ -215,6 +234,7 @@ public partial class Clients : ComponentBase
                 client.ClientId = editClientId.Trim();
                 client.Audience = editAudience.Trim();
                 client.AllowedReturnUrls = ClientsViewModel.NormalizeUrls(allowedUrlsText);
+                client.DefaultLandingPage = _vm.EditDefaultLandingPage;
                 
                 // Apply CreatedId from service (no reload needed)
                 if (result.CreatedId.HasValue)
@@ -226,6 +246,7 @@ public partial class Clients : ComponentBase
                 _clientIdBuffer.Remove(client);
                 _audienceBuffer.Remove(client);
                 _urlsBuffer.Remove(client);
+                _landingPageBuffer.Remove(client);
                 
                 // Only reload if CreatedId is missing (fallback)
                 if (!result.CreatedId.HasValue && result.RequiresReload)
@@ -270,6 +291,7 @@ public partial class Clients : ComponentBase
             editClientId = GetClientIdBuffer(client);
             editAudience = GetAudienceBuffer(client);
             allowedUrlsText = GetUrlsBuffer(client);
+            _vm.EditDefaultLandingPage = GetLandingPageBuffer(client);
             var result = await _vm.SaveAsync();
             NotifyUser(result);
 
@@ -279,11 +301,13 @@ public partial class Clients : ComponentBase
                 client.ClientId = editClientId.Trim();
                 client.Audience = editAudience.Trim();
                 client.AllowedReturnUrls = ClientsViewModel.NormalizeUrls(allowedUrlsText);
+                client.DefaultLandingPage = _vm.EditDefaultLandingPage;
                 
                 _clientsToUpdate.Remove(client);
                 _clientIdBuffer.Remove(client);
                 _audienceBuffer.Remove(client);
                 _urlsBuffer.Remove(client);
+                _landingPageBuffer.Remove(client);
                 
                 // Explicit contract: UPDATE success does NOT require reload (RequiresReload=false)
                 // Filters/pagination/sorting preserved via local update
@@ -340,6 +364,7 @@ public partial class Clients : ComponentBase
         _urlsBuffer.Remove(client);
         _clientIdBuffer.Remove(client);
         _audienceBuffer.Remove(client);
+        _landingPageBuffer.Remove(client);
         _clientsToInsert.Remove(client);
         _clientsToUpdate.Remove(client);
         

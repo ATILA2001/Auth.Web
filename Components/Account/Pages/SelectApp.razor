@@ -1,5 +1,7 @@
 @page "/Account/SelectApp"
-@rendermode InteractiveServer
+@* App.razor.cs forces SSR (null render mode) for all /Account/* routes,
+   so InteractiveServer is intentionally omitted. Navigation uses native HTML
+   forms/links so everything works without a Blazor circuit. *@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 <RadzenTheme Theme="material-dark" />
@@ -34,43 +36,44 @@
                     <RadzenStack Orientation="Orientation.Vertical" Gap="0.75rem" Style="width: 100%;">
                         @foreach (var app in _apps)
                         {
-                            <form method="post" action="/connect/select-app">
+                            @* GET form — no antiforgery needed; works without Blazor circuit *@
+                            <form method="get" action="/connect/switch-app" style="width: 100%; margin: 0;">
                                 <input type="hidden" name="clientId" value="@app.ClientId" />
-                                @if (!string.IsNullOrEmpty(AntiforgeryFieldName) && !string.IsNullOrEmpty(AntiforgeryToken))
-                                {
-                                    <input type="hidden" name="@AntiforgeryFieldName" value="@AntiforgeryToken" />
-                                }
                                 <RadzenButton Text="@app.DisplayName"
                                               Icon="launch"
-                                              ButtonType="ButtonType.Submit"
                                               ButtonStyle="ButtonStyle.Primary"
+                                              ButtonType="ButtonType.Submit"
                                               Style="width: 100%; background: #1976D2;" />
                             </form>
                         }
 
                         @if (IsAdmin)
                         {
-                            <RadzenButton Text="Panel de Administración"
-                                          Icon="admin_panel_settings"
-                                          ButtonStyle="ButtonStyle.Secondary"
-                                          Style="width: 100%;"
-                                          Click="@(() => NavigationManager.NavigateTo("/admin"))" />
+                            <form method="get" action="/admin" style="width: 100%; margin: 0;">
+                                <RadzenButton Text="Panel de Administración"
+                                              Icon="admin_panel_settings"
+                                              ButtonStyle="ButtonStyle.Secondary"
+                                              ButtonType="ButtonType.Submit"
+                                              Style="width: 100%;" />
+                            </form>
                         }
                     </RadzenStack>
                 }
 
-                <form method="post" action="/connect/logout" style="width:100%">
+                @* POST logout — antiforgery token generated during SSR *@
+                <form method="post" action="/connect/logout" style="width: 100%; margin: 0;">
                     @if (!string.IsNullOrEmpty(AntiforgeryFieldName) && !string.IsNullOrEmpty(AntiforgeryToken))
                     {
                         <input type="hidden" name="@AntiforgeryFieldName" value="@AntiforgeryToken" />
                     }
                     <RadzenButton Text="Cerrar sesión"
                                   Icon="logout"
-                                  ButtonType="ButtonType.Submit"
                                   ButtonStyle="ButtonStyle.Light"
                                   Variant="Variant.Text"
+                                  ButtonType="ButtonType.Submit"
                                   Style="width: 100%; color: rgba(255,255,255,0.6);" />
                 </form>
+
             </RadzenStack>
         </RadzenCard>
     </div>

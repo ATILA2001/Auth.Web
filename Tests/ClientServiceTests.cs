@@ -67,4 +67,21 @@ public class ClientServiceTests
         var ok = svc.IsReturnUrlAllowed(client, "https://any");
         Assert.False(ok);
     }
+
+    [Fact]
+    public void GetLandingUrl_Uses_Client_Default_Or_Base()
+    {
+        var db = CreateDb(Guid.NewGuid().ToString());
+        var svc = new Auth.Web.Services.Implementations.Clients.ClientService(new ClientRepository(db));
+        var client = new ApplicationClient
+        {
+            ClientId = "c4",
+            Audience = "a",
+            AllowedReturnUrlsJson = JsonSerializer.Serialize(new[] { "https://app/Startup.aspx" }),
+            DefaultLandingPage = "/admin-home"
+        };
+
+        Assert.Equal("https://app/admin-home", svc.GetLandingUrl(client));
+        Assert.Equal("https://app/Startup.aspx", svc.GetLandingUrl(client, useClientDefaultLandingPage: false));
+    }
 }

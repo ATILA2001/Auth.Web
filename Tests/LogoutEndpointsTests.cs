@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -103,7 +104,7 @@ public class LogoutEndpointsTests
     private static ConnectController CreateController(FakeAuthenticationService authService, Mock<IAntiforgery>? antiforgery = null)
     {
         var antiforgeryInstance = antiforgery ?? SuccessfulAntiforgery();
-        var controller = new ConnectController(Mock.Of<IAuthFlowService>(), antiforgeryInstance.Object)
+        var controller = new ConnectController(Mock.Of<IAuthFlowService>(), antiforgeryInstance.Object, NullLogger<ConnectController>.Instance)
         {
             ControllerContext = new ControllerContext
             {

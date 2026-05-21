@@ -46,6 +46,7 @@ public sealed class ClientsViewModel
     public string EditClientId { get; set; } = string.Empty;
     public string EditAudience { get; set; } = string.Empty;
     public string AllowedUrlsText { get; set; } = string.Empty;
+    public string? EditDefaultLandingPage { get; set; }
     public string? ValidationError { get; private set; }
 
     public async Task LoadAsync()
@@ -65,6 +66,7 @@ public sealed class ClientsViewModel
         EditClientId = string.Empty;
         EditAudience = string.Empty;
         AllowedUrlsText = string.Empty;
+        EditDefaultLandingPage = null;
         ValidationError = null;
     }
 
@@ -81,6 +83,7 @@ public sealed class ClientsViewModel
         EditClientId = dto.ClientId ?? string.Empty;
         EditAudience = dto.Audience ?? string.Empty;
         AllowedUrlsText = string.Join("\n", dto.AllowedReturnUrls);
+        EditDefaultLandingPage = dto.DefaultLandingPage;
         ValidationError = null;
     }
 
@@ -131,7 +134,7 @@ public sealed class ClientsViewModel
             if (EditModel.Id == 0)
             {
                 // CREATE: return CreatedId so UI can set it locally without reload
-                var id = await _clientService.CreateClientAsync(clientId, audience, urls);
+                var id = await _clientService.CreateClientAsync(clientId, audience, urls, EditDefaultLandingPage);
                 if (id != 0)
                 {
                     ValidationError = null;
@@ -142,7 +145,7 @@ public sealed class ClientsViewModel
             }
 
             // UPDATE: no reload required; buffer?DTO sync handles display update
-            await _clientService.UpdateClientAsync(EditModel.Id, clientId, audience, urls);
+            await _clientService.UpdateClientAsync(EditModel.Id, clientId, audience, urls, EditDefaultLandingPage);
             ValidationError = null;
             return ClientsVmResult.Success("Cliente actualizado", $"Se actualizó '{clientId}'.", requiresReload: false);
         }

@@ -44,6 +44,12 @@
                             <RadzenTextArea Value="@GetUrlsBuffer(c)" ValueChanged="@(v => SetUrlsBuffer(c, v))"  Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="ApplicationClientAdminDto" Property="DefaultLandingPage" Title="Pág. entrada" Width="160px">
+                        <Template Context="c">@(c.DefaultLandingPage ?? "—")</Template>
+                        <EditTemplate Context="c">
+                            <RadzenTextBox Value="@GetLandingPageBuffer(c)" ValueChanged="@(v => SetLandingPageBuffer(c, string.IsNullOrWhiteSpace(v) ? null : v))" Placeholder="/ruta" Disabled="@(IsLoading || IsSaving)" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="ApplicationClientAdminDto" Context="c" Filterable="false" Title="Acciones" Width="112px" TextAlign="TextAlign.Center">
                         <Template Context="c">
                             <RadzenButton Icon="edit" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(c))" @onclick:stopPropagation class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />

@@ -54,7 +54,13 @@ public class RoutingServiceTests
         using var db = CreateDb(dbName);
         var area = new Area { Name = "IT" };
         db.Areas.Add(area);
-        var client = new ApplicationClient { ClientId = "cli", Audience = "aud", AllowedReturnUrlsJson = "[\"https://app/\"]" };
+        var client = new ApplicationClient
+        {
+            ClientId = "cli",
+            Audience = "aud",
+            AllowedReturnUrlsJson = "[\"https://app/\"]",
+            DefaultLandingPage = "/admin-home"
+        };
         db.ApplicationClients.Add(client);
         db.UserAreas.Add(new UserArea { UserId = "u2", AreaId = area.Id });
         var route = new AreaRoute { AreaId = area.Id, ClientId = client.Id, IsActive = true, Priority = 1 };
@@ -70,6 +76,6 @@ public class RoutingServiceTests
         var res = await svc2.ResolveForUserAsync(user.Id);
         Assert.NotNull(res);
         Assert.Equal("cli", res!.Value.ClientId);
-        Assert.Equal("https://app/", res.Value.ReturnUrl);
+        Assert.Equal("https://app/admin-home", res.Value.ReturnUrl);
     }
 }

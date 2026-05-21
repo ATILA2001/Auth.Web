@@ -30,7 +30,7 @@ public class ClientAdminServiceTests
         var provider = services.BuildServiceProvider();
 
         var admin = provider.GetRequiredService<IAdminClientService>();
-        var id = await admin.CreateClientAsync("cli1", "aud1", new[] { "https://app/a", "https://app/b" });
+        var id = await admin.CreateClientAsync("cli1", "aud1", new[] { "https://app/a", "https://app/b" }, "/inicio");
 
         Assert.True(id > 0);
         var list = await admin.GetClientsAsync();
@@ -38,6 +38,7 @@ public class ClientAdminServiceTests
         var dto = list.Single();
         Assert.Equal("cli1", dto.ClientId);
         Assert.Contains("https://app/a", dto.AllowedReturnUrls);
+        Assert.Equal("/inicio", dto.DefaultLandingPage);
     }
 
     [Fact]

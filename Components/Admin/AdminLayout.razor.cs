@@ -120,13 +120,13 @@ public partial class AdminLayout : LayoutComponentBase, IDisposable
 
     private void OnClientChanged(object? value)
     {
-        var id = value as int?;
+        var id = value is int selectedId ? selectedId : selectedClientId;
         var client = clients.FirstOrDefault(c => c.Id == id);
-        var url = client?.AllowedReturnUrls?.FirstOrDefault();
 
-        if (!string.IsNullOrWhiteSpace(url))
+        if (!string.IsNullOrWhiteSpace(client?.ClientId))
         {
-            NavigationManager.NavigateTo(url!, true);
+            var target = $"/connect/switch-app?clientId={Uri.EscapeDataString(client.ClientId)}";
+            NavigationManager.NavigateTo(target, true);
         }
     }
 
