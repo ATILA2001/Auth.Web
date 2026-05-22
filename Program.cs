@@ -74,7 +74,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 
 builder.Services.AddDataProtection()
     .PersistKeysToDbContext<AuthDbContext>()
-    .SetApplicationName(dataProtectionAppName);
+    .SetApplicationName(dataProtectionAppName ?? string.Empty);
 
 builder.Services.AddAuthentication(options =>
     {

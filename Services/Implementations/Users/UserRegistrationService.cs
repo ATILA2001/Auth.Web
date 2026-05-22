@@ -42,6 +42,12 @@ public sealed class UserRegistrationService : IUserRegistrationService
             return RegisterUserResult.AlreadyExists("El CUIL ya está registrado.");
         }
 
+        existing = await _userManager.FindByEmailAsync(email);
+        if (existing is not null)
+        {
+            return RegisterUserResult.AlreadyExists("El correo ya est\u00e1 registrado.");
+        }
+
         var existsInAd = await _adAuth.ExistsByEmailAsync(email);
         if (!existsInAd)
         {

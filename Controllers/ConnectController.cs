@@ -89,10 +89,9 @@ public class ConnectController : ControllerBase
 
     [Authorize]
     [HttpGet("logout")]
-    public async Task<IActionResult> Logout()
+    public IActionResult Logout()
     {
-        await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
-        return Redirect("/Account/Login");
+        return StatusCode(StatusCodes.Status405MethodNotAllowed);
     }
 
     [Authorize]

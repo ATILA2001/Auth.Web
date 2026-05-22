@@ -22,23 +22,25 @@ namespace Auth.Web.Security
 
         public string Protect(AuthenticationTicket data)
         {
-            if (data == null)
-            {
-                return null;
-            }
+            ArgumentNullException.ThrowIfNull(data);
 
             var dto = SharedCookieTicketDto.FromAspNetCore(data);
+            if (dto is null)
+            {
+                return string.Empty;
+            }
+
             var serialized = Serialize(dto);
             var protectedBytes = _protector.Protect(serialized);
             return Base64UrlEncode(protectedBytes);
         }
 
-        public string Protect(AuthenticationTicket data, string purpose)
+        public string Protect(AuthenticationTicket data, string? purpose)
         {
             return Protect(data);
         }
 
-        public AuthenticationTicket Unprotect(string protectedText)
+        public AuthenticationTicket? Unprotect(string? protectedText)
         {
             if (string.IsNullOrWhiteSpace(protectedText))
             {
@@ -58,7 +60,7 @@ namespace Auth.Web.Security
             }
         }
 
-        public AuthenticationTicket Unprotect(string protectedText, string purpose)
+        public AuthenticationTicket? Unprotect(string? protectedText, string? purpose)
         {
             return Unprotect(protectedText);
         }
@@ -72,7 +74,7 @@ namespace Auth.Web.Security
             }
         }
 
-        private static SharedCookieTicketDto Deserialize(byte[] data)
+        private static SharedCookieTicketDto? Deserialize(byte[] data)
         {
             using (var ms = new MemoryStream(data))
             {

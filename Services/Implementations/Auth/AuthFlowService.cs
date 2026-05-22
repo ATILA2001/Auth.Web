@@ -188,7 +188,7 @@ public sealed class AuthFlowService : IAuthFlowService
                 areaIdsOverride: testAreaId.HasValue ? new[] { testAreaId.Value } : null);
             var adminClaims = _permissionsAssembler.BuildClaims(user, effectiveRoles, adminPermissions, Array.Empty<string>());
             adminClaims = MergeTestUserClaims(adminClaims, testUser);
-            var adminRoutes = await _routingService.ResolveAllForUserAsync(user.Id);
+            var adminRoutes = await _routingService.ResolveAllForUserAsync(user.Id) ?? Array.Empty<(string ClientId, string ReturnUrl)>();
             var adminAppIds = adminRoutes.Select(r => r.ClientId).ToList();
             await SignInAsync(user, adminClaims, adUserInfo?.EmployeeId, adminAppIds);
 
@@ -197,24 +197,24 @@ public sealed class AuthFlowService : IAuthFlowService
 
         if (hasClientRequest)
         {
-            client = await _clientService.GetAsync(dto.ClientId);
+            client = await _clientService.GetAsync(dto.ClientId!);
             if (client is null)
             {
                 _logger.LogWarning("Login: cliente '{ClientId}' no encontrado en DB.", dto.ClientId);
                 return await FinalizeResultAsync(BuildLoginRedirect("invalid_client", "Aplicación destino inválida.", dto.ReturnUrl, dto.ClientId));
             }
-            if (!_clientService.IsReturnUrlAllowed(client, dto.ReturnUrl))
+            if (!_clientService.IsReturnUrlAllowed(client, dto.ReturnUrl!))
             {
                 _logger.LogWarning("Login: returnUrl '{ReturnUrl}' no permitida para cliente '{ClientId}'. AllowedUrls={Allowed}",
                     dto.ReturnUrl, dto.ClientId, client.AllowedReturnUrlsJson);
                 return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "URL de retorno inválida.", dto.ReturnUrl, dto.ClientId));
             }
-            clientId = dto.ClientId;
-            returnUrl = dto.ReturnUrl;
+            clientId = dto.ClientId!;
+            returnUrl = dto.ReturnUrl!;
         }
         else
         {
-            var allRoutes = await _routingService.ResolveAllForUserAsync(user.Id);
+            var allRoutes = await _routingService.ResolveAllForUserAsync(user.Id) ?? Array.Empty<(string ClientId, string ReturnUrl)>();
 
             if (allRoutes.Count == 0)
             {
@@ -248,12 +248,12 @@ public sealed class AuthFlowService : IAuthFlowService
 
             if (hasReturnUrl)
             {
-                if (!_clientService.IsReturnUrlAllowed(client, dto.ReturnUrl))
+                if (!_clientService.IsReturnUrlAllowed(client, dto.ReturnUrl!))
                 {
                     return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "URL de retorno inválida.", dto.ReturnUrl, dto.ClientId));
                 }
 
-                returnUrl = dto.ReturnUrl;
+                returnUrl = dto.ReturnUrl!;
             }
             else
             {
@@ -275,10 +275,10 @@ public sealed class AuthFlowService : IAuthFlowService
         claimsModel = MergeTestUserClaims(claimsModel, testUser);
         var activeAppId = GetActiveAppId(claimsModel, clientId);
 
-        var allAvailableApps = await _routingService.ResolveAllForUserAsync(user.Id);
+        var allAvailableApps = await _routingService.ResolveAllForUserAsync(user.Id) ?? Array.Empty<(string ClientId, string ReturnUrl)>();
         await SignInAsync(user, claimsModel, adUserInfo?.EmployeeId, allAvailableApps.Select(r => r.ClientId).ToList());
 
-        returnUrl = _clientService.ResolveReturnUrlForCurrentEnvironment(client, returnUrl, activeAppId);
+        returnUrl = _clientService.ResolveReturnUrlForCurrentEnvironment(client!, returnUrl, activeAppId);
 
         _logger.LogInformation("Login exitoso: user='{User}' app='{App}' clientId='{ClientId}' audience='{Audience}' → redirectUrl='{RedirectUrl}' permsVersion={Version}",
             user.UserName, activeAppId, client?.ClientId, client?.Audience, returnUrl, rawPermissions.Version);

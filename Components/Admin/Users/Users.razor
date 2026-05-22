@@ -34,7 +34,7 @@
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Roles" Filterable="false" Width="180px">
                         <Template Context="u">@string.Join(", ", u.Roles)</Template>
                         <EditTemplate Context="u">
-                            <RadzenDropDown TValue="string?"
+                            <RadzenDropDown TValue="string"
                                             Data="@AllRoles"
                                             TextProperty="Name"
                                             ValueProperty="Name"

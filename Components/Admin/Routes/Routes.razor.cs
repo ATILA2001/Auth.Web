@@ -152,7 +152,7 @@ public partial class Routes : ComponentBase
             IsActive = true,
             AreaName = areas.FirstOrDefault()?.Name,
             ApplicationName = firstClient?.Audience,
-            ClientIdentifier = firstClient?.ClientId
+            ClientIdentifier = firstClient?.ClientId ?? string.Empty
         };
         _routesToInsert.Add(newRoute);
         await grid.InsertRow(newRoute);
@@ -232,8 +232,8 @@ public partial class Routes : ComponentBase
                     : "Sin asignar";
 
                 route.ClientIdentifier = _vm.SelectedClientId.HasValue
-                    ? clients.FirstOrDefault(c => c.Id == _vm.SelectedClientId.Value)?.ClientId
-                    : null;
+                    ? clients.FirstOrDefault(c => c.Id == _vm.SelectedClientId.Value)?.ClientId ?? string.Empty
+                    : string.Empty;
 
                 if (result.CreatedId.HasValue)
                 {
@@ -312,8 +312,8 @@ public partial class Routes : ComponentBase
                     : "Sin asignar";
 
                 route.ClientIdentifier = _vm.SelectedClientId.HasValue
-                    ? clients.FirstOrDefault(c => c.Id == _vm.SelectedClientId.Value)?.ClientId
-                    : null;
+                    ? clients.FirstOrDefault(c => c.Id == _vm.SelectedClientId.Value)?.ClientId ?? string.Empty
+                    : string.Empty;
 
                 _routesToUpdate.Remove(route);
                 _areaBuffer.Remove(route);
