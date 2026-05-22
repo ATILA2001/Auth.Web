@@ -19,19 +19,19 @@ namespace SharedCookie
     internal sealed class SharedCookieTicketDto
     {
         [DataMember(Order = 1)]
-        public List<ClaimDto> Claims { get; set; }
+        public List<ClaimDto> Claims { get; set; } = new();
 
         [DataMember(Order = 2)]
-        public string AuthenticationType { get; set; }
+        public string? AuthenticationType { get; set; }
 
         [DataMember(Order = 3)]
-        public string NameClaimType { get; set; }
+        public string? NameClaimType { get; set; }
 
         [DataMember(Order = 4)]
-        public string RoleClaimType { get; set; }
+        public string? RoleClaimType { get; set; }
 
         [DataMember(Order = 5)]
-        public Dictionary<string, string> Properties { get; set; }
+        public Dictionary<string, string?> Properties { get; set; } = new();
 
         [DataMember(Order = 6)]
         public DateTimeOffset? IssuedUtc { get; set; }
@@ -46,9 +46,9 @@ namespace SharedCookie
         public bool? AllowRefresh { get; set; }
 
         [DataMember(Order = 10)]
-        public string RedirectUri { get; set; }
+        public string? RedirectUri { get; set; }
 
-        public static SharedCookieTicketDto FromAspNetCore(AuthenticationTicket ticket)
+        public static SharedCookieTicketDto? FromAspNetCore(AuthenticationTicket ticket)
         {
             var identity = ticket.Principal.Identity as ClaimsIdentity;
             if (identity == null)
@@ -62,7 +62,7 @@ namespace SharedCookie
                 NameClaimType = identity.NameClaimType,
                 RoleClaimType = identity.RoleClaimType,
                 Claims = identity.Claims.Select(ClaimDto.FromClaim).ToList(),
-                Properties = new Dictionary<string, string>(ticket.Properties.Items ?? new Dictionary<string, string>()),
+                Properties = new Dictionary<string, string?>(ticket.Properties.Items),
                 IssuedUtc = ticket.Properties.IssuedUtc,
                 ExpiresUtc = ticket.Properties.ExpiresUtc,
                 IsPersistent = ticket.Properties.IsPersistent,
@@ -79,14 +79,14 @@ namespace SharedCookie
                 NameClaimType ?? ClaimTypes.Name,
                 RoleClaimType ?? ClaimTypes.Role);
 
-            var props = new AuthenticationProperties(Properties ?? new Dictionary<string, string>());
+            var props = new AuthenticationProperties(Properties);
             props.IssuedUtc = IssuedUtc;
             props.ExpiresUtc = ExpiresUtc;
             props.IsPersistent = IsPersistent;
             props.AllowRefresh = AllowRefresh;
             props.RedirectUri = RedirectUri;
 
-            return new AuthenticationTicket(new ClaimsPrincipal(identity), props, AuthenticationType);
+            return new AuthenticationTicket(new ClaimsPrincipal(identity), props, AuthenticationType ?? string.Empty);
         }
     }
 
@@ -94,19 +94,19 @@ namespace SharedCookie
     internal sealed class ClaimDto
     {
         [DataMember(Order = 1)]
-        public string Type { get; set; }
+        public string Type { get; set; } = string.Empty;
 
         [DataMember(Order = 2)]
-        public string Value { get; set; }
+        public string Value { get; set; } = string.Empty;
 
         [DataMember(Order = 3)]
-        public string ValueType { get; set; }
+        public string ValueType { get; set; } = ClaimValueTypes.String;
 
         [DataMember(Order = 4)]
-        public string Issuer { get; set; }
+        public string Issuer { get; set; } = ClaimsIdentity.DefaultIssuer;
 
         [DataMember(Order = 5)]
-        public string OriginalIssuer { get; set; }
+        public string OriginalIssuer { get; set; } = ClaimsIdentity.DefaultIssuer;
 
         public static ClaimDto FromClaim(Claim claim)
         {
