@@ -55,7 +55,16 @@ public class AuthFlowServiceTests
         var featureOptions = Microsoft.Extensions.Options.Options.Create(new Auth.Web.Configuration.FeatureOptions { EnableTestUsers = true });
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AuthFlowService>.Instance;
         var userStore = new Mock<Microsoft.AspNetCore.Identity.IUserStore<ApplicationUser>>();
-        var userManager = new Mock<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>(userStore.Object, null, null, null, null, null, null, null, null);
+        var userManager = new Mock<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>(
+            userStore.Object,
+            Microsoft.Extensions.Options.Options.Create(new Microsoft.AspNetCore.Identity.IdentityOptions()),
+            Mock.Of<Microsoft.AspNetCore.Identity.IPasswordHasher<ApplicationUser>>(),
+            Array.Empty<Microsoft.AspNetCore.Identity.IUserValidator<ApplicationUser>>(),
+            Array.Empty<Microsoft.AspNetCore.Identity.IPasswordValidator<ApplicationUser>>(),
+            Mock.Of<Microsoft.AspNetCore.Identity.ILookupNormalizer>(),
+            new Microsoft.AspNetCore.Identity.IdentityErrorDescriber(),
+            Mock.Of<IServiceProvider>(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>.Instance);
         return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, provisioning.Object, assembler, adminSignIn.Object, authService.Object, claimsFactory.Object, httpContextAccessor, options, featureOptions, userManager.Object, logger);
     }
 
@@ -91,6 +100,9 @@ public class AuthFlowServiceTests
         userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
 
         var adminSignIn = new Mock<IAdminSignInService>();
+        var routing = new Mock<IRoutingService>();
+        routing.Setup(x => x.ResolveAllForUserAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<(string ClientId, string ReturnUrl)> { ("SAI", "https://app/admin") });
 
         var perms = new Mock<IPermissionService>();
         perms.Setup(x => x.GetAsync(userName, It.IsAny<int?>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
@@ -98,10 +110,10 @@ public class AuthFlowServiceTests
 
         var authService = new Mock<IAuthenticationService>();
 
-        var svc = CreateService(ad: ad, userManagement: userManagement, adminSignIn: adminSignIn, perms: perms, authService: authService);
+        var svc = CreateService(ad: ad, userManagement: userManagement, routing: routing, adminSignIn: adminSignIn, perms: perms, authService: authService);
         var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = userName, Password = "pwd" });
+        Assert.True(outcome.ShowAppPicker);
         Assert.False(outcome.SignInAdmin);
-        Assert.Equal("/admin", outcome.RedirectUrl);
         Assert.True(string.IsNullOrWhiteSpace(outcome.AdminUserId));
         adminSignIn.Verify(x => x.SignInAsync(user.Id, It.IsAny<CancellationToken>()), Times.Never);
         authService.Verify(x => x.SignInAsync(It.IsAny<HttpContext>(), IdentityConstants.ApplicationScheme, It.IsAny<System.Security.Claims.ClaimsPrincipal>(), It.IsAny<AuthenticationProperties>()), Times.Once);
@@ -120,12 +132,15 @@ public class AuthFlowServiceTests
         userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Usuario" });
 
         var routing = new Mock<IRoutingService>();
-        routing.Setup(x => x.ResolveForUserAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(("clientA", "https://app/landing"));
+        routing.Setup(x => x.ResolveAllForUserAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<(string ClientId, string ReturnUrl)> { ("clientA", "https://app/landing") });
 
         var clientSvc = new Mock<IClientService>();
         var client = new ApplicationClient { Audience = "audA", ClientId = "clientA" };
         clientSvc.Setup(x => x.GetAsync("clientA")).ReturnsAsync(client);
         clientSvc.Setup(x => x.IsReturnUrlAllowed(client, "https://app/landing")).Returns(true);
+        clientSvc.Setup(x => x.ResolveReturnUrlForCurrentEnvironment(client, "https://app/landing", It.IsAny<string?>()))
+            .Returns("https://app/landing");
 
         var perms = new Mock<IPermissionService>();
         perms.Setup(x => x.GetAsync(userName, It.IsAny<int?>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
@@ -155,7 +170,8 @@ public class AuthFlowServiceTests
         userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Usuario" });
 
         var routing = new Mock<IRoutingService>();
-        routing.Setup(x => x.ResolveForUserAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(((string ClientId, string ReturnUrl)?)null);
+        routing.Setup(x => x.ResolveAllForUserAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<(string ClientId, string ReturnUrl)>());
 
         var svc = CreateService(ad: ad, routing: routing, userManagement: userManagement);
         var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = userName, Password = "pwd" });
@@ -175,7 +191,8 @@ public class AuthFlowServiceTests
         userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Usuario" });
 
         var routing = new Mock<IRoutingService>();
-        routing.Setup(x => x.ResolveForUserAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(("clientB", "https://bad/forbidden"));
+        routing.Setup(x => x.ResolveAllForUserAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<(string ClientId, string ReturnUrl)> { ("clientB", "https://bad/forbidden") });
 
         var clientSvc = new Mock<IClientService>();
         var client = new ApplicationClient { Audience = "audB", ClientId = "clientB" };
