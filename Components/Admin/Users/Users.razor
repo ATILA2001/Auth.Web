@@ -28,7 +28,7 @@
                     </RadzenStack>
                 </HeaderTemplate>
                 <Columns>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="FullName" Title="Usuario" Width="240px" />
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="FullName" Title="Usuario" Width="240px" Frozen="true" FrozenPosition="FrozenColumnPosition.Left" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="UserName" Title="CUIL" Width="140px" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="Email" Title="Correo" Width="280px" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Title="Roles" Filterable="false" Width="180px">
@@ -76,7 +76,7 @@
                         </EditTemplate>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="PermissionVersion" Title="Ver. Permisos" Width="120px" TextAlign="TextAlign.Center" Filterable="false" />
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Context="u" Filterable="false" Title="Acciones" Width="148px" TextAlign="TextAlign.Center">
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Context="u" Filterable="false" Title="Acciones" Width="148px" TextAlign="TextAlign.Center" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
                         <Template Context="u">
                             <RadzenButton Icon="edit" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar roles/áreas" AriaLabel="Editar" Click="@(args => EditRow(u))" Disabled="@(IsLoading || IsSaving)" class="rz-mr-1" />
                             <RadzenButton Icon="manage_accounts" ButtonStyle="ButtonStyle.Info" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Overrides" AriaLabel="Overrides" Click="@(args => OpenUserOverridesDialog(u))" Disabled="@(IsLoading || IsSaving)" class="rz-mr-1" />
