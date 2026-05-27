@@ -76,9 +76,24 @@ public sealed class PageAdminRepository : IPageAdminRepository
             .ToDictionary(x => x.Key!.Value, x => x.Count);
     }
 
+    public async Task<IReadOnlyDictionary<int, int>> GetPageAreaCountsAsync(CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var counts = await db.AreaPagePermissions.AsNoTracking()
+            .Where(a => a.PageId.HasValue)
+            .GroupBy(a => a.PageId)
+            .Select(g => new { g.Key, Count = g.Select(a => a.AreaId).Distinct().Count() })
+            .ToListAsync(ct);
+
+        return counts
+            .Where(x => x.Key.HasValue)
+            .ToDictionary(x => x.Key!.Value, x => x.Count);
+    }
+
     public async Task<int> GetPagePermissionCountAsync(int pageId, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         return await db.AreaPagePermissions.CountAsync(a => a.PageId == pageId, ct);
     }
+
 }

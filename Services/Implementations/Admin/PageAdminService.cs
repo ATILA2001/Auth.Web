@@ -22,7 +22,11 @@ public sealed class PageAdminService : IAdminPageService
             return Array.Empty<PageAdminDto>();
         }
         var counts = await _repository.GetPagePermissionCountsAsync(cancellationToken);
-        return pages.Select(p => MapPage(p, counts.TryGetValue(p.Id, out var count) ? count : 0)).ToList();
+        var areaCounts = await _repository.GetPageAreaCountsAsync(cancellationToken);
+        return pages.Select(p => MapPage(
+            p,
+            counts.TryGetValue(p.Id, out var count) ? count : 0,
+            areaCounts.TryGetValue(p.Id, out var areaCount) ? areaCount : 0)).ToList();
     }
 
     public async Task<PageAdminDto?> GetPageByIdAsync(int pageId, CancellationToken cancellationToken = default)
@@ -33,7 +37,11 @@ public sealed class PageAdminService : IAdminPageService
             return null;
         }
         var count = await _repository.GetPagePermissionCountAsync(pageId, cancellationToken);
-        return MapPage(page, count);
+        var areaCounts = await _repository.GetPageAreaCountsAsync(cancellationToken);
+        return MapPage(
+            page,
+            count,
+            areaCounts.TryGetValue(pageId, out var areaCount) ? areaCount : 0);
     }
 
     public async Task<int> CreatePageAsync(string name, string url, int? clientId, CancellationToken cancellationToken = default)
@@ -49,13 +57,14 @@ public sealed class PageAdminService : IAdminPageService
     public Task DeletePageAsync(int pageId, CancellationToken cancellationToken = default)
         => _repository.DeleteAsync(pageId, cancellationToken);
 
-    private static PageAdminDto MapPage(Page page, int permissionCount) => new()
+    private static PageAdminDto MapPage(Page page, int permissionCount, int areaCount) => new()
     {
         Id = page.Id,
         Name = page.Name,
         Url = page.Url,
         ClientId = page.ClientId,
         ClientName = page.Client?.ClientId ?? string.Empty,
-        PermissionCount = permissionCount
+        PermissionCount = permissionCount,
+        AreaCount = areaCount
     };
 }

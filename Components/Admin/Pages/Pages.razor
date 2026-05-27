@@ -50,7 +50,18 @@
                                             AllowClear="true" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="PageAdminDto" Property="PermissionCount" Title="Permisos" />
+                    <RadzenDataGridColumn TItem="PageAdminDto" Title="Áreas con acceso" Filterable="false" Sortable="false" Width="160px">
+                        <Template Context="p">
+                            @if (p.PermissionCount == 0)
+                            {
+                                <span>Sin permisos</span>
+                            }
+                            else
+                            {
+                                @FormatAreaCount(p)
+                            }
+                        </Template>
+                    </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="PageAdminDto" Context="p" Filterable="false" Title="Acciones" Width="112px" TextAlign="TextAlign.Center">
                         <Template Context="p">
                             <RadzenButton Icon="edit" ButtonSize="ButtonSize.Small" ButtonType="ButtonType.Button" Title="Editar" AriaLabel="Editar" Click="@(args => EditRow(p))" @onclick:stopPropagation class="rz-mr-2" Disabled="@(IsLoading || IsSaving)" />

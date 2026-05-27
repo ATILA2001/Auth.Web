@@ -8,4 +8,5 @@ public sealed class PageAdminDto
     public int? ClientId { get; set; }
     public string ClientName { get; set; } = string.Empty;
     public int PermissionCount { get; set; }
+    public int AreaCount { get; set; }
 }

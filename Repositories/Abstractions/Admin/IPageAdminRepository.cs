@@ -10,5 +10,6 @@ public interface IPageAdminRepository
     Task<bool> UpdateAsync(int id, string name, string url, int? clientId, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
     Task<IReadOnlyDictionary<int, int>> GetPagePermissionCountsAsync(CancellationToken ct = default);
+    Task<IReadOnlyDictionary<int, int>> GetPageAreaCountsAsync(CancellationToken ct = default);
     Task<int> GetPagePermissionCountAsync(int pageId, CancellationToken ct = default);
 }

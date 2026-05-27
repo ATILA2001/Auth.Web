@@ -132,7 +132,7 @@ public partial class Pages : ComponentBase
         }
 
         _vm.BeginCreate();
-        var newPage = new PageAdminDto { Id = 0, Name = string.Empty, Url = string.Empty, PermissionCount = 0 };
+        var newPage = new PageAdminDto { Id = 0, Name = string.Empty, Url = string.Empty, PermissionCount = 0, AreaCount = 0 };
         _pagesToInsert.Add(newPage);
         pages.Insert(0, newPage);
         await grid.InsertRow(newPage);
@@ -328,6 +328,11 @@ public partial class Pages : ComponentBase
         }
 
         grid.Reset(true);
+    }
+
+    private static string FormatAreaCount(PageAdminDto page)
+    {
+        return page.AreaCount == 1 ? "1 área" : $"{page.AreaCount} áreas";
     }
 
     private void NotifyUser(PagesVmResult result)

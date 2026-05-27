@@ -60,7 +60,7 @@ public sealed class PagesViewModel
 
     public void BeginCreate()
     {
-        EditModel = new PageAdminDto { Id = 0, Name = string.Empty, Url = string.Empty, PermissionCount = 0 };
+        EditModel = new PageAdminDto { Id = 0, Name = string.Empty, Url = string.Empty, PermissionCount = 0, AreaCount = 0 };
         EditName = string.Empty;
         EditUrl = string.Empty;
         EditClientId = null;
@@ -70,7 +70,15 @@ public sealed class PagesViewModel
     public void BeginEdit(PageAdminDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
-        EditModel = new PageAdminDto { Id = dto.Id, Name = dto.Name, Url = dto.Url, ClientId = dto.ClientId, PermissionCount = dto.PermissionCount };
+        EditModel = new PageAdminDto
+        {
+            Id = dto.Id,
+            Name = dto.Name,
+            Url = dto.Url,
+            ClientId = dto.ClientId,
+            PermissionCount = dto.PermissionCount,
+            AreaCount = dto.AreaCount,
+        };
         EditName = dto.Name ?? string.Empty;
         EditUrl = dto.Url ?? string.Empty;
         EditClientId = dto.ClientId;
