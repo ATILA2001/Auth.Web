@@ -14,13 +14,12 @@
     <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="width: 100%;" />
 }
 
-<RadzenRow>
-    <RadzenColumn Size="12" SizeMd="10" SizeLg="10" OffsetMd="1" OffsetLg="1">
-        <RadzenCard Class="rz-shadow-3 rz-p-3">
-            <RadzenDataGrid TItem="ApplicationClientAdminDto" Data="@clients" @ref="grid" AllowPaging="true" PageSize="10" AllowFiltering="true" AllowColumnResize="true"
+<RadzenDataGrid TItem="ApplicationClientAdminDto" Data="@clients" @ref="grid" IsBusy="@IsLoading" AllowPaging="false" AllowVirtualization="true" AllowFiltering="true" AllowColumnResize="true"
                             AllowSorting="true" EditMode="DataGridEditMode.Single" RowCreate="@OnRowCreate" RowUpdate="@OnRowUpdate"
-                            FilterMode="FilterMode.CheckBoxList" GridLines="DataGridGridLines.Vertical" Style="height: 60vh"
-                            AllowColumnPicking="false" EmptyText="No hay registros para mostrar.">
+                            FilterMode="FilterMode.CheckBoxList" ClearFilterText="Limpiar" ApplyFilterText="Aplicar"
+                            GridLines="DataGridGridLines.Both" AllowColumnPicking="false" ColumnsText="Columnas"
+                             ColumnsShowingText="columnas mostradas" AllColumnsText="Todas"
+                            EmptyText="No hay registros para mostrar.">
                 <HeaderTemplate>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0.5rem">
                         <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle" Text="Agregar" Click="@BeginCreate" Disabled="@(IsLoading || IsSaving || _clientsToInsert.Count > 0)" />
@@ -61,7 +60,4 @@
                         </EditTemplate>
                     </RadzenDataGridColumn>
                 </Columns>
-            </RadzenDataGrid>
-        </RadzenCard>
-    </RadzenColumn>
-</RadzenRow>
+</RadzenDataGrid>
