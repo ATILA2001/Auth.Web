@@ -20,13 +20,25 @@
                          AlignItems="AlignItems.Center"
                          Class="rz-ml-auto"
                          Gap="0.75rem">
-                <RadzenDropDown TValue="int?"
-                                Data="@clients"
-                                TextProperty="ClientId"
-                                ValueProperty="Id"
-                                @bind-Value="selectedClientId"
-                                Placeholder="Aplicaciones"
-                                Change="@OnClientChanged" />
+                <div style="position: relative; display: inline-block;">
+                    <RadzenButton Text="Aplicaciones"
+                                  Icon="grid_view"
+                                  ButtonStyle="ButtonStyle.Secondary"
+                                  Click="@ToggleAppSwitcher" />
+                    @if (_appSwitcherOpen)
+                    {
+                        <div style="position: absolute; right: 0; top: calc(100% + 4px); min-width: 220px; z-index: 1000;
+                                    background: var(--rz-base-background-color); border: 1px solid rgba(255,255,255,.15);
+                                    border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,.5); overflow: hidden;">
+                            @foreach (var client in clients)
+                            {
+                                <a href="@($"/connect/switch-app?clientId={Uri.EscapeDataString(client.ClientId)}")"
+                                   style="display: block; padding: 10px 16px; text-decoration: none; color: var(--rz-text-color);"
+                                   @onclick="@(() => _appSwitcherOpen = false)">@GetAppDisplayName(client.ClientId)</a>
+                            }
+                        </div>
+                    }
+                </div>
 
                 @if (!string.IsNullOrWhiteSpace(CurrentUserName))
                 {

@@ -13,15 +13,12 @@ public partial class AdminLayout : LayoutComponentBase, IDisposable
     bool sidebarExpanded = true;
 
     private List<ApplicationClientAdminDto> clients = new();
-    private int? selectedClientId;
+    private bool _appSwitcherOpen;
     private string? CurrentUserName = string.Empty;
     private string? _antiforgeryFieldName;
     private string? _antiforgeryToken;
     private bool _canSubmitLogout;
     private PersistingComponentStateSubscription? _subscription;
-
-    [Inject]
-    private NavigationManager NavigationManager { get; set; } = default!;
 
     [Inject]
     private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
@@ -53,7 +50,8 @@ public partial class AdminLayout : LayoutComponentBase, IDisposable
             }
 
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            CurrentUserName = authState.User.Identity?.Name ?? string.Empty;
+            var user = authState.User;
+            CurrentUserName = user.Identity?.Name ?? string.Empty;
 
             clients = (await AdminClientService.GetClientsAsync()).ToList();
         }
@@ -118,17 +116,14 @@ public partial class AdminLayout : LayoutComponentBase, IDisposable
         _canSubmitLogout = !string.IsNullOrEmpty(_antiforgeryFieldName) && !string.IsNullOrEmpty(_antiforgeryToken);
     }
 
-    private void OnClientChanged(object? value)
-    {
-        var id = value is int selectedId ? selectedId : selectedClientId;
-        var client = clients.FirstOrDefault(c => c.Id == id);
+    private void ToggleAppSwitcher() => _appSwitcherOpen = !_appSwitcherOpen;
 
-        if (!string.IsNullOrWhiteSpace(client?.ClientId))
-        {
-            var target = $"/connect/switch-app?clientId={Uri.EscapeDataString(client.ClientId)}";
-            NavigationManager.NavigateTo(target, true);
-        }
-    }
+    private static string GetAppDisplayName(string clientId) => clientId switch
+    {
+        "sai" => "Sistema de Administración de Inventario",
+        "PlaniLocal" => "Administración Financiera",
+        _ => clientId
+    };
 
     public void Dispose()
         => _subscription?.Dispose();
