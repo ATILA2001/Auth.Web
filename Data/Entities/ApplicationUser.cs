@@ -7,4 +7,6 @@ public class ApplicationUser : IdentityUser
     public string? Nombre { get; set; }
 
     public int PermissionVersion { get; set; } = 1;
+
+    public bool IsActive { get; set; }
 }

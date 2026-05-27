@@ -124,4 +124,33 @@ public class UserAdminServiceTests
         Assert.Equal(area2Id, userAreas.Single().AreaId);
         Assert.DoesNotContain(userAreas, ua => ua.AreaId == area1Id);
     }
+
+    [Fact]
+    public async Task UpdateUserRolesAndAreasAsync_Updates_IsActive()
+    {
+        var factory = CreateFactory();
+        await using (var seed = factory.CreateDbContext())
+        {
+            seed.Users.Add(new ApplicationUser { Id = "user-2", UserName = "user2", Email = "user2@test", IsActive = true });
+            await seed.SaveChangesAsync();
+        }
+
+        var umMock = CreateUserManagerMock();
+        var userRef = new ApplicationUser { Id = "user-2", UserName = "user2", Email = "user2@test", IsActive = true };
+        umMock.Setup(m => m.FindByIdAsync("user-2")).ReturnsAsync(userRef);
+        umMock.Setup(m => m.UpdateAsync(It.Is<ApplicationUser>(u => u.Id == "user-2" && !u.IsActive)))
+            .ReturnsAsync(IdentityResult.Success);
+        umMock.Setup(m => m.GetRolesAsync(It.Is<ApplicationUser>(u => u.Id == "user-2"))).ReturnsAsync(new List<string> { "RoleA" });
+
+        IUserAdminRepository repo = new UserAdminRepository(factory);
+        var auditMock = new Mock<IPermissionAuditService>();
+        auditMock.Setup(a => a.IncrementUserPermissionVersionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        var routingMock = new Mock<IRoutingRepository>();
+        IAdminUserService svc = new UserAdminService(repo, routingMock.Object, umMock.Object, auditMock.Object);
+
+        await svc.UpdateUserRolesAndAreasAsync("user-2", new[] { "RoleA" }, Array.Empty<int>(), isActive: false);
+
+        Assert.False(userRef.IsActive);
+        umMock.Verify(m => m.UpdateAsync(It.Is<ApplicationUser>(u => u.Id == "user-2" && !u.IsActive)), Times.Once);
+    }
 }

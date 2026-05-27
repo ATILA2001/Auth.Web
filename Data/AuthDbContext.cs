@@ -36,6 +36,10 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
     {
         base.OnModelCreating(builder);
 
+        builder.Entity<ApplicationUser>()
+            .Property(x => x.IsActive)
+            .HasDefaultValue(false);
+
         builder.Entity<RolePagePermission>()
             .HasIndex(x => new { x.RoleId, x.PageId, x.ActionPermissionId })
             .IsUnique();

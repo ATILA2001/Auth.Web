@@ -107,10 +107,23 @@ public sealed class UserAdminService : IAdminUserService
         return MapUser(user, roleList, areaIds, areaMap, new List<string>());
     }
 
-    public async Task UpdateUserRolesAndAreasAsync(string userId, IEnumerable<string> roles, IEnumerable<int> areaIds, CancellationToken cancellationToken = default)
+    public async Task UpdateUserRolesAndAreasAsync(string userId, IEnumerable<string> roles, IEnumerable<int> areaIds, bool? isActive = null, CancellationToken cancellationToken = default)
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null) return;
+
+        if (isActive.HasValue)
+        {
+            user.IsActive = isActive.Value;
+            var activeResult = await _userManager.UpdateAsync(user);
+            if (!activeResult.Succeeded)
+            {
+                var errors = string.Join("; ", activeResult.Errors.Select(e => e.Description));
+                throw new InvalidOperationException(string.IsNullOrWhiteSpace(errors)
+                    ? "No se pudo actualizar el estado del usuario."
+                    : errors);
+            }
+        }
 
         var currentRoles = await _userManager.GetRolesAsync(user);
         var desiredRoles = roles.Distinct().ToArray();
@@ -174,7 +187,8 @@ public sealed class UserAdminService : IAdminUserService
             Areas = areaNames,
             AreaIds = areaIds,
             ClientIds = clientIds,
-            PermissionVersion = user.PermissionVersion
+            PermissionVersion = user.PermissionVersion,
+            IsActive = user.IsActive
         };
     }
 }

@@ -11,4 +11,5 @@ public sealed class UserAdminDto
     public IReadOnlyCollection<int> AreaIds { get; set; } = Array.Empty<int>();
     public IReadOnlyCollection<string> ClientIds { get; set; } = Array.Empty<string>();
     public int PermissionVersion { get; set; }
+    public bool IsActive { get; set; } = true;
 }

@@ -159,6 +159,11 @@ public sealed class AuthFlowService : IAuthFlowService
         var provisionKey = adUserInfo?.UserName ?? dto.UserNameOrEmail;
         user ??= await _userProvisioningService.EnsureUserAsync(provisionKey, adUserInfo?.Email, adUserInfo?.DisplayName);
 
+        if (!user.IsActive)
+        {
+            return await FinalizeResultAsync(BuildLoginRedirect("user_disabled", "Usuario inactivo.", dto.ReturnUrl, dto.ClientId));
+        }
+
         var rolesList = await _userManagement.GetRolesAsync(user);
         var roles = rolesList.ToArray();
         var effectiveRoles = roles

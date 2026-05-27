@@ -73,6 +73,14 @@
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="IsActive" Title="Activo" Width="110px" TextAlign="TextAlign.Center">
+                        <Template Context="u">
+                            @(u.IsActive ? "Sí" : "No")
+                        </Template>
+                        <EditTemplate Context="u">
+                            <RadzenCheckBox TValue="bool" Value="@GetActiveBuffer(u)" ValueChanged="@(v => SetActiveBuffer(u, v))" Disabled="@(IsLoading || IsSaving)" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="PermissionVersion" Title="Ver. Permisos" Width="120px" TextAlign="TextAlign.Center" Filterable="false" />
                     <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Context="u" Filterable="false" Title="Acciones" Width="148px" TextAlign="TextAlign.Center" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
                         <Template Context="u">

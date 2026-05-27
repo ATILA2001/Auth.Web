@@ -36,6 +36,7 @@ public sealed class UsersViewModel
     private List<string> _selectedRoles = new();
     private List<int> _selectedAreaIds = new();
     private List<string> _selectedClientIds = new();
+    private bool _selectedIsActive = true;
 
     public UsersViewModel(IAdminUserService userService, IAdminRoleService roleService, IAdminAreaService areaService, IAdminClientService clientService)
     {
@@ -73,6 +74,12 @@ public sealed class UsersViewModel
         set => _selectedClientIds = value ?? new();
     }
 
+    public bool SelectedIsActive
+    {
+        get => _selectedIsActive;
+        set => _selectedIsActive = value;
+    }
+
     public async Task LoadAsync()
     {
         Users = (await _userService.GetUsersAsync()).ToList();
@@ -96,11 +103,13 @@ public sealed class UsersViewModel
             Roles = roles.ToArray(),
             Areas = areas.ToArray(),
             AreaIds = areaIds.ToArray(),
-            ClientIds = (user.ClientIds ?? Array.Empty<string>()).ToArray()
+            ClientIds = (user.ClientIds ?? Array.Empty<string>()).ToArray(),
+            IsActive = user.IsActive
         };
         SelectedRoles = roles.ToList();
         SelectedAreaIds = areaIds.ToList();
         SelectedClientIds = (user.ClientIds ?? Array.Empty<string>()).ToList();
+        SelectedIsActive = user.IsActive;
     }
 
     public async Task<UsersVmResult> SaveAsync()
@@ -119,7 +128,7 @@ public sealed class UsersViewModel
         try
         {
             var userName = string.IsNullOrWhiteSpace(SelectedUser.UserName) ? "(sin nombre)" : SelectedUser.UserName;
-            await _userService.UpdateUserRolesAndAreasAsync(SelectedUser.Id, SelectedRoles, SelectedAreaIds);
+            await _userService.UpdateUserRolesAndAreasAsync(SelectedUser.Id, SelectedRoles, SelectedAreaIds, SelectedIsActive);
             SelectedUser = null;
             return UsersVmResult.Success("Usuario actualizado", $"Se actualizaron roles/áreas de {userName}.");
         }

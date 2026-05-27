@@ -24,6 +24,7 @@ public partial class Users : ComponentBase
     private readonly Dictionary<UserAdminDto, List<string>> _rolesBuffer = new();
     private readonly Dictionary<UserAdminDto, List<int>> _areasBuffer = new();
     private readonly Dictionary<UserAdminDto, List<string>> _clientsBuffer = new();
+    private readonly Dictionary<UserAdminDto, bool> _activeBuffer = new();
 
     private string _selectedUserId = string.Empty;
     private string _selectedUserName = string.Empty;
@@ -59,6 +60,7 @@ public partial class Users : ComponentBase
             _rolesBuffer.Clear();
             _areasBuffer.Clear();
             _clientsBuffer.Clear();
+            _activeBuffer.Clear();
             if (reloadGrid && grid is not null)
             {
                 await grid.Reload();
@@ -120,6 +122,21 @@ public partial class Users : ComponentBase
         _clientsBuffer[user] = clients;
     }
 
+    private bool GetActiveBuffer(UserAdminDto user)
+    {
+        if (!_activeBuffer.TryGetValue(user, out var value))
+        {
+            value = user.IsActive;
+            _activeBuffer[user] = value;
+        }
+        return value;
+    }
+
+    private void SetActiveBuffer(UserAdminDto user, bool value)
+    {
+        _activeBuffer[user] = value;
+    }
+
     private async Task OpenUserOverridesDialog(UserAdminDto user)
     {
         _selectedUserId = user.Id;
@@ -172,6 +189,7 @@ public partial class Users : ComponentBase
             _vm.SelectedRoles = _rolesBuffer.TryGetValue(user, out var roles) ? roles : new List<string>();
             _vm.SelectedAreaIds = _areasBuffer.TryGetValue(user, out var areas) ? areas : new List<int>();
             _vm.SelectedClientIds = _clientsBuffer.TryGetValue(user, out var clients) ? clients : new List<string>();
+            _vm.SelectedIsActive = _activeBuffer.TryGetValue(user, out var active) ? active : user.IsActive;
 
             var result = await _vm.SaveAsync();
             NotifyUser(result);
@@ -198,6 +216,7 @@ public partial class Users : ComponentBase
         _rolesBuffer.Remove(user);
         _areasBuffer.Remove(user);
         _clientsBuffer.Remove(user);
+        _activeBuffer.Remove(user);
     }
 
     private async Task ValidateAndSave(UserAdminDto user)
@@ -212,6 +231,7 @@ public partial class Users : ComponentBase
         _vm.SelectedRoles = selectedRole is not null ? new List<string> { selectedRole } : new List<string>();
         _vm.SelectedAreaIds = GetAreasBuffer(user).ToList();
         _vm.SelectedClientIds = GetClientsBuffer(user).ToList();
+        _vm.SelectedIsActive = GetActiveBuffer(user);
         var validationResult = _vm.ValidateOnly();
 
         if (validationResult.Outcome != UsersVmOutcome.Success)

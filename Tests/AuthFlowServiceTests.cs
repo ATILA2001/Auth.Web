@@ -72,7 +72,7 @@ public class AuthFlowServiceTests
     {
         ArgumentNullException.ThrowIfNull(userName);
         ArgumentNullException.ThrowIfNull(email);
-        var user = new ApplicationUser { Id = id, UserName = userName, Email = email };
+        var user = new ApplicationUser { Id = id, UserName = userName, Email = email, IsActive = true };
         return (user, userName, email);
     }
 
@@ -156,6 +156,30 @@ public class AuthFlowServiceTests
         Assert.NotNull(outcome.RedirectUrl);
         Assert.Equal("https://app/landing", outcome.RedirectUrl);
         authService.Verify(x => x.SignInAsync(It.IsAny<HttpContext>(), IdentityConstants.ApplicationScheme, It.IsAny<System.Security.Claims.ClaimsPrincipal>(), It.IsAny<AuthenticationProperties>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Login_InactiveUser_Failure()
+    {
+        var ad = new Mock<IActiveDirectoryAuthService>();
+        ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+
+        var userManagement = new Mock<IUserManagementService>();
+        var (user, userName, email) = MakeUser("u-inactive", "inactive@corp", "inactive@corp");
+        user.IsActive = false;
+        userManagement.Setup(x => x.FindByNameAsync(userName)).ReturnsAsync(user);
+        userManagement.Setup(x => x.FindByEmailAsync(email)).ReturnsAsync(user);
+
+        var authService = new Mock<IAuthenticationService>();
+        var svc = CreateService(ad: ad, userManagement: userManagement, authService: authService);
+
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = userName, Password = "pwd" });
+
+        Assert.StartsWith("/Account/Login?", outcome.RedirectUrl);
+        var uri = new Uri("http://local" + outcome.RedirectUrl);
+        var qs = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        Assert.Equal("user_disabled", qs["errorCode"]);
+        authService.Verify(x => x.SignInAsync(It.IsAny<HttpContext>(), IdentityConstants.ApplicationScheme, It.IsAny<System.Security.Claims.ClaimsPrincipal>(), It.IsAny<AuthenticationProperties>()), Times.Never);
     }
 
     [Fact]
