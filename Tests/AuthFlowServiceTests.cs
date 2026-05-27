@@ -159,6 +159,48 @@ public class AuthFlowServiceTests
     }
 
     [Fact]
+    public async Task Login_With_ReturnUrl_Infers_Client_From_Allowed_Urls()
+    {
+        var ad = new Mock<IActiveDirectoryAuthService>();
+        ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+
+        var userManagement = new Mock<IUserManagementService>();
+        var (user, userName, email) = MakeUser("u5", "user5@corp", "user5@corp");
+        userManagement.Setup(x => x.FindByNameAsync(userName)).ReturnsAsync(user);
+        userManagement.Setup(x => x.FindByEmailAsync(email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Usuario" });
+
+        var returnUrl = "https://sai.test/inventory";
+        var inferredClient = new ApplicationClient { Id = 42, Audience = "SAI TEST", ClientId = "SAI TEST" };
+        var otherClient = new ApplicationClient { Id = 43, Audience = "PLAFI TEST", ClientId = "Plani TEST" };
+
+        var clientSvc = new Mock<IClientService>();
+        clientSvc.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { inferredClient, otherClient });
+        clientSvc.Setup(x => x.IsReturnUrlAllowed(inferredClient, returnUrl)).Returns(true);
+        clientSvc.Setup(x => x.IsReturnUrlAllowed(otherClient, returnUrl)).Returns(false);
+        clientSvc.Setup(x => x.ResolveReturnUrlForCurrentEnvironment(inferredClient, returnUrl, It.IsAny<string?>()))
+            .Returns(returnUrl);
+
+        var routing = new Mock<IRoutingService>();
+        routing.Setup(x => x.ResolveAllForUserAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<(string ClientId, string ReturnUrl)> { ("SAI TEST", "https://sai.test/") });
+
+        var perms = new Mock<IPermissionService>();
+        perms.Setup(x => x.GetAsync(userName, inferredClient.Id, It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
+            .ReturnsAsync(new UserPermissionsDto { AreaIds = new List<int> { 1 }, Version = 1 });
+
+        var authService = new Mock<IAuthenticationService>();
+
+        var svc = CreateService(ad: ad, client: clientSvc, routing: routing, perms: perms, userManagement: userManagement, authService: authService);
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = userName, Password = "pwd", ReturnUrl = returnUrl });
+
+        Assert.Equal(returnUrl, outcome.RedirectUrl);
+        perms.Verify(x => x.GetAsync(userName, inferredClient.Id, It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()), Times.Once);
+        authService.Verify(x => x.SignInAsync(It.IsAny<HttpContext>(), IdentityConstants.ApplicationScheme, It.IsAny<System.Security.Claims.ClaimsPrincipal>(), It.IsAny<AuthenticationProperties>()), Times.Once);
+    }
+
+    [Fact]
     public async Task Login_NoRouting_Failure()
     {
         var ad = new Mock<IActiveDirectoryAuthService>();

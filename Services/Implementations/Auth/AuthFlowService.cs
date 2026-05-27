@@ -176,9 +176,10 @@ public sealed class AuthFlowService : IAuthFlowService
             testAreaId = parsedArea;
         }
 
-        string clientId;
-        string returnUrl;
+        string? clientId = null;
+        string? returnUrl = null;
         ApplicationClient? client = null;
+        var clientResolvedFromReturnUrl = false;
 
         if (isAdmin)
         {
@@ -195,7 +196,18 @@ public sealed class AuthFlowService : IAuthFlowService
             return new LoginResult { ShowAppPicker = true };
         }
 
-        if (hasClientRequest)
+        if (!hasClientId && hasReturnUrl)
+        {
+            client = await TryResolveClientFromReturnUrlAsync(dto.ReturnUrl!);
+            if (client is not null)
+            {
+                clientId = client.ClientId;
+                returnUrl = dto.ReturnUrl!;
+                clientResolvedFromReturnUrl = true;
+            }
+        }
+
+        if (!clientResolvedFromReturnUrl && hasClientRequest)
         {
             client = await _clientService.GetAsync(dto.ClientId!);
             if (client is null)
@@ -212,7 +224,7 @@ public sealed class AuthFlowService : IAuthFlowService
             clientId = dto.ClientId!;
             returnUrl = dto.ReturnUrl!;
         }
-        else
+        else if (!clientResolvedFromReturnUrl)
         {
             var allRoutes = await _routingService.ResolveAllForUserAsync(user.Id) ?? Array.Empty<(string ClientId, string ReturnUrl)>();
 
@@ -265,6 +277,11 @@ public sealed class AuthFlowService : IAuthFlowService
             }
         }
 
+        if (client is null || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(returnUrl))
+        {
+            return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "Aplicación o URL de retorno inválida.", dto.ReturnUrl, dto.ClientId));
+        }
+
         var rawPermissions = await _permissionService.GetAsync(
             user.UserName!,
             clientId: client?.Id,
@@ -284,6 +301,28 @@ public sealed class AuthFlowService : IAuthFlowService
             user.UserName, activeAppId, client?.ClientId, client?.Audience, returnUrl, rawPermissions.Version);
 
         return await FinalizeResultAsync(new LoginResult { RedirectUrl = returnUrl, SignInAdmin = false });
+    }
+
+    private async Task<ApplicationClient?> TryResolveClientFromReturnUrlAsync(string returnUrl, CancellationToken ct = default)
+    {
+        var candidates = (await _clientService.GetAllAsync(ct))
+            .Where(client => _clientService.IsReturnUrlAllowed(client, returnUrl))
+            .ToList();
+
+        if (candidates.Count == 1)
+        {
+            return candidates[0];
+        }
+
+        if (candidates.Count > 1)
+        {
+            _logger.LogWarning(
+                "Login: returnUrl '{ReturnUrl}' coincide con múltiples clientes ({Count}); se resolverá por rutas.",
+                returnUrl,
+                candidates.Count);
+        }
+
+        return null;
     }
 
     private static LoginResult BuildLoginRedirect(string errorCode, string errorMessage, string? returnUrl, string? clientId)

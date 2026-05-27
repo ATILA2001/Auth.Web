@@ -34,7 +34,7 @@
                             {
                                 <a href="@($"/connect/switch-app?clientId={Uri.EscapeDataString(client.ClientId)}")"
                                    style="display: block; padding: 10px 16px; text-decoration: none; color: var(--rz-text-color);"
-                                   @onclick="@(() => _appSwitcherOpen = false)">@GetAppDisplayName(client.ClientId)</a>
+                                   @onclick="@(() => _appSwitcherOpen = false)">@GetAppDisplayName(client)</a>
                             }
                         </div>
                     }

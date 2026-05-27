@@ -59,7 +59,7 @@ public partial class SelectApp : ComponentBase
                     .Select(c => new AppPickerOption(
                         c.ClientId,
                         c.AllowedReturnUrls.FirstOrDefault() ?? string.Empty,
-                        GetAppDisplayName(c.ClientId)))
+                        GetAppDisplayName(c.Audience, c.ClientId)))
                     .Where(a => !string.IsNullOrWhiteSpace(a.ReturnUrl))
                     .ToList();
             }
@@ -67,16 +67,12 @@ public partial class SelectApp : ComponentBase
             {
                 var routes = await RoutingService.ResolveAllForUserAsync(userId);
                 _apps = routes
-                    .Select(r => new AppPickerOption(r.ClientId, r.ReturnUrl, GetAppDisplayName(r.ClientId)))
+                    .Select(r => new AppPickerOption(r.ClientId, r.ReturnUrl, r.ClientId))
                     .ToList();
             }
         }
     }
 
-    private static string GetAppDisplayName(string clientId) => clientId switch
-    {
-        "sai" => "Sistema de Administración de Inventario",
-        "PlaniLocal" => "Administración Financiera",
-        _ => clientId
-    };
+    private static string GetAppDisplayName(string? audience, string clientId)
+        => !string.IsNullOrWhiteSpace(audience) ? audience : clientId;
 }

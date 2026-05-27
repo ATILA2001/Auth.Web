@@ -118,12 +118,10 @@ public partial class AdminLayout : LayoutComponentBase, IDisposable
 
     private void ToggleAppSwitcher() => _appSwitcherOpen = !_appSwitcherOpen;
 
-    private static string GetAppDisplayName(string clientId) => clientId switch
-    {
-        "sai" => "Sistema de Administración de Inventario",
-        "PlaniLocal" => "Administración Financiera",
-        _ => clientId
-    };
+    private static string GetAppDisplayName(ApplicationClientAdminDto client)
+        => !string.IsNullOrWhiteSpace(client.Audience)
+            ? client.Audience
+            : client.ClientId;
 
     public void Dispose()
         => _subscription?.Dispose();
