@@ -29,23 +29,20 @@ public sealed class UserPageOverrideAdminService : IAdminUserPageOverrideService
         return entities.Select(Map).ToArray();
     }
 
-    public async Task<int> CreateOverrideAsync(string userId, int? pageId, int? actionPermissionId, string type, CancellationToken ct = default)
+    public async Task<int> CreateOverrideAsync(string userId, int? pageId, int? actionPermissionId, bool isAllowed, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(userId))
             throw new ArgumentException("UserId is required.", nameof(userId));
 
-        if (type != "GRANT" && type != "DENY")
-            throw new ArgumentException("Type must be GRANT or DENY.", nameof(type));
-
-        // Enforce DB check constraint: GRANT requires ActionPermissionId
-        if (type == "GRANT" && actionPermissionId is null)
-            throw new ArgumentException("GRANT override requires an ActionPermissionId.", nameof(actionPermissionId));
+        // Enforce DB check constraint: allowed overrides require ActionPermissionId.
+        if (isAllowed && actionPermissionId is null)
+            throw new ArgumentException("Allowed override requires an ActionPermissionId.", nameof(actionPermissionId));
 
         var existing = await _repository.FindAsync(userId, pageId, actionPermissionId, ct);
         if (existing is not null)
             throw new InvalidOperationException("Ya existe un override identico para este usuario.");
 
-        var id = await _repository.CreateAsync(userId, pageId, actionPermissionId, type, ct);
+        var id = await _repository.CreateAsync(userId, pageId, actionPermissionId, isAllowed, ct);
         await _auditService.IncrementUserPermissionVersionAsync(userId, ct);
         return id;
     }
@@ -67,6 +64,6 @@ public sealed class UserPageOverrideAdminService : IAdminUserPageOverrideService
         PageUrl = o.Page?.Url ?? string.Empty,
         ActionPermissionId = o.ActionPermissionId,
         ActionName = o.ActionPermission?.Name ?? "Sin asignar",
-        Type = o.Type
+        IsAllowed = o.IsAllowed
     };
 }

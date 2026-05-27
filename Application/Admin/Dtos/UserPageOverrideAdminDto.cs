@@ -10,6 +10,6 @@ public sealed class UserPageOverrideAdminDto
     public int? ActionPermissionId { get; set; }
     public string ActionName { get; set; } = "Sin asignar";
 
-    /// <summary>GRANT o DENY</summary>
-    public string Type { get; set; } = string.Empty;
+    /// <summary>True permite; false deniega.</summary>
+    public bool IsAllowed { get; set; }
 }

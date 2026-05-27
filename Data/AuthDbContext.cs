@@ -105,8 +105,8 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
         // UserPageOverride
         builder.Entity<UserPageOverride>()
             .ToTable(t => t.HasCheckConstraint(
-                "CK_UserPageOverride_GrantRequiresAction",
-                "Type <> 'GRANT' OR ActionPermissionId IS NOT NULL"));
+                "CK_UserPageOverride_AllowedRequiresAction",
+                "IsAllowed = 0 OR ActionPermissionId IS NOT NULL"));
 
         builder.Entity<UserPageOverride>()
             .HasOne(x => x.Page)

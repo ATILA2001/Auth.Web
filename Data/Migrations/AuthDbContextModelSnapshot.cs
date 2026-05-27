@@ -346,9 +346,8 @@ namespace Auth.Web.Data.Migrations
                     b.Property<int?>("PageId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<bool>("IsAllowed")
+                        .HasColumnType("bit");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -362,7 +361,7 @@ namespace Auth.Web.Data.Migrations
 
                     b.ToTable("UserPageOverrides", t =>
                         {
-                            t.HasCheckConstraint("CK_UserPageOverride_GrantRequiresAction", "Type <> 'GRANT' OR ActionPermissionId IS NOT NULL");
+                            t.HasCheckConstraint("CK_UserPageOverride_AllowedRequiresAction", "IsAllowed = 0 OR ActionPermissionId IS NOT NULL");
                         });
                 });
 

@@ -101,26 +101,26 @@ public class PermissionService : IPermissionService
         IReadOnlyCollection<AreaPagePermission> areaPermissions,
         IReadOnlyCollection<UserPageOverride> userOverrides)
     {
-        // Todas las páginas candidatas: de área + de GRANT overrides
+        // Todas las páginas candidatas: de área + de overrides permitidos
         var pageIds = new HashSet<int>();
         foreach (var ap in areaPermissions.Where(a => a.PageId.HasValue))
             pageIds.Add(ap.PageId!.Value);
-        foreach (var ov in userOverrides.Where(o => o.PageId.HasValue && o.Type == "GRANT"))
+        foreach (var ov in userOverrides.Where(o => o.PageId.HasValue && o.IsAllowed))
             pageIds.Add(ov.PageId!.Value);
 
         var denies = userOverrides
-            .Where(o => o.Type == "DENY" && o.PageId.HasValue)
+            .Where(o => !o.IsAllowed && o.PageId.HasValue)
             .ToLookup(o => o.PageId!.Value);
 
         var grants = userOverrides
-            .Where(o => o.Type == "GRANT" && o.PageId.HasValue && o.ActionPermission?.Name != null)
+            .Where(o => o.IsAllowed && o.PageId.HasValue && o.ActionPermission?.Name != null)
             .ToLookup(o => o.PageId!.Value);
 
         var result = new List<PagePermissionDto>();
 
         foreach (var pageId in pageIds)
         {
-            // Regla 1: DENY sin ActionId = denegar toda la página (máxima precedencia)
+            // Regla 1: denegación sin ActionId = denegar toda la página (máxima precedencia)
             if (denies[pageId].Any(d => d.ActionPermissionId == null))
                 continue;
 
@@ -129,11 +129,11 @@ public class PermissionService : IPermissionService
             foreach (var ap in areaPermissions.Where(a => a.PageId == pageId && a.ActionPermission?.Name != null))
                 actions.Add(ap.ActionPermission!.Name!.Trim());
 
-            // Regla 1b: DENY con ActionId específico = remover esa acción
+            // Regla 1b: denegación con ActionId específico = remover esa acción
             foreach (var deny in denies[pageId].Where(d => d.ActionPermission?.Name != null))
                 actions.Remove(deny.ActionPermission!.Name!.Trim());
 
-            // Regla 2: GRANT agrega acción si no está denegada específicamente
+            // Regla 2: permiso explícito agrega acción si no está denegada específicamente
             foreach (var grant in grants[pageId])
             {
                 var actionName = grant.ActionPermission!.Name!.Trim();

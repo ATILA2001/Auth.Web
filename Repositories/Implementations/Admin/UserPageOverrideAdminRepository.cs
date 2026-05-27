@@ -45,7 +45,7 @@ public sealed class UserPageOverrideAdminRepository : IUserPageOverrideAdminRepo
             .FirstOrDefaultAsync(o => o.UserId == userId && o.PageId == pageId && o.ActionPermissionId == actionPermissionId, ct);
     }
 
-    public async Task<int> CreateAsync(string userId, int? pageId, int? actionPermissionId, string type, CancellationToken ct = default)
+    public async Task<int> CreateAsync(string userId, int? pageId, int? actionPermissionId, bool isAllowed, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         var entity = new UserPageOverride
@@ -53,7 +53,7 @@ public sealed class UserPageOverrideAdminRepository : IUserPageOverrideAdminRepo
             UserId = userId,
             PageId = pageId,
             ActionPermissionId = actionPermissionId,
-            Type = type
+            IsAllowed = isAllowed
         };
         db.UserPageOverrides.Add(entity);
         await db.SaveChangesAsync(ct);

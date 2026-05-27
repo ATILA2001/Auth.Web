@@ -21,7 +21,9 @@
                 <RadzenStack Gap="0.25rem">
                     <RadzenLabel Text="Página" />
                     <RadzenDropDown TValue="int?" Data="@_allPages" TextProperty="Name" ValueProperty="Id"
-                                    Placeholder="Sin asignar" @bind-Value="_newPageId" AllowClear="true" Style="min-width:200px" />
+                                    Placeholder="Sin asignar" @bind-Value="_newPageId" AllowClear="true"
+                                    AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                    Style="min-width:200px" />
                 </RadzenStack>
                 <RadzenStack Gap="0.25rem">
                     <RadzenLabel Text="Acción" />
@@ -30,7 +32,7 @@
                 </RadzenStack>
                 <RadzenStack Gap="0.25rem">
                     <RadzenLabel Text="Tipo" />
-                    <RadzenDropDown TValue="string" Data="@_typeOptions" @bind-Value="_newType" Style="min-width:100px" />
+                    <RadzenDropDown TValue="bool" Data="@_typeOptions" TextProperty="Text" ValueProperty="Value" @bind-Value="_newIsAllowed" Style="min-width:120px" />
                 </RadzenStack>
                 <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Success" ButtonSize="ButtonSize.Small"
                               Text="Guardar" Click="@SaveAdd" Disabled="@_isSaving" />
@@ -48,15 +50,15 @@
             <RadzenDataGridColumn TItem="UserPageOverrideAdminDto" Property="PageName" Title="Página" />
             <RadzenDataGridColumn TItem="UserPageOverrideAdminDto" Property="PageUrl" Title="URL" />
             <RadzenDataGridColumn TItem="UserPageOverrideAdminDto" Property="ActionName" Title="Acción" />
-            <RadzenDataGridColumn TItem="UserPageOverrideAdminDto" Property="Type" Title="Tipo" Width="80px" TextAlign="TextAlign.Center">
+            <RadzenDataGridColumn TItem="UserPageOverrideAdminDto" Property="IsAllowed" Title="Tipo" Width="90px" TextAlign="TextAlign.Center">
                 <Template Context="o">
-                    @if (o.Type == "GRANT")
+                    @if (o.IsAllowed)
                     {
-                        <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="GRANT" />
+                        <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="@TranslateOverrideType(o.IsAllowed)" />
                     }
                     else
                     {
-                        <RadzenBadge BadgeStyle="BadgeStyle.Danger" Text="DENY" />
+                        <RadzenBadge BadgeStyle="BadgeStyle.Danger" Text="@TranslateOverrideType(o.IsAllowed)" />
                     }
                 </Template>
             </RadzenDataGridColumn>
@@ -87,11 +89,15 @@
     private List<UserPageOverrideAdminDto> _overrides = new();
     private List<PageAdminDto> _allPages = new();
     private List<ActionPermissionAdminDto> _allActions = new();
-    private List<string> _typeOptions = new() { "GRANT", "DENY" };
+    private List<OverrideTypeOption> _typeOptions = new()
+    {
+        new("Permitir", true),
+        new("Denegar", false)
+    };
 
     private int? _newPageId;
     private int? _newActionId;
-    private string _newType = "GRANT";
+    private bool _newIsAllowed = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -122,7 +128,7 @@
         _isAdding = true;
         _newPageId = null;
         _newActionId = null;
-        _newType = "GRANT";
+        _newIsAllowed = true;
     }
 
     private void CancelAdd()
@@ -132,16 +138,22 @@
 
     private async Task SaveAdd()
     {
-        if (_newPageId is null || _newActionId is null)
+        if (_newPageId is null)
         {
-            NotificationService.Notify(NotificationSeverity.Warning, "Validación", "Debe seleccionar página y acción.");
+            NotificationService.Notify(NotificationSeverity.Warning, "Validación", "Debe seleccionar página.");
+            return;
+        }
+
+        if (_newIsAllowed && _newActionId is null)
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Validación", "Para permitir debe seleccionar una acción.");
             return;
         }
 
         _isSaving = true;
         try
         {
-            await OverrideService.CreateOverrideAsync(UserId, _newPageId, _newActionId, _newType);
+            await OverrideService.CreateOverrideAsync(UserId, _newPageId, _newActionId, _newIsAllowed);
             await LoadDataAsync();
             _isAdding = false;
             NotificationService.Notify(NotificationSeverity.Success, "Éxito", "Override creado.");
@@ -180,4 +192,9 @@
             _isSaving = false;
         }
     }
+
+    private static string TranslateOverrideType(bool isAllowed)
+        => isAllowed ? "Permitir" : "Denegar";
+
+    private sealed record OverrideTypeOption(string Text, bool Value);
 }

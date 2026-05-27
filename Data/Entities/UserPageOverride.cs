@@ -10,8 +10,8 @@ public class UserPageOverride
 
     public int? ActionPermissionId { get; set; }
 
-    /// <summary>GRANT o DENY</summary>
-    public string Type { get; set; } = string.Empty;
+    /// <summary>True permite; false deniega.</summary>
+    public bool IsAllowed { get; set; }
 
     public Page? Page { get; set; }
 
