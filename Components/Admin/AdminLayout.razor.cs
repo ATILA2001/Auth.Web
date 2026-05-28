@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Auth.Web.Application.Admin.Dtos;
+using Auth.Web.Data.Entities;
+using Microsoft.AspNetCore.Identity;
 using Radzen;
 
 namespace Auth.Web.Components.Admin;
@@ -22,6 +24,9 @@ public partial class AdminLayout : LayoutComponentBase, IDisposable
 
     [Inject]
     private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
+
+    [Inject]
+    private UserManager<ApplicationUser> UserManager { get; set; } = default!;
 
     [Inject]
     private Services.Abstractions.Admin.IAdminClientService AdminClientService { get; set; } = default!;
@@ -50,8 +55,8 @@ public partial class AdminLayout : LayoutComponentBase, IDisposable
             }
 
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-            CurrentUserName = user.Identity?.Name ?? string.Empty;
+            var user = await UserManager.GetUserAsync(authState.User);
+            CurrentUserName = GetDisplayName(user);
 
             clients = (await AdminClientService.GetClientsAsync()).ToList();
         }
@@ -122,6 +127,25 @@ public partial class AdminLayout : LayoutComponentBase, IDisposable
         => !string.IsNullOrWhiteSpace(client.Audience)
             ? client.Audience
             : client.ClientId;
+
+    private static string GetDisplayName(ApplicationUser? user)
+    {
+        if (user is null)
+        {
+            return string.Empty;
+        }
+
+        var displayName = !string.IsNullOrWhiteSpace(user.Nombre)
+            ? user.Nombre
+            : user.UserName;
+
+        if (!string.IsNullOrWhiteSpace(displayName) && displayName.Contains('@'))
+        {
+            displayName = displayName.Split('@')[0];
+        }
+
+        return displayName ?? string.Empty;
+    }
 
     public void Dispose()
         => _subscription?.Dispose();

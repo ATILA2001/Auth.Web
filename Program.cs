@@ -18,6 +18,7 @@ using Auth.Web.Services.Abstractions.Permissions;
 using Auth.Web.Services.Abstractions.Routing;
 using Auth.Web.Services.Abstractions.Clients;
 using Auth.Web.Security.Auth;
+using Auth.Web.Security;
 using Auth.Web.Services.Implementations.Auth;
 using Auth.Web.Services.Implementations.Clients;
 using Auth.Web.Services.Implementations.Permissions;
@@ -69,6 +70,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AuthDbContext>()
+    .AddClaimsPrincipalFactory<ApplicationUserClaimsPrincipalFactory>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
