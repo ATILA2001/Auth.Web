@@ -20,6 +20,7 @@ public partial class Clients : ComponentBase
     private readonly Dictionary<ApplicationClientAdminDto, string?> _landingPageBuffer = new();
     private readonly List<ApplicationClientAdminDto> _clientsToInsert = new();
     private readonly List<ApplicationClientAdminDto> _clientsToUpdate = new();
+    private int _tempId = -1;
 
     private List<ApplicationClientAdminDto> clients => _vm.Clients;
     private string editClientId
@@ -163,14 +164,13 @@ public partial class Clients : ComponentBase
         _vm.BeginCreate();
         var newClient = new ApplicationClientAdminDto
         {
-            Id = 0,
+            Id = _tempId--,
             ClientId = string.Empty,
             Audience = string.Empty,
             AllowedReturnUrls = Array.Empty<string>(),
             DefaultLandingPage = null
         };
         _clientsToInsert.Add(newClient);
-        clients.Insert(0, newClient);
         await grid.InsertRow(newClient);
     }
 
@@ -182,16 +182,18 @@ public partial class Clients : ComponentBase
         }
 
         // Set VM context for validation: for EDIT set BeginEdit; for CREATE EditFields already set from buffer
-        if (client.Id != 0)
+        if (client.Id > 0)
         {
             _vm.BeginEdit(client);
         }
         else
         {
             // For CREATE: ensure EditFields are synced from buffer for pre-validation
+            _vm.BeginCreate();
             _vm.EditClientId = GetClientIdBuffer(client);
             _vm.EditAudience = GetAudienceBuffer(client);
             _vm.AllowedUrlsText = GetUrlsBuffer(client);
+            _vm.EditDefaultLandingPage = GetLandingPageBuffer(client);
         }
 
         var clientId = GetClientIdBuffer(client);
@@ -368,7 +370,7 @@ public partial class Clients : ComponentBase
         _clientsToInsert.Remove(client);
         _clientsToUpdate.Remove(client);
         
-        if (client.Id == 0)
+        if (client.Id <= 0)
         {
             clients.Remove(client);
         }

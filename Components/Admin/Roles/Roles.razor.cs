@@ -17,6 +17,7 @@ public partial class Roles : ComponentBase
     private readonly Dictionary<RoleAdminDto, string> _nameBuffer = new();
     private readonly List<RoleAdminDto> _rolesToInsert = new();
     private readonly List<RoleAdminDto> _rolesToUpdate = new();
+    private int _tempId = -1;
 
     private List<RoleAdminDto> roles => _vm.Roles;
     private string editName
@@ -100,9 +101,8 @@ public partial class Roles : ComponentBase
         }
 
         _vm.BeginCreate();
-        var newRole = new RoleAdminDto { Id = string.Empty, Name = string.Empty, UserCount = 0 };
+        var newRole = new RoleAdminDto { Id = $"__new_role_{_tempId--}", Name = string.Empty, UserCount = 0 };
         _rolesToInsert.Add(newRole);
-        roles.Insert(0, newRole);
         await grid.InsertRow(newRole);
     }
 
@@ -114,13 +114,14 @@ public partial class Roles : ComponentBase
         }
 
         // Set VM context for validation: for EDIT set BeginEdit; for CREATE EditName is already set from buffer
-        if (!string.IsNullOrWhiteSpace(role.Id))
+        if (!_rolesToInsert.Contains(role) && !string.IsNullOrWhiteSpace(role.Id))
         {
             _vm.BeginEdit(role);
         }
         else
         {
             // For CREATE: ensure EditName is synced from buffer for pre-validation
+            _vm.BeginCreate();
             _vm.EditName = GetNameBuffer(role);
         }
 
@@ -275,7 +276,7 @@ public partial class Roles : ComponentBase
         _rolesToInsert.Remove(role);
         _rolesToUpdate.Remove(role);
         
-        if (string.IsNullOrWhiteSpace(role.Id))
+        if (_rolesToInsert.Contains(role) || role.Id.StartsWith("__new_role_", StringComparison.Ordinal))
         {
             roles.Remove(role);
         }

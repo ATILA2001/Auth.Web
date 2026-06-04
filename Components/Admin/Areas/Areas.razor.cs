@@ -17,6 +17,7 @@ public partial class Areas : ComponentBase
     private readonly Dictionary<AreaAdminDto, string> _nameBuffer = new();
     private readonly List<AreaAdminDto> _areasToInsert = new();
     private readonly List<AreaAdminDto> _areasToUpdate = new();
+    private int _tempId = -1;
 
     private List<AreaAdminDto> areas => _vm.Areas;
     private string editName
@@ -100,9 +101,8 @@ public partial class Areas : ComponentBase
         }
 
         _vm.BeginCreate();
-        var newArea = new AreaAdminDto { Id = 0, Name = string.Empty, UserCount = 0 };
+        var newArea = new AreaAdminDto { Id = _tempId--, Name = string.Empty, UserCount = 0 };
         _areasToInsert.Add(newArea);
-        areas.Insert(0, newArea);
         await grid.InsertRow(newArea);
     }
 
@@ -114,13 +114,14 @@ public partial class Areas : ComponentBase
         }
 
         // Set VM context for validation: for EDIT set BeginEdit; for CREATE EditName is already set from buffer
-        if (area.Id != 0)
+        if (area.Id > 0)
         {
             _vm.BeginEdit(area);
         }
         else
         {
             // For CREATE: ensure EditName is synced from buffer for pre-validation
+            _vm.BeginCreate();
             _vm.EditName = GetNameBuffer(area);
         }
 
@@ -275,7 +276,7 @@ public partial class Areas : ComponentBase
         _areasToInsert.Remove(area);
         _areasToUpdate.Remove(area);
         
-        if (area.Id == 0)
+        if (area.Id <= 0)
         {
             areas.Remove(area);
         }

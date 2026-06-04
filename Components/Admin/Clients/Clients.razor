@@ -19,7 +19,7 @@
                             FilterMode="FilterMode.CheckBoxList" ClearFilterText="Limpiar" ApplyFilterText="Aplicar"
                             GridLines="DataGridGridLines.Both" AllowColumnPicking="false" ColumnsText="Columnas"
                              ColumnsShowingText="columnas mostradas" AllColumnsText="Todas"
-                            EmptyText="No hay registros para mostrar.">
+                            EmptyText="No hay registros para mostrar." KeyProperty="Id">
                 <HeaderTemplate>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0.5rem">
                         <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle" Text="Agregar" Click="@BeginCreate" Disabled="@(IsLoading || IsSaving || _clientsToInsert.Count > 0)" />

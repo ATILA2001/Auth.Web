@@ -20,6 +20,7 @@ public partial class Pages : ComponentBase
     private readonly Dictionary<PageAdminDto, int?> _clientBuffer = new();
     private readonly List<PageAdminDto> _pagesToInsert = new();
     private readonly List<PageAdminDto> _pagesToUpdate = new();
+    private int _tempId = -1;
 
     private List<PageAdminDto> pages => _vm.Pages;
     private List<ApplicationClientAdminDto> clients => _vm.Clients;
@@ -132,9 +133,8 @@ public partial class Pages : ComponentBase
         }
 
         _vm.BeginCreate();
-        var newPage = new PageAdminDto { Id = 0, Name = string.Empty, Url = string.Empty, PermissionCount = 0, AreaCount = 0 };
+        var newPage = new PageAdminDto { Id = _tempId--, Name = string.Empty, Url = string.Empty, PermissionCount = 0, AreaCount = 0 };
         _pagesToInsert.Add(newPage);
-        pages.Insert(0, newPage);
         await grid.InsertRow(newPage);
     }
 
@@ -145,12 +145,13 @@ public partial class Pages : ComponentBase
             return;
         }
 
-        if (page.Id != 0)
+        if (page.Id > 0)
         {
             _vm.BeginEdit(page);
         }
         else
         {
+            _vm.BeginCreate();
             _vm.EditName = GetNameBuffer(page);
             _vm.EditUrl = GetUrlBuffer(page);
             _vm.EditClientId = GetClientBuffer(page);
@@ -314,7 +315,7 @@ public partial class Pages : ComponentBase
         _pagesToInsert.Remove(page);
         _pagesToUpdate.Remove(page);
 
-        if (page.Id == 0)
+        if (page.Id <= 0)
         {
             pages.Remove(page);
         }
