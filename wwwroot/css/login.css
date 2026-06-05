@@ -70,9 +70,10 @@
 }
 
 .login-right-panel {
-    background: var(--rz-base-background-color);
+    background-color: var(--rz-white);
     min-height: var(--panel-h);
     position: relative;
+    border-radius: 0 var(--rz-border-radius) var(--rz-border-radius) 0;
 }
 
 .login-form-content {
@@ -83,6 +84,7 @@
     padding: 3rem;
     height: 100%;
     box-sizing: border-box;
+    color: #2b3a50;
 }
 
     .login-form-content h2 {
@@ -96,6 +98,11 @@
 /* Form */
 .login-field {
     margin-bottom: 1.5rem;
+}
+
+.rz-textbox, .rz-form-field-label{
+    background-color: var(--rz-white) !important;
+    color: #2b3a50;
 }
 
 .login-form-footer {
