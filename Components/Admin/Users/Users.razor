@@ -73,7 +73,7 @@
                                             Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="IsActive" Title="Activo" Width="110px" TextAlign="TextAlign.Center">
+                    <RadzenDataGridColumn TItem="Application.Admin.Dtos.UserAdminDto" Property="IsActiveText" Title="Activo" Width="110px" TextAlign="TextAlign.Center">
                         <Template Context="u">
                             @(u.IsActive ? "Sí" : "No")
                         </Template>

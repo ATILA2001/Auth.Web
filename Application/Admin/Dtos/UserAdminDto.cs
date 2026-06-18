@@ -12,4 +12,5 @@ public sealed class UserAdminDto
     public IReadOnlyCollection<string> ClientIds { get; set; } = Array.Empty<string>();
     public int PermissionVersion { get; set; }
     public bool IsActive { get; set; } = true;
+    public string IsActiveText => IsActive ? "Sí" : "No";
 }
