@@ -82,7 +82,7 @@ namespace Auth.Web.Tests
 
             var svc = new UserRegistrationService(ad.Object, um.Object, store.Object, new Mock<ILogger<UserRegistrationService>>().Object);
             var res = await svc.RegisterUserAsync(new RegisterUserRequest { Email = "e@d.com", Cuil = "20123456789" });
-            Assert.Equal("Cuenta creada correctamente. Inicie sesión.", res.Message);
+            Assert.Equal("Cuenta creada correctamente.", res.Message);
         }
     }
 }

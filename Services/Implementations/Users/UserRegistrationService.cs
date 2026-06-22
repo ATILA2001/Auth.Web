@@ -69,7 +69,7 @@ public sealed class UserRegistrationService : IUserRegistrationService
         }
 
         _logger.LogInformation("Usuario creado sin password local (AD-backed).");
-        return RegisterUserResult.Success("Cuenta creada correctamente. Inicie sesión.");
+        return RegisterUserResult.Success("Cuenta creada correctamente.");
     }
 
     private IUserEmailStore<ApplicationUser> GetEmailStore()

@@ -47,6 +47,11 @@
                                 <div class="validation-message" style="margin-top: 0.5rem;">@ErrorMessage</div>
                             }
 
+                            @if (!string.IsNullOrWhiteSpace(SuccessMessage))
+                            {
+                                <div class="alert alert-success" role="status" style="margin-top: 0.5rem;">@SuccessMessage</div>
+                            }
+
                             <div class="login-form-footer">
                                 <RadzenButton Text="Crear una cuenta" Variant="Variant.Text" Click="FlipCard" ButtonStyle="ButtonStyle.Primary"  />
                                 <RadzenButton Text="Ingresar" ButtonType="ButtonType.Submit" form="loginForm" ButtonStyle="ButtonStyle.Dark" />

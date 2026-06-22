@@ -36,6 +36,7 @@ public partial class Login : ComponentBase, IDisposable
     public string? ClientIdFromQuery => _vm.ClientId;
     public LoginViewModel.RegisterInputModel RegInput => _vm.Register;
     public string? RegisterMessage => _vm.RegisterMessage;
+    public string? SuccessMessage => _vm.SuccessMessage;
     public string? AntiforgeryFieldName => _antiforgeryFieldName;
     public string? AntiforgeryToken => _antiforgeryToken;
 
