@@ -27,7 +27,7 @@
                     </RadzenStack>
                 </HeaderTemplate>
                 <Columns>
-                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="AreaId" Title="Área">
+                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="AreaName" Title="Área">
                         <Template Context="r">
                             @(r.AreaName ?? "Sin asignar")
                         </Template>
@@ -47,7 +47,7 @@
                         </Template>
                     </RadzenDataGridColumn>
 
-                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="ClientId" Title="Aplicación">
+                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="ApplicationName" Title="Aplicación">
                         <Template Context="r">
                             @(r.ApplicationName ?? "Sin asignar")
                         </Template>
@@ -66,7 +66,7 @@
                             <RadzenNumeric TValue="int" Value="@GetPriorityBuffer(r)" ValueChanged="@(v => SetPriorityBuffer(r, v))"  Disabled="@(IsLoading || IsSaving)" />
                         </EditTemplate>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="IsActive" Title="Activo">
+                    <RadzenDataGridColumn TItem="AreaRouteAdminDto" Property="IsActiveText" Title="Activo">
                         <Template Context="r">
                             @(r.IsActive ? "Sí" : "No")
                         </Template>

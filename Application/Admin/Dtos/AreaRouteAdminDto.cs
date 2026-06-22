@@ -8,6 +8,7 @@ public sealed class AreaRouteAdminDto
     public string ClientIdentifier { get; set; } = string.Empty; // underlying ClientId string value
     public int Priority { get; set; }
     public bool IsActive { get; set; }
+    public string IsActiveText => IsActive ? "Sí" : "No";
     public string? AreaName { get; set; }
     public string? ApplicationName { get; set; }
 }
