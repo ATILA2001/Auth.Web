@@ -149,7 +149,8 @@ public partial class Users : ComponentBase
             ["OverrideService"] = OverrideService,
             ["PageService"] = PageService,
             ["ActionService"] = ActionService,
-            ["NotificationService"] = NotificationService
+            ["NotificationService"] = NotificationService,
+            ["DialogService"] = DialogService
         };
 
         var options = new DialogOptions
