@@ -88,82 +88,33 @@ public sealed class AuthFlowService : IAuthFlowService
         }
 
         AdUserInfo? adUserInfo = null;
-        ApplicationUser? dbAuthUser = null;
 
 #if DEBUG
         // .test users: DB-only auth, never touch AD. Development environment only.
         var testUser = _features.EnableTestUsers ? TryGetTestUser(dto.UserNameOrEmail) : null;
         var isDbTest = dto.UserNameOrEmail.EndsWith(".test", StringComparison.OrdinalIgnoreCase);
-
-        if (testUser is not null)
-        {
-            if (!PasswordMatches(dto.Password, testUser.Password))
-            {
-                return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
-            }
-        }
-        else if (isDbTest)
-        {
-            dbAuthUser = await _userManagement.FindByNameAsync(dto.UserNameOrEmail)
-                         ?? await _userManagement.FindByEmailAsync(dto.UserNameOrEmail);
-
-            if (dbAuthUser is null || !VerifyPasswordHash(dbAuthUser.PasswordHash, dto.Password))
-            {
-                return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
-            }
-        }
-        else
-        {
 #else
         var testUser = (TestUserOptions?)null;
-        {
+        const bool isDbTest = false;
 #endif
-            adUserInfo = await _adAuth.GetUserInfoAsync(dto.UserNameOrEmail);
-            var adOk = await _adAuth.ValidateCredentialsAsync(dto.UserNameOrEmail, dto.Password);
-            if (!adOk)
-            {
-                return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
-            }
-        }
 
-        // Buscar por email de AD primero: funciona tanto para usuarios registrados antes (UserName=email)
-        // como después del cambio (UserName=CUIL). El fallback por UserName cubre casos sin email en AD.
-        ApplicationUser? user;
-        if (dbAuthUser is not null)
-        {
-            user = dbAuthUser;
-        }
-        else if (adUserInfo is not null)
-        {
-            user = (adUserInfo.Email is not null ? await _userManagement.FindByEmailAsync(adUserInfo.Email) : null)
-                   ?? await _userManagement.FindByNameAsync(adUserInfo.UserName);
-        }
-        else
-        {
-            user = await _userManagement.FindByNameAsync(dto.UserNameOrEmail)
-                   ?? await _userManagement.FindByEmailAsync(dto.UserNameOrEmail);
-        }
+        // Prevalidación local obligatoria: ningún usuario inexistente, inactivo o sin
+        // autorización básica debe enviar credenciales a Active Directory.
+        var localLookup = testUser?.Email ?? dto.UserNameOrEmail;
+        var user = await _userManagement.FindByNameAsync(localLookup)
+                   ?? await _userManagement.FindByEmailAsync(localLookup);
 
-        if (user is null && testUser is not null)
+        if (user is null)
         {
-            var testEmail = testUser.Email;
-            user = await _userManagement.FindByNameAsync(testEmail)
-                   ?? await _userManagement.FindByEmailAsync(testEmail);
-
-            if (user is null)
-            {
-                user = await _userProvisioningService.EnsureUserAsync(testEmail);
-            }
+            _logger.LogWarning("Login rechazado antes de AD: usuario local no encontrado para '{User}'.", dto.UserNameOrEmail);
+            return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
         }
-
-        var provisionKey = adUserInfo?.UserName ?? dto.UserNameOrEmail;
-        user ??= await _userProvisioningService.EnsureUserAsync(provisionKey, adUserInfo?.Email, adUserInfo?.DisplayName);
 
         if (!user.IsActive)
         {
+            _logger.LogWarning("Login rechazado antes de AD: usuario local '{UserId}' inactivo.", user.Id);
             return await FinalizeResultAsync(BuildLoginRedirect("user_disabled", "Usuario inactivo.", dto.ReturnUrl, dto.ClientId));
         }
-
         var rolesList = await _userManagement.GetRolesAsync(user);
         var roles = rolesList.ToArray();
         var effectiveRoles = roles
@@ -171,6 +122,13 @@ public sealed class AuthFlowService : IAuthFlowService
             .Where(role => !string.IsNullOrWhiteSpace(role))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+
+        if (effectiveRoles.Length == 0)
+        {
+            _logger.LogWarning("Login rechazado antes de AD: usuario local '{UserId}' sin roles.", user.Id);
+            return await FinalizeResultAsync(BuildLoginRedirect("no_role", "El usuario no tiene un rol asignado.", dto.ReturnUrl, dto.ClientId));
+        }
+
         var isAdmin = effectiveRoles.Contains("Admin") || effectiveRoles.Contains("Administrador");
         var hasReturnUrl = !string.IsNullOrWhiteSpace(dto.ReturnUrl);
         var hasClientId = !string.IsNullOrWhiteSpace(dto.ClientId);
@@ -185,7 +143,87 @@ public sealed class AuthFlowService : IAuthFlowService
         string? returnUrl = null;
         ApplicationClient? client = null;
         var clientResolvedFromReturnUrl = false;
+        IReadOnlyList<(string ClientId, string ReturnUrl)> allRoutes = Array.Empty<(string ClientId, string ReturnUrl)>();
 
+        if (!isAdmin)
+        {
+            allRoutes = await _routingService.ResolveAllForUserAsync(user.Id) ?? Array.Empty<(string ClientId, string ReturnUrl)>();
+            if (allRoutes.Count == 0)
+            {
+                _logger.LogWarning("Login rechazado antes de AD: usuario '{UserId}' sin áreas con rutas activas.", user.Id);
+                return await FinalizeResultAsync(BuildLoginRedirect("no_route", "No tiene permisos para acceder a una aplicación.", dto.ReturnUrl, dto.ClientId));
+            }
+
+            if (hasClientRequest)
+            {
+                client = await _clientService.GetAsync(dto.ClientId!);
+                if (client is null)
+                {
+                    _logger.LogWarning("Login rechazado antes de AD: cliente '{ClientId}' inexistente.", dto.ClientId);
+                    return await FinalizeResultAsync(BuildLoginRedirect("invalid_client", "Aplicación destino inválida.", dto.ReturnUrl, dto.ClientId));
+                }
+
+                if (!_clientService.IsReturnUrlAllowed(client, dto.ReturnUrl!))
+                {
+                    _logger.LogWarning("Login rechazado antes de AD: returnUrl '{ReturnUrl}' no permitida para cliente '{ClientId}'.", dto.ReturnUrl, dto.ClientId);
+                    return await FinalizeResultAsync(BuildLoginRedirect("invalid_return_url", "URL de retorno inválida.", dto.ReturnUrl, dto.ClientId));
+                }
+
+                if (!allRoutes.Any(route => string.Equals(route.ClientId, dto.ClientId, StringComparison.OrdinalIgnoreCase)))
+                {
+                    _logger.LogWarning("Login rechazado antes de AD: usuario '{UserId}' sin ruta activa al cliente '{ClientId}'.", user.Id, dto.ClientId);
+                    return await FinalizeResultAsync(BuildLoginRedirect("no_route", "No tiene permisos para acceder a esta aplicación.", dto.ReturnUrl, dto.ClientId));
+                }
+
+                clientId = dto.ClientId!;
+                returnUrl = dto.ReturnUrl!;
+            }
+            else if (!hasClientId && hasReturnUrl)
+            {
+                client = await TryResolveClientFromReturnUrlAsync(dto.ReturnUrl!);
+                if (client is not null)
+                {
+                    if (!allRoutes.Any(route => string.Equals(route.ClientId, client.ClientId, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        _logger.LogWarning("Login rechazado antes de AD: usuario '{UserId}' sin ruta activa al cliente inferido '{ClientId}'.", user.Id, client.ClientId);
+                        return await FinalizeResultAsync(BuildLoginRedirect("no_route", "No tiene permisos para acceder a esta aplicación.", dto.ReturnUrl, dto.ClientId));
+                    }
+
+                    clientId = client.ClientId;
+                    returnUrl = dto.ReturnUrl!;
+                    clientResolvedFromReturnUrl = true;
+                }
+            }
+        }
+
+#if DEBUG
+        if (testUser is not null)
+        {
+            if (!PasswordMatches(dto.Password, testUser.Password))
+            {
+                return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
+            }
+        }
+        else if (isDbTest)
+        {
+            if (!VerifyPasswordHash(user.PasswordHash, dto.Password))
+            {
+                return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
+            }
+        }
+        else
+        {
+#else
+        {
+#endif
+            var adOk = await _adAuth.ValidateCredentialsAsync(dto.UserNameOrEmail, dto.Password);
+            if (!adOk)
+            {
+                return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
+            }
+
+            adUserInfo = await _adAuth.GetUserInfoAsync(dto.UserNameOrEmail);
+        }
         if (isAdmin)
         {
             var adminPermissions = await _permissionService.GetAsync(
@@ -201,7 +239,7 @@ public sealed class AuthFlowService : IAuthFlowService
             return new LoginResult { ShowAppPicker = true };
         }
 
-        if (!hasClientId && hasReturnUrl)
+        if (!hasClientId && hasReturnUrl && !clientResolvedFromReturnUrl)
         {
             client = await TryResolveClientFromReturnUrlAsync(dto.ReturnUrl!);
             if (client is not null)
@@ -212,7 +250,7 @@ public sealed class AuthFlowService : IAuthFlowService
             }
         }
 
-        if (!clientResolvedFromReturnUrl && hasClientRequest)
+        if (!clientResolvedFromReturnUrl && hasClientRequest && client is null)
         {
             client = await _clientService.GetAsync(dto.ClientId!);
             if (client is null)
@@ -229,17 +267,8 @@ public sealed class AuthFlowService : IAuthFlowService
             clientId = dto.ClientId!;
             returnUrl = dto.ReturnUrl!;
         }
-        else if (!clientResolvedFromReturnUrl)
+        else if (!clientResolvedFromReturnUrl && !hasClientRequest)
         {
-            var allRoutes = await _routingService.ResolveAllForUserAsync(user.Id) ?? Array.Empty<(string ClientId, string ReturnUrl)>();
-
-            if (allRoutes.Count == 0)
-            {
-                _logger.LogWarning("Login: sin ruta activa para usuario '{UserId}'. hasReturnUrl={HasReturnUrl}, hasClientId={HasClientId}",
-                    user.Id, hasReturnUrl, hasClientId);
-                return await FinalizeResultAsync(BuildLoginRedirect("no_route", "No tiene permisos para ver esta página.", dto.ReturnUrl, dto.ClientId));
-            }
-
             // Multiple apps available → partial sign-in and show the app picker
             if (allRoutes.Count > 1)
             {
@@ -297,8 +326,7 @@ public sealed class AuthFlowService : IAuthFlowService
         claimsModel = MergeTestUserClaims(claimsModel, testUser);
         var activeAppId = GetActiveAppId(claimsModel, clientId);
 
-        var allAvailableApps = await _routingService.ResolveAllForUserAsync(user.Id) ?? Array.Empty<(string ClientId, string ReturnUrl)>();
-        await SignInAsync(user, claimsModel, adUserInfo?.EmployeeId, allAvailableApps.Select(r => r.ClientId).ToList());
+        await SignInAsync(user, claimsModel, adUserInfo?.EmployeeId, allRoutes.Select(r => r.ClientId).ToList());
 
         returnUrl = _clientService.ResolveReturnUrlForCurrentEnvironment(client!, returnUrl, activeAppId);
 

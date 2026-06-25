@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using Auth.Web.Application.Permissions;
 using Auth.Web.Application.Permissions.Dtos;
 using Auth.Web.Contracts.Auth;
@@ -85,6 +85,8 @@ public class AuthFlowServiceTests
         var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = "user", Password = "pwd" });
         Assert.Equal("/Account/Login", outcome.RedirectUrl[..14]);
         Assert.False(outcome.SignInAdmin);
+        ad.Verify(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        ad.Verify(x => x.GetUserInfoAsync(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -179,6 +181,8 @@ public class AuthFlowServiceTests
         var uri = new Uri("http://local" + outcome.RedirectUrl);
         var qs = System.Web.HttpUtility.ParseQueryString(uri.Query);
         Assert.Equal("user_disabled", qs["errorCode"]);
+        ad.Verify(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        ad.Verify(x => x.GetUserInfoAsync(It.IsAny<string>()), Times.Never);
         authService.Verify(x => x.SignInAsync(It.IsAny<HttpContext>(), IdentityConstants.ApplicationScheme, It.IsAny<System.Security.Claims.ClaimsPrincipal>(), It.IsAny<AuthenticationProperties>()), Times.Never);
     }
 
@@ -243,6 +247,8 @@ public class AuthFlowServiceTests
         var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = userName, Password = "pwd" });
         Assert.False(outcome.SignInAdmin);
         Assert.Contains("/Account/Login", outcome.RedirectUrl);
+        ad.Verify(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        ad.Verify(x => x.GetUserInfoAsync(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -273,5 +279,65 @@ public class AuthFlowServiceTests
         var qs = System.Web.HttpUtility.ParseQueryString(uri.Query);
         Assert.False(string.IsNullOrWhiteSpace(qs["error"]));
         Assert.Equal("invalid_return_url", qs["errorCode"]);
+    }
+    [Fact]
+    public async Task Login_UserWithoutRoles_DoesNotCallActiveDirectory()
+    {
+        var ad = new Mock<IActiveDirectoryAuthService>();
+        var userManagement = new Mock<IUserManagementService>();
+        var (user, userName, email) = MakeUser("u-no-role", "norole@corp", "norole@corp");
+        userManagement.Setup(x => x.FindByNameAsync(userName)).ReturnsAsync(user);
+        userManagement.Setup(x => x.FindByEmailAsync(email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync([]);
+
+        var svc = CreateService(ad: ad, userManagement: userManagement);
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = userName, Password = "pwd" });
+
+        var uri = new Uri("http://local" + outcome.RedirectUrl);
+        var qs = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        Assert.Equal("no_role", qs["errorCode"]);
+        ad.Verify(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        ad.Verify(x => x.GetUserInfoAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Login_ClientWithoutAssignedRoute_DoesNotCallActiveDirectory()
+    {
+        var ad = new Mock<IActiveDirectoryAuthService>();
+        var userManagement = new Mock<IUserManagementService>();
+        var (user, userName, email) = MakeUser("u-client", "clientuser@corp", "clientuser@corp");
+        userManagement.Setup(x => x.FindByNameAsync(userName)).ReturnsAsync(user);
+        userManagement.Setup(x => x.FindByEmailAsync(email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Usuario" });
+
+        var routing = new Mock<IRoutingService>();
+        routing.Setup(x => x.ResolveAllForUserAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<(string ClientId, string ReturnUrl)> { ("clientA", "https://app-a/") });
+
+        var requestedClient = new ApplicationClient
+        {
+            Id = 2,
+            ClientId = "clientB",
+            Audience = "clientB",
+            AllowedReturnUrlsJson = "[\"https://app-b/\"]"
+        };
+        var clientSvc = new Mock<IClientService>();
+        clientSvc.Setup(x => x.GetAsync("clientB")).ReturnsAsync(requestedClient);
+        clientSvc.Setup(x => x.IsReturnUrlAllowed(requestedClient, "https://app-b/home")).Returns(true);
+
+        var svc = CreateService(ad: ad, client: clientSvc, routing: routing, userManagement: userManagement);
+        var outcome = await svc.LoginAsync(new LoginRequestDto
+        {
+            UserNameOrEmail = userName,
+            Password = "pwd",
+            ClientId = "clientB",
+            ReturnUrl = "https://app-b/home"
+        });
+
+        var uri = new Uri("http://local" + outcome.RedirectUrl);
+        var qs = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        Assert.Equal("no_route", qs["errorCode"]);
+        ad.Verify(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        ad.Verify(x => x.GetUserInfoAsync(It.IsAny<string>()), Times.Never);
     }
 }
