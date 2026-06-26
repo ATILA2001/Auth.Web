@@ -28,14 +28,62 @@ public sealed class LoginViewModel
 
         var query = QueryHelpers.ParseQuery(uri.Query);
 
-        ErrorMessage = query.TryGetValue("error", out var errorValues) 
-            ? errorValues.FirstOrDefault() : null;
-        ReturnUrl = query.TryGetValue("returnUrl", out var returnValues) 
+        var errorCode = query.TryGetValue("errorCode", out var errorCodeValues)
+            ? errorCodeValues.FirstOrDefault()
+            : null;
+        var fallbackError = query.TryGetValue("error", out var errorValues)
+            ? errorValues.FirstOrDefault()
+            : null;
+        var unlockAt = TryParseUnlockAt(query);
+        var requiresAdminUnlock = query.TryGetValue("requiresAdminUnlock", out var adminUnlockValues)
+            && bool.TryParse(adminUnlockValues.FirstOrDefault(), out var parsedAdminUnlock)
+            && parsedAdminUnlock;
+
+        ErrorMessage = BuildErrorMessage(errorCode, fallbackError, unlockAt, requiresAdminUnlock);
+        ReturnUrl = query.TryGetValue("returnUrl", out var returnValues)
             ? returnValues.FirstOrDefault() : null;
         ClientId = query.TryGetValue("clientId", out var clientValues) 
             ? clientValues.FirstOrDefault() : null;
     }
 
+    private static DateTimeOffset? TryParseUnlockAt(Dictionary<string, Microsoft.Extensions.Primitives.StringValues> query)
+    {
+        if (!query.TryGetValue("unlockAt", out var values))
+        {
+            return null;
+        }
+
+        return DateTimeOffset.TryParse(
+            values.FirstOrDefault(),
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.RoundtripKind,
+            out var unlockAt)
+                ? unlockAt
+                : null;
+    }
+
+    private static string? BuildErrorMessage(
+        string? errorCode,
+        string? fallbackError,
+        DateTimeOffset? unlockAtUtc,
+        bool requiresAdminUnlock)
+    {
+        return errorCode?.Trim().ToLowerInvariant() switch
+        {
+            "invalid_credentials" => "Usuario o contraseña inválidos.",
+            "account_locked" when requiresAdminUnlock =>
+                "La cuenta de dominio está bloqueada. Contacte al administrador para desbloquearla.",
+            "account_locked" when unlockAtUtc.HasValue =>
+                $"La cuenta de dominio está bloqueada. Podrá volver a intentar después del {unlockAtUtc.Value.ToLocalTime():dd/MM/yyyy HH:mm}.",
+            "account_locked" =>
+                "La cuenta de dominio está bloqueada. Intente nuevamente más tarde o contacte al administrador.",
+            "ad_unavailable" =>
+                "El servicio de autenticación de dominio no está disponible. Intente nuevamente más tarde.",
+            "ad_error" =>
+                "No se pudo validar la cuenta de dominio. Intente nuevamente más tarde.",
+            _ => fallbackError
+        };
+    }
     public async Task RegisterUserAsync()
     {
         RegisterMessage = null;

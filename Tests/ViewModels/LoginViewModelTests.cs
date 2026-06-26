@@ -264,4 +264,45 @@ public class LoginViewModelTests
 
         Assert.Throws<ArgumentNullException>(() => vm.LoadFromQuery(null!));
     }
+    [Fact]
+    public void LoadFromQuery_Maps_InvalidCredentials_Code()
+    {
+        var vm = new LoginViewModel(CreateRegistrationServiceMock().Object);
+
+        vm.LoadFromQuery(new Uri("https://localhost/Account/Login?errorCode=invalid_credentials"));
+
+        Assert.Equal("Usuario o contraseña inválidos.", vm.ErrorMessage);
+    }
+
+    [Fact]
+    public void LoadFromQuery_Maps_LockedAccount_With_UnlockTime()
+    {
+        var vm = new LoginViewModel(CreateRegistrationServiceMock().Object);
+        var unlockAt = DateTimeOffset.UtcNow.AddMinutes(10);
+        var uri = new Uri($"https://localhost/Account/Login?errorCode=account_locked&unlockAt={Uri.EscapeDataString(unlockAt.ToString("O"))}");
+
+        vm.LoadFromQuery(uri);
+
+        Assert.Contains(unlockAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"), vm.ErrorMessage);
+    }
+
+    [Fact]
+    public void LoadFromQuery_Maps_LockedAccount_RequiringAdministrator()
+    {
+        var vm = new LoginViewModel(CreateRegistrationServiceMock().Object);
+
+        vm.LoadFromQuery(new Uri("https://localhost/Account/Login?errorCode=account_locked&requiresAdminUnlock=true"));
+
+        Assert.Contains("administrador", vm.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void LoadFromQuery_Maps_AdUnavailable()
+    {
+        var vm = new LoginViewModel(CreateRegistrationServiceMock().Object);
+
+        vm.LoadFromQuery(new Uri("https://localhost/Account/Login?errorCode=ad_unavailable"));
+
+        Assert.Contains("no está disponible", vm.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
 }
