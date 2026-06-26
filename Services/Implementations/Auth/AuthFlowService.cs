@@ -32,7 +32,6 @@ public sealed class AuthFlowService : IAuthFlowService
     private readonly IUserClaimsPrincipalFactory<ApplicationUser> _claimsPrincipalFactory;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly TestUsersOptions _testUsers;
-    private readonly FeatureOptions _features;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public AuthFlowService(
@@ -48,7 +47,6 @@ public sealed class AuthFlowService : IAuthFlowService
         IUserClaimsPrincipalFactory<ApplicationUser> claimsPrincipalFactory,
         IHttpContextAccessor httpContextAccessor,
         IOptions<TestUsersOptions> testUsersOptions,
-        IOptions<FeatureOptions> featureOptions,
         UserManager<ApplicationUser> userManager,
         ILogger<AuthFlowService> logger)
     {
@@ -65,7 +63,6 @@ public sealed class AuthFlowService : IAuthFlowService
         _claimsPrincipalFactory = claimsPrincipalFactory;
         _httpContextAccessor = httpContextAccessor;
         _testUsers = testUsersOptions.Value ?? new TestUsersOptions();
-        _features = featureOptions.Value ?? new FeatureOptions();
         _userManager = userManager;
     }
 
@@ -90,9 +87,10 @@ public sealed class AuthFlowService : IAuthFlowService
         AdUserInfo? adUserInfo = null;
 
 #if DEBUG
-        // .test users: DB-only auth, never touch AD. Development environment only.
-        var testUser = _features.EnableTestUsers ? TryGetTestUser(dto.UserNameOrEmail) : null;
-        var isDbTest = dto.UserNameOrEmail.EndsWith(".test", StringComparison.OrdinalIgnoreCase);
+        // .test users are DB-only: validate against PasswordHash and never touch AD or TestUsers password.
+        // Other configured test users remain DEBUG-only and also never touch AD.
+        var isDbTest = IsDbTestUserName(dto.UserNameOrEmail);
+        var testUser = isDbTest ? null : TryGetTestUser(dto.UserNameOrEmail);
 #else
         var testUser = (TestUserOptions?)null;
         const bool isDbTest = false;
@@ -100,9 +98,16 @@ public sealed class AuthFlowService : IAuthFlowService
 
         // Prevalidación local obligatoria: ningún usuario inexistente, inactivo o sin
         // autorización básica debe enviar credenciales a Active Directory.
-        var localLookup = testUser?.Email ?? dto.UserNameOrEmail;
-        var user = await _userManagement.FindByNameAsync(localLookup)
+        var user = (ApplicationUser?)null;
+        foreach (var localLookup in BuildLocalLookupCandidates(dto.UserNameOrEmail, testUser))
+        {
+            user = await _userManagement.FindByNameAsync(localLookup)
                    ?? await _userManagement.FindByEmailAsync(localLookup);
+            if (user is not null)
+            {
+                break;
+            }
+        }
 
         if (user is null)
         {
@@ -216,13 +221,29 @@ public sealed class AuthFlowService : IAuthFlowService
 #else
         {
 #endif
-            var adOk = await _adAuth.ValidateCredentialsAsync(dto.UserNameOrEmail, dto.Password);
-            if (!adOk)
+            var adResult = await _adAuth.AuthenticateAsync(dto.UserNameOrEmail, dto.Password);
+            if (!adResult.Succeeded)
             {
-                return await FinalizeResultAsync(BuildLoginRedirect("invalid_credentials", "Usuario o contraseña inválidos.", dto.ReturnUrl, dto.ClientId));
+                _logger.LogWarning(
+                    "Login rechazado por AD: user='{User}' status='{Status}' diagnosticCode='{DiagnosticCode}' unlockAtUtc='{UnlockAtUtc}' requiresAdminUnlock={RequiresAdminUnlock} lockoutThreshold={LockoutThreshold}.",
+                    dto.UserNameOrEmail,
+                    adResult.Status,
+                    adResult.DiagnosticCode,
+                    adResult.UnlockAtUtc,
+                    adResult.RequiresAdministratorUnlock,
+                    adResult.LockoutThreshold);
+                return await FinalizeResultAsync(BuildAdFailureRedirect(adResult, dto.ReturnUrl, dto.ClientId));
             }
 
-            adUserInfo = await _adAuth.GetUserInfoAsync(dto.UserNameOrEmail);
+            adUserInfo = adResult.UserInfo;
+            if (adUserInfo is null)
+            {
+                _logger.LogError("AD devolvió autenticación exitosa sin información de usuario para '{User}'.", dto.UserNameOrEmail);
+                return await FinalizeResultAsync(BuildAdFailureRedirect(
+                    AdAuthenticationResult.UnexpectedError(),
+                    dto.ReturnUrl,
+                    dto.ClientId));
+            }
         }
         if (isAdmin)
         {
@@ -358,6 +379,32 @@ public sealed class AuthFlowService : IAuthFlowService
         return null;
     }
 
+    private static LoginResult BuildAdFailureRedirect(
+        AdAuthenticationResult result,
+        string? returnUrl,
+        string? clientId)
+    {
+        var errorCode = result.Status switch
+        {
+            AdAuthenticationStatus.InvalidCredentials => "invalid_credentials",
+            AdAuthenticationStatus.LockedOut => "account_locked",
+            AdAuthenticationStatus.ServerUnavailable => "ad_unavailable",
+            AdAuthenticationStatus.LookupFailed => "ad_unavailable",
+            _ => "ad_error"
+        };
+
+        var query = new Dictionary<string, string?>
+        {
+            ["errorCode"] = errorCode,
+            ["returnUrl"] = returnUrl,
+            ["clientId"] = clientId,
+            ["unlockAt"] = result.UnlockAtUtc?.ToString("O"),
+            ["requiresAdminUnlock"] = result.RequiresAdministratorUnlock ? "true" : null
+        };
+
+        var url = QueryHelpers.AddQueryString("/Account/Login", query!);
+        return new LoginResult { RedirectUrl = url, SignInAdmin = false };
+    }
     private static LoginResult BuildLoginRedirect(string errorCode, string errorMessage, string? returnUrl, string? clientId)
     {
         var query = new Dictionary<string, string?>
@@ -573,6 +620,64 @@ public sealed class AuthFlowService : IAuthFlowService
         {
             identity.RemoveClaim(claim);
         }
+    }
+
+    private static IReadOnlyList<string> BuildLocalLookupCandidates(string userNameOrEmail, TestUserOptions? testUser)
+    {
+        var candidates = new List<string>();
+
+        AddLookupCandidate(candidates, testUser?.Email);
+        AddLookupCandidate(candidates, userNameOrEmail);
+        AddLookupCandidate(candidates, GetLocalPart(testUser?.Email));
+        AddLookupCandidate(candidates, GetLocalPart(userNameOrEmail));
+
+        return candidates;
+    }
+
+    private static void AddLookupCandidate(List<string> candidates, string? value)
+    {
+        var normalized = value?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return;
+        }
+
+        if (!candidates.Any(candidate => candidate.Equals(normalized, StringComparison.OrdinalIgnoreCase)))
+        {
+            candidates.Add(normalized);
+        }
+    }
+
+    private static string? GetLocalPart(string? userNameOrEmail)
+    {
+        var normalized = userNameOrEmail?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return null;
+        }
+
+        var atIndex = normalized.IndexOf('@');
+        return atIndex > 0 ? normalized[..atIndex] : normalized;
+    }
+
+    private static bool IsDbTestUserName(string userNameOrEmail)
+    {
+        var normalized = userNameOrEmail?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return false;
+        }
+
+        // Preserve the original contract: any login value ending in .test is DB-only.
+        // Also support email addresses whose local part ends in .test.
+        if (normalized.EndsWith(".test", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var localPart = GetLocalPart(normalized);
+        return !string.IsNullOrWhiteSpace(localPart)
+            && localPart.EndsWith(".test", StringComparison.OrdinalIgnoreCase);
     }
 
     private TestUserOptions? TryGetTestUser(string userNameOrEmail)

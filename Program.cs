@@ -48,7 +48,6 @@ builder.Services.AddRazorComponents()
 builder.Services.AddRadzenComponents();
 
 builder.Services.Configure<AdOptions>(builder.Configuration.GetSection("ActiveDirectory"));
-builder.Services.Configure<FeatureOptions>(builder.Configuration.GetSection("Features"));
 builder.Services.Configure<TestUsersOptions>(builder.Configuration.GetSection("TestUsers"));
 
 var sharedCookieName = builder.Configuration["SharedCookie:Name"];

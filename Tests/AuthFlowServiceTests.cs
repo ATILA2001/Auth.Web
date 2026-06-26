@@ -31,7 +31,8 @@ public class AuthFlowServiceTests
         Mock<IAdminSignInService>? adminSignIn = null,
         Mock<IAuthenticationService>? authService = null,
         Mock<IUserClaimsPrincipalFactory<ApplicationUser>>? claimsFactory = null,
-        IHttpContextAccessor? httpContextAccessor = null)
+        IHttpContextAccessor? httpContextAccessor = null,
+        Auth.Web.Configuration.TestUsersOptions? testUsers = null)
     {
         ad ??= new Mock<IActiveDirectoryAuthService>();
         client ??= new Mock<IClientService>();
@@ -51,8 +52,7 @@ public class AuthFlowServiceTests
             .Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>()))
             .ReturnsAsync(new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(IdentityConstants.ApplicationScheme)));
 
-        var options = Microsoft.Extensions.Options.Options.Create(new Auth.Web.Configuration.TestUsersOptions());
-        var featureOptions = Microsoft.Extensions.Options.Options.Create(new Auth.Web.Configuration.FeatureOptions { EnableTestUsers = true });
+        var options = Microsoft.Extensions.Options.Options.Create(testUsers ?? new Auth.Web.Configuration.TestUsersOptions());
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AuthFlowService>.Instance;
         var userStore = new Mock<Microsoft.AspNetCore.Identity.IUserStore<ApplicationUser>>();
         var userManager = new Mock<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>(
@@ -65,7 +65,7 @@ public class AuthFlowServiceTests
             new Microsoft.AspNetCore.Identity.IdentityErrorDescriber(),
             Mock.Of<IServiceProvider>(),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>.Instance);
-        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, provisioning.Object, assembler, adminSignIn.Object, authService.Object, claimsFactory.Object, httpContextAccessor, options, featureOptions, userManager.Object, logger);
+        return new AuthFlowService(ad.Object, userManagement.Object, perms.Object, routing.Object, client.Object, provisioning.Object, assembler, adminSignIn.Object, authService.Object, claimsFactory.Object, httpContextAccessor, options, userManager.Object, logger);
     }
 
     private static (ApplicationUser User, string UserName, string Email) MakeUser(string id, string userName, string email)
@@ -80,20 +80,19 @@ public class AuthFlowServiceTests
     public async Task Login_Failure_InvalidCredentials()
     {
         var ad = new Mock<IActiveDirectoryAuthService>();
-        ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
+        ad.Setup(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(AdAuthenticationResult.InvalidCredentials());
         var svc = CreateService(ad: ad);
         var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = "user", Password = "pwd" });
         Assert.Equal("/Account/Login", outcome.RedirectUrl[..14]);
         Assert.False(outcome.SignInAdmin);
-        ad.Verify(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        ad.Verify(x => x.GetUserInfoAsync(It.IsAny<string>()), Times.Never);
+        ad.Verify(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
     public async Task Login_AdminSuccess()
     {
         var ad = new Mock<IActiveDirectoryAuthService>();
-        ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        ad.Setup(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(AdAuthenticationResult.Success(new AdUserInfo { UserName = "ad-user" }));
 
         var userManagement = new Mock<IUserManagementService>();
         var (user, userName, email) = MakeUser("u1", "admin@corp", "admin@corp");
@@ -122,10 +121,173 @@ public class AuthFlowServiceTests
     }
 
     [Fact]
+    public async Task Login_DbTestUser_UsesDatabaseHashEvenWhenConfiguredTestUserExists()
+    {
+        var ad = new Mock<IActiveDirectoryAuthService>();
+        var password = "db-test-password";
+
+        var testUsers = new Auth.Web.Configuration.TestUsersOptions
+        {
+            Users = new List<Auth.Web.Configuration.TestUserOptions>
+            {
+                new()
+                {
+                    Email = "configured.test@example.local",
+                    Password = "stale-config-password",
+                    Roles = new List<string> { "Admin" }
+                }
+            }
+        };
+
+        var userManagement = new Mock<IUserManagementService>();
+        var (user, userName, email) = MakeUser("u-configured-db-test", "configured.test", "configured.test@example.local");
+        user.PasswordHash = new PasswordHasher<ApplicationUser>().HashPassword(user, password);
+        userManagement.Setup(x => x.FindByNameAsync(email)).ReturnsAsync((ApplicationUser?)null);
+        userManagement.Setup(x => x.FindByEmailAsync(email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
+
+        var routing = new Mock<IRoutingService>();
+        routing.Setup(x => x.ResolveAllForUserAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<(string ClientId, string ReturnUrl)> { ("SAI", "https://app/admin") });
+
+        var perms = new Mock<IPermissionService>();
+        perms.Setup(x => x.GetAsync(userName, It.IsAny<int?>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
+            .ReturnsAsync(new UserPermissionsDto { AreaIds = new List<int>(), Version = 1 });
+
+        var authService = new Mock<IAuthenticationService>();
+        var svc = CreateService(
+            ad: ad,
+            userManagement: userManagement,
+            routing: routing,
+            perms: perms,
+            authService: authService,
+            testUsers: testUsers);
+
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = email, Password = password });
+
+        Assert.True(outcome.ShowAppPicker);
+        ad.Verify(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        authService.Verify(x => x.SignInAsync(It.IsAny<HttpContext>(), IdentityConstants.ApplicationScheme, It.IsAny<System.Security.Claims.ClaimsPrincipal>(), It.IsAny<AuthenticationProperties>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Login_ConfiguredTestUserWithoutDotTestSuffix_NeverCallsAd()
+    {
+        var ad = new Mock<IActiveDirectoryAuthService>();
+        var password = "configured-test-password";
+
+        var testUsers = new Auth.Web.Configuration.TestUsersOptions
+        {
+            Users = new List<Auth.Web.Configuration.TestUserOptions>
+            {
+                new()
+                {
+                    Email = "qa@example.local",
+                    Password = password,
+                    Roles = new List<string> { "Admin" }
+                }
+            }
+        };
+
+        var userManagement = new Mock<IUserManagementService>();
+        var (user, userName, email) = MakeUser("u-configured-test-no-dot", "qa", "qa@example.local");
+        userManagement.Setup(x => x.FindByNameAsync(email)).ReturnsAsync((ApplicationUser?)null);
+        userManagement.Setup(x => x.FindByEmailAsync(email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
+
+        var routing = new Mock<IRoutingService>();
+        routing.Setup(x => x.ResolveAllForUserAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<(string ClientId, string ReturnUrl)> { ("SAI", "https://app/admin") });
+
+        var perms = new Mock<IPermissionService>();
+        perms.Setup(x => x.GetAsync(userName, It.IsAny<int?>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
+            .ReturnsAsync(new UserPermissionsDto { AreaIds = new List<int>(), Version = 1 });
+
+        var authService = new Mock<IAuthenticationService>();
+        var svc = CreateService(
+            ad: ad,
+            userManagement: userManagement,
+            routing: routing,
+            perms: perms,
+            authService: authService,
+            testUsers: testUsers);
+
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = email, Password = password });
+
+        Assert.True(outcome.ShowAppPicker);
+        ad.Verify(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        authService.Verify(x => x.SignInAsync(It.IsAny<HttpContext>(), IdentityConstants.ApplicationScheme, It.IsAny<System.Security.Claims.ClaimsPrincipal>(), It.IsAny<AuthenticationProperties>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Login_DbTestFullEmailEndingInTest_UsesDatabaseHashAndNeverCallsAd()
+    {
+        var ad = new Mock<IActiveDirectoryAuthService>();
+        var password = "pwd-test-domain";
+
+        var userManagement = new Mock<IUserManagementService>();
+        var (user, userName, email) = MakeUser("u-db-test-domain", "dev", "dev@example.test");
+        user.PasswordHash = new PasswordHasher<ApplicationUser>().HashPassword(user, password);
+        userManagement.Setup(x => x.FindByNameAsync(email)).ReturnsAsync((ApplicationUser?)null);
+        userManagement.Setup(x => x.FindByEmailAsync(email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.FindByNameAsync(userName)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
+
+        var routing = new Mock<IRoutingService>();
+        routing.Setup(x => x.ResolveAllForUserAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<(string ClientId, string ReturnUrl)> { ("SAI", "https://app/admin") });
+
+        var perms = new Mock<IPermissionService>();
+        perms.Setup(x => x.GetAsync(userName, It.IsAny<int?>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
+            .ReturnsAsync(new UserPermissionsDto { AreaIds = new List<int>(), Version = 1 });
+
+        var authService = new Mock<IAuthenticationService>();
+        var svc = CreateService(ad: ad, userManagement: userManagement, routing: routing, perms: perms, authService: authService);
+
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = email, Password = password });
+
+        Assert.True(outcome.ShowAppPicker);
+        ad.Verify(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        authService.Verify(x => x.SignInAsync(It.IsAny<HttpContext>(), IdentityConstants.ApplicationScheme, It.IsAny<System.Security.Claims.ClaimsPrincipal>(), It.IsAny<AuthenticationProperties>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Login_DbTestEmailLocalPart_UsesLocalPasswordAndNeverCallsAd()
+    {
+        var ad = new Mock<IActiveDirectoryAuthService>();
+        var password = "pwd-test";
+
+        var userManagement = new Mock<IUserManagementService>();
+        var (user, userName, email) = MakeUser("u-db-test", "dev.test", "dev.test@example.local");
+        user.PasswordHash = new PasswordHasher<ApplicationUser>().HashPassword(user, password);
+        userManagement.Setup(x => x.FindByNameAsync(email)).ReturnsAsync((ApplicationUser?)null);
+        userManagement.Setup(x => x.FindByEmailAsync(email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.FindByNameAsync(userName)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
+
+        var routing = new Mock<IRoutingService>();
+        routing.Setup(x => x.ResolveAllForUserAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<(string ClientId, string ReturnUrl)> { ("SAI", "https://app/admin") });
+
+        var perms = new Mock<IPermissionService>();
+        perms.Setup(x => x.GetAsync(userName, It.IsAny<int?>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<int>>()))
+            .ReturnsAsync(new UserPermissionsDto { AreaIds = new List<int>(), Version = 1 });
+
+        var authService = new Mock<IAuthenticationService>();
+        var svc = CreateService(ad: ad, userManagement: userManagement, routing: routing, perms: perms, authService: authService);
+
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = email, Password = password });
+
+        Assert.True(outcome.ShowAppPicker);
+        ad.Verify(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        authService.Verify(x => x.SignInAsync(It.IsAny<HttpContext>(), IdentityConstants.ApplicationScheme, It.IsAny<System.Security.Claims.ClaimsPrincipal>(), It.IsAny<AuthenticationProperties>()), Times.Once);
+    }
+
+    [Fact]
     public async Task Login_NonAdmin_Success_With_Cookie_SignIn()
     {
         var ad = new Mock<IActiveDirectoryAuthService>();
-        ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        ad.Setup(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(AdAuthenticationResult.Success(new AdUserInfo { UserName = "ad-user" }));
 
         var userManagement = new Mock<IUserManagementService>();
         var (user, userName, email) = MakeUser("u2", "user@corp", "user@corp");
@@ -164,7 +326,7 @@ public class AuthFlowServiceTests
     public async Task Login_InactiveUser_Failure()
     {
         var ad = new Mock<IActiveDirectoryAuthService>();
-        ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        ad.Setup(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(AdAuthenticationResult.Success(new AdUserInfo { UserName = "ad-user" }));
 
         var userManagement = new Mock<IUserManagementService>();
         var (user, userName, email) = MakeUser("u-inactive", "inactive@corp", "inactive@corp");
@@ -181,8 +343,7 @@ public class AuthFlowServiceTests
         var uri = new Uri("http://local" + outcome.RedirectUrl);
         var qs = System.Web.HttpUtility.ParseQueryString(uri.Query);
         Assert.Equal("user_disabled", qs["errorCode"]);
-        ad.Verify(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        ad.Verify(x => x.GetUserInfoAsync(It.IsAny<string>()), Times.Never);
+        ad.Verify(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         authService.Verify(x => x.SignInAsync(It.IsAny<HttpContext>(), IdentityConstants.ApplicationScheme, It.IsAny<System.Security.Claims.ClaimsPrincipal>(), It.IsAny<AuthenticationProperties>()), Times.Never);
     }
 
@@ -190,7 +351,7 @@ public class AuthFlowServiceTests
     public async Task Login_With_ReturnUrl_Infers_Client_From_Allowed_Urls()
     {
         var ad = new Mock<IActiveDirectoryAuthService>();
-        ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        ad.Setup(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(AdAuthenticationResult.Success(new AdUserInfo { UserName = "ad-user" }));
 
         var userManagement = new Mock<IUserManagementService>();
         var (user, userName, email) = MakeUser("u5", "user5@corp", "user5@corp");
@@ -232,7 +393,7 @@ public class AuthFlowServiceTests
     public async Task Login_NoRouting_Failure()
     {
         var ad = new Mock<IActiveDirectoryAuthService>();
-        ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        ad.Setup(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(AdAuthenticationResult.Success(new AdUserInfo { UserName = "ad-user" }));
         var userManagement = new Mock<IUserManagementService>();
         var (user, userName, email) = MakeUser("u3", "user3@corp", "user3@corp");
         userManagement.Setup(x => x.FindByNameAsync(userName)).ReturnsAsync(user);
@@ -247,15 +408,14 @@ public class AuthFlowServiceTests
         var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = userName, Password = "pwd" });
         Assert.False(outcome.SignInAdmin);
         Assert.Contains("/Account/Login", outcome.RedirectUrl);
-        ad.Verify(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        ad.Verify(x => x.GetUserInfoAsync(It.IsAny<string>()), Times.Never);
+        ad.Verify(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
     public async Task Login_InvalidReturnUrl_Failure()
     {
         var ad = new Mock<IActiveDirectoryAuthService>();
-        ad.Setup(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        ad.Setup(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(AdAuthenticationResult.Success(new AdUserInfo { UserName = "ad-user" }));
         var userManagement = new Mock<IUserManagementService>();
         var (user, userName, email) = MakeUser("u4", "user4@corp", "user4@corp");
         userManagement.Setup(x => x.FindByNameAsync(userName)).ReturnsAsync(user);
@@ -280,6 +440,7 @@ public class AuthFlowServiceTests
         Assert.False(string.IsNullOrWhiteSpace(qs["error"]));
         Assert.Equal("invalid_return_url", qs["errorCode"]);
     }
+
     [Fact]
     public async Task Login_UserWithoutRoles_DoesNotCallActiveDirectory()
     {
@@ -296,8 +457,7 @@ public class AuthFlowServiceTests
         var uri = new Uri("http://local" + outcome.RedirectUrl);
         var qs = System.Web.HttpUtility.ParseQueryString(uri.Query);
         Assert.Equal("no_role", qs["errorCode"]);
-        ad.Verify(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        ad.Verify(x => x.GetUserInfoAsync(It.IsAny<string>()), Times.Never);
+        ad.Verify(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -337,7 +497,90 @@ public class AuthFlowServiceTests
         var uri = new Uri("http://local" + outcome.RedirectUrl);
         var qs = System.Web.HttpUtility.ParseQueryString(uri.Query);
         Assert.Equal("no_route", qs["errorCode"]);
-        ad.Verify(x => x.ValidateCredentialsAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        ad.Verify(x => x.GetUserInfoAsync(It.IsAny<string>()), Times.Never);
+        ad.Verify(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Login_InvalidAdCredentials_ReturnsGenericError()
+    {
+        var ad = new Mock<IActiveDirectoryAuthService>();
+        ad.Setup(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(AdAuthenticationResult.InvalidCredentials());
+        var userManagement = new Mock<IUserManagementService>();
+        var (user, userName, email) = MakeUser("u-invalid-ad", "invalid@corp", "invalid@corp");
+        userManagement.Setup(x => x.FindByNameAsync(userName)).ReturnsAsync(user);
+        userManagement.Setup(x => x.FindByEmailAsync(email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
+
+        var svc = CreateService(ad: ad, userManagement: userManagement);
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = userName, Password = "bad" });
+
+        var query = System.Web.HttpUtility.ParseQueryString(new Uri("http://local" + outcome.RedirectUrl).Query);
+        Assert.Equal("invalid_credentials", query["errorCode"]);
+        Assert.Null(query["error"]);
+        ad.Verify(x => x.AuthenticateAsync(userName, "bad"), Times.Once);
+    }
+
+    [Fact]
+    public async Task Login_AdLockedOut_IncludesUnlockTime()
+    {
+        var unlockAt = DateTimeOffset.UtcNow.AddMinutes(12);
+        var ad = new Mock<IActiveDirectoryAuthService>();
+        ad.Setup(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(AdAuthenticationResult.LockedOut(unlockAt, false, 5));
+        var userManagement = new Mock<IUserManagementService>();
+        var (user, userName, email) = MakeUser("u-locked", "locked@corp", "locked@corp");
+        userManagement.Setup(x => x.FindByNameAsync(userName)).ReturnsAsync(user);
+        userManagement.Setup(x => x.FindByEmailAsync(email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
+
+        var svc = CreateService(ad: ad, userManagement: userManagement);
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = userName, Password = "pwd" });
+
+        var query = System.Web.HttpUtility.ParseQueryString(new Uri("http://local" + outcome.RedirectUrl).Query);
+        Assert.Equal("account_locked", query["errorCode"]);
+        Assert.Equal(unlockAt.ToString("O"), query["unlockAt"]);
+        Assert.Null(query["requiresAdminUnlock"]);
+    }
+
+    [Fact]
+    public async Task Login_AdLockedOutUntilAdministrator_IncludesAdminFlag()
+    {
+        var ad = new Mock<IActiveDirectoryAuthService>();
+        ad.Setup(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(AdAuthenticationResult.LockedOut(null, true, 5));
+        var userManagement = new Mock<IUserManagementService>();
+        var (user, userName, email) = MakeUser("u-admin-unlock", "adminunlock@corp", "adminunlock@corp");
+        userManagement.Setup(x => x.FindByNameAsync(userName)).ReturnsAsync(user);
+        userManagement.Setup(x => x.FindByEmailAsync(email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
+
+        var svc = CreateService(ad: ad, userManagement: userManagement);
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = userName, Password = "pwd" });
+
+        var query = System.Web.HttpUtility.ParseQueryString(new Uri("http://local" + outcome.RedirectUrl).Query);
+        Assert.Equal("account_locked", query["errorCode"]);
+        Assert.Equal("true", query["requiresAdminUnlock"]);
+        Assert.Null(query["unlockAt"]);
+    }
+
+    [Fact]
+    public async Task Login_AdUnavailable_ReturnsServiceUnavailableCode()
+    {
+        var ad = new Mock<IActiveDirectoryAuthService>();
+        ad.Setup(x => x.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(AdAuthenticationResult.ServerUnavailable());
+        var userManagement = new Mock<IUserManagementService>();
+        var (user, userName, email) = MakeUser("u-ad-down", "addown@corp", "addown@corp");
+        userManagement.Setup(x => x.FindByNameAsync(userName)).ReturnsAsync(user);
+        userManagement.Setup(x => x.FindByEmailAsync(email)).ReturnsAsync(user);
+        userManagement.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
+
+        var svc = CreateService(ad: ad, userManagement: userManagement);
+        var outcome = await svc.LoginAsync(new LoginRequestDto { UserNameOrEmail = userName, Password = "pwd" });
+
+        var query = System.Web.HttpUtility.ParseQueryString(new Uri("http://local" + outcome.RedirectUrl).Query);
+        Assert.Equal("ad_unavailable", query["errorCode"]);
+        Assert.Null(query["error"]);
     }
 }

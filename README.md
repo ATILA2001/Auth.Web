@@ -91,7 +91,6 @@ Controllers/
 
 Configuration/
 ├─ AdOptions.cs
-└─ FeatureOptions.cs
 
 Tests/
 wwwroot/
@@ -125,7 +124,7 @@ wwwroot/
   - `ConnectController.cs` — punto de entrada para login y portal-login.
   - `PermissionsController.cs` — API de permisos consumida por clientes.
 
-- `Configuration/` — Clases de opciones para configuración de la app (`AdOptions.cs`, `FeatureOptions.cs`) usadas para binder `IOptions<T>` en `Program.cs`.
+- `Configuration/` — Clases de opciones para configuración de la app usadas para binder `IOptions<T>` en `Program.cs`.
 
 - `Tests/` — Pruebas unitarias e integración para servicios clave y controladores.
 
@@ -197,7 +196,6 @@ Configuración principal (appsettings)
 - `ConnectionStrings:DefaultConnection` — cadena de conexión a SQL Server.
 - `ActiveDirectory` — opciones para conexión AD (ver `Configuration/AdOptions.cs`).
 - Shared cookie: `SharedCookie:Name`, `SharedCookie:Domain`, `SharedCookie:ApplicationName` (usar variables de entorno/IIS; en dev, user secrets).
-- `Features` — opciones de toggles/feature flags (ver `Configuration/FeatureOptions.cs`).
 
 Paquetes NuGet recomendados (presentes o esperados)
 - `Microsoft.EntityFrameworkCore.SqlServer`
